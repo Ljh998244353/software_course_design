@@ -1,0 +1,2 @@
+/usr/bin/llvm-ar-20 qc ../../../lib/libgtest.a "CMakeFiles/gtest.dir/src/gtest-all.cc.o"
+/usr/bin/llvm-ranlib-20 ../../../lib/libgtest.a

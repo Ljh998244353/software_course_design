@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/CMakeFiles/jwt_cpp-populate"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/CMakeFiles/jwt_cpp-populate.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/CMakeFiles/jwt_cpp-populate-complete.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-build.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-configure.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-download.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-install.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-patch.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-test.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/jwt_cpp-subbuild/jwt_cpp-populate-prefix/src/jwt_cpp-populate-stamp/jwt_cpp-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"jwt_cpp-populate"
+		],
+		"name" : "jwt_cpp-populate"
+	}
+}

@@ -1,0 +1,1 @@
+/usr/bin/clang++-20 -g "CMakeFiles/rsa-create.dir/rsa-create.cpp.o" -o ../../../bin/rsa-create  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

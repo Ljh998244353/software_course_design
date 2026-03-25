@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/CMakeFiles/hiredis-populate"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/CMakeFiles/hiredis-populate.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/CMakeFiles/hiredis-populate-complete.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-build.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-configure.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-download.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-install.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-patch.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-test.rule"
+		},
+		{
+			"file" : "/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/hiredis-populate-prefix/src/hiredis-populate-stamp/hiredis-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"hiredis-populate"
+		],
+		"name" : "hiredis-populate"
+	}
+}

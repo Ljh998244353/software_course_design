@@ -1,0 +1,1 @@
+/usr/bin/clang++-20 -g CMakeFiles/es256k.dir/es256k.cpp.o -o ../../../bin/es256k  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

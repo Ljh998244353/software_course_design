@@ -1,0 +1,1 @@
+/usr/bin/clang++-20 -g "CMakeFiles/jwks-verify.dir/jwks-verify.cpp.o" -o ../../../bin/jwks-verify  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 
