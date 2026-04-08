@@ -25,17 +25,6 @@
             ],
             "preLaunchTask": "C/C++: g++ 生成活动文件",
             "miDebuggerPath": "/usr/bin/gdb"
-        },
-
-        {
-        "name": "Debug Hello Rust (WSL)",
-        "type": "lldb",
-        "request": "launch",
-        "program": "${workspaceFolder}/target/debug/hello_rust",
-        "args": [],
-        "cwd": "${workspaceFolder}",
-        "console": "integratedTerminal",
-        "preLaunchTask": "cargo build"
         }
     ],
     "version": "2.0.0"
