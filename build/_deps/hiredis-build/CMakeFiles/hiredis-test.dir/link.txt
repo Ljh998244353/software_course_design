@@ -1,1 +1,0 @@
-/usr/bin/clang-20 -g -rdynamic "CMakeFiles/hiredis-test.dir/test.c.o" -o ../../bin/hiredis-test  ../../lib/libhiredisd.a 

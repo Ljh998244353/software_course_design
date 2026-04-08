@@ -1,1 +1,0 @@
-/usr/bin/clang++-20 -g "CMakeFiles/partial-claim-verifier.dir/partial-claim-verifier.cpp.o" -o ../../../bin/partial-claim-verifier  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

@@ -1,2 +1,0 @@
-/usr/bin/llvm-ar-20 qc ../../lib/libhiredisd.a CMakeFiles/hiredis.dir/alloc.c.o CMakeFiles/hiredis.dir/async.c.o CMakeFiles/hiredis.dir/hiredis.c.o CMakeFiles/hiredis.dir/net.c.o CMakeFiles/hiredis.dir/read.c.o CMakeFiles/hiredis.dir/sds.c.o CMakeFiles/hiredis.dir/sockcompat.c.o
-/usr/bin/llvm-ranlib-20 ../../lib/libhiredisd.a

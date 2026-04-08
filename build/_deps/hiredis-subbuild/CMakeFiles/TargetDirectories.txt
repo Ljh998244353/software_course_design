@@ -1,3 +1,0 @@
-/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/CMakeFiles/hiredis-populate.dir
-/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/CMakeFiles/edit_cache.dir
-/home/ljh/project/soft_course_design/build/_deps/hiredis-subbuild/CMakeFiles/rebuild_cache.dir
