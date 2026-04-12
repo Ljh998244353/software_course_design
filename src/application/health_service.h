@@ -14,4 +14,3 @@ common::http::ApiResponse BuildHealthResponse(
 );
 
 }  // namespace auction::application
-

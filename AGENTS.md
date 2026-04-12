@@ -17,11 +17,22 @@ WSL2 Ubuntu24.04 zsh
 - Only use emojis if explicitly requested
 - Stop and ask if anything is unclear or a step fails
 
+## 上下文恢复规则
+
+- 每次进入本仓库开始新一轮任务前，先读取 `docs/schedule.md`
+- 每次进入本仓库开始新一轮任务前，先读取 `docs/schedule.md` 中的“新会话固定恢复文本”章节，并按其中要求补齐上下文
+- 如果任务属于某个具体步骤 `SXX`，则在正式动手前，先读取：
+  - `docs/schedule.md`
+  - 当前步骤对应的模块说明文档
+  - 当前步骤对应的代码目录 `src/xxx/` 与 `tests/xxx/`
+- 如果 `schedule.md`、模块文档与代码现状不一致，优先以代码现状为准，并同步更新文档
+- 每次完成一个模块，更新docs/schedule.md，包括handoff模块。
+
 
 
 ## Project Structure & Module Organization
 
-This repository is currently documentation-first. Core project materials live in `docs/`:
+This repository is currently docs-heavy but no longer documentation-only. Core project materials live in `docs/`, and the executable skeleton already exists in `src/`, `tests/`, `config/`, and `scripts/`:
 
 - `docs/需求规格说明书.md`: functional requirements, roles, and business scope
 - `docs/系统概要设计报告.md`: architecture, module boundaries, and data model
@@ -30,13 +41,17 @@ Add new course-design artifacts under `docs/` unless they are executable source 
 
 ## Build, Test, and Development Commands
 
-There is no build pipeline or automated test suite in the repository yet. Current useful commands are:
+Current useful commands are:
 
 - `git status`: inspect local changes before editing or submitting
 - `rg --files docs`: list tracked documentation files quickly
 - `sed -n '1,120p' docs/需求规格说明书.md`: review a section from the terminal
+- `cmake -S . -B build`: configure the project
+- `cmake --build build`: build the project
+- `ctest --test-dir build --output-on-failure`: run the current smoke tests
+- `./build/bin/auction_app --check-config`: verify bootstrap/config loading
 
-If code is added, document the exact local run and test commands in this file and in the relevant module README.
+If new code is added, update the exact local run and test commands in this file and in the relevant module documentation.
 
 ## Coding Style & Naming Conventions
 
@@ -50,9 +65,9 @@ For future source code:
 
 ## Testing Guidelines
 
-No testing framework is configured yet. For documentation changes, verify terminology consistency across both design documents and check that diagrams, tables, and headings render correctly in Markdown preview.
+The repository currently has a CMake + CTest smoke-test baseline. For documentation changes, verify terminology consistency across both design documents and check that diagrams, tables, and headings render correctly in Markdown preview.
 
-If code is introduced, add a `tests/` directory, keep test names aligned to the module under test, and require contributors to document how to run those tests locally.
+If more code is introduced, keep test names aligned to the module under test, extend the existing `tests/` directory, and document how to run those tests locally.
 
 ## Commit & Pull Request Guidelines
 

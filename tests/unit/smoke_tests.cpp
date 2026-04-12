@@ -16,6 +16,10 @@ int main() {
 
     assert(config.server.port == 8080);
     assert(config.mysql.database == "auction_system");
+    assert(config.mysql.charset == "utf8mb4");
+    assert(config.mysql.connect_timeout_seconds == 3U);
+    assert(config.auth.token_secret == "change_me_auth_secret");
+    assert(config.auth.password_hash_rounds == 100000U);
     assert(config.ResolveUploadBasePath(project_root).string().find("data/uploads") != std::string::npos);
 
     const auto success = auction::common::http::ApiResponse::Success();
@@ -34,4 +38,3 @@ int main() {
     std::cout << "auction_smoke_tests passed\n";
     return 0;
 }
-

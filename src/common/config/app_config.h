@@ -17,6 +17,13 @@ struct MysqlConfig {
     std::string database{"auction_system"};
     std::string username{"auction_user"};
     std::string password{"change_me"};
+    std::string socket{};
+    std::string charset{"utf8mb4"};
+    unsigned int connect_timeout_seconds{3};
+
+    [[nodiscard]] std::filesystem::path ResolveSocketPath(
+        const std::filesystem::path& project_root
+    ) const;
 };
 
 struct RedisConfig {
@@ -32,6 +39,8 @@ struct StorageConfig {
 
 struct AuthConfig {
     int token_expire_minutes{120};
+    std::string token_secret{"change_me_auth_secret"};
+    unsigned int password_hash_rounds{100000};
 };
 
 struct LoggingConfig {
@@ -57,4 +66,3 @@ struct AppConfig {
 };
 
 }  // namespace auction::common::config
-

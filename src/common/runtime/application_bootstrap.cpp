@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "access/http/health_http.h"
+#include "application/database_health_service.h"
 #include "application/health_service.h"
 #include "common/config/config_loader.h"
 #include "common/logging/logger.h"
@@ -52,6 +53,14 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
         return 0;
     }
 
+    if (options.check_database_only) {
+        const auto database_response =
+            application::BuildDatabaseCheckResponse(app_config, kProjectRoot, config_path);
+        logging::Logger::Instance().Info("check-db mode completed");
+        std::cout << database_response.ToJsonString() << '\n';
+        return static_cast<int>(database_response.code) == 0 ? 0 : 1;
+    }
+
 #if AUCTION_HAS_DROGON
     access::http::RegisterHealthHttpRoutes(app_config, kProjectRoot, config_path);
     drogon::app().addListener(app_config.server.host, app_config.server.port);
@@ -72,4 +81,3 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
 }
 
 }  // namespace auction::common::runtime
-

@@ -12,6 +12,8 @@ auction::common::runtime::BootstrapOptions ParseArgs(int argc, char* argv[]) {
         const std::string_view arg(argv[index]);
         if (arg == "--check-config") {
             options.check_config_only = true;
+        } else if (arg == "--check-db") {
+            options.check_database_only = true;
         }
     }
     return options;
@@ -28,4 +30,3 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 }
-

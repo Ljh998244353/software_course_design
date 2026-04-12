@@ -34,6 +34,11 @@ common::http::ApiResponse BuildHealthResponse(
     payload["drogonEnabled"] = static_cast<bool>(AUCTION_HAS_DROGON);
     payload["server"]["host"] = config.server.host;
     payload["server"]["port"] = config.server.port;
+    payload["mysql"]["database"] = config.mysql.database;
+    payload["mysql"]["charset"] = config.mysql.charset;
+    payload["mysql"]["endpoint"] = config.mysql.socket.empty()
+        ? config.mysql.host + ":" + std::to_string(config.mysql.port)
+        : config.mysql.ResolveSocketPath(project_root).string();
     payload["configPath"] = config_path.string();
     payload["projectRoot"] = project_root.string();
     payload["uploadBasePath"] = config.ResolveUploadBasePath(project_root).string();
@@ -43,4 +48,3 @@ common::http::ApiResponse BuildHealthResponse(
 }
 
 }  // namespace auction::application
-

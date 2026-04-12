@@ -4,6 +4,7 @@ namespace auction::common::runtime {
 
 struct BootstrapOptions {
     bool check_config_only{false};
+    bool check_database_only{false};
 };
 
 class ApplicationBootstrap {
@@ -12,4 +13,3 @@ public:
 };
 
 }  // namespace auction::common::runtime
-

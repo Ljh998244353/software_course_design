@@ -58,7 +58,28 @@ int ReadInt(
     return root[section][key].asInt();
 }
 
+unsigned int ReadUInt(
+    const Json::Value& root,
+    const char* section,
+    const char* key,
+    unsigned int default_value
+) {
+    if (!root.isMember(section) || !root[section].isMember(key)) {
+        return default_value;
+    }
+    return root[section][key].asUInt();
+}
+
 }  // namespace
+
+std::filesystem::path MysqlConfig::ResolveSocketPath(
+    const std::filesystem::path& project_root
+) const {
+    if (socket.empty()) {
+        return {};
+    }
+    return ResolvePath(project_root, socket);
+}
 
 std::filesystem::path AppConfig::ResolveLogPath(const std::filesystem::path& project_root) const {
     return ResolvePath(project_root, logging.path);
@@ -113,6 +134,14 @@ AppConfig ConfigLoader::LoadFromFile(const std::filesystem::path& config_path) {
     config.mysql.database = ReadString(root, "mysql", "database", config.mysql.database);
     config.mysql.username = ReadString(root, "mysql", "username", config.mysql.username);
     config.mysql.password = ReadString(root, "mysql", "password", config.mysql.password);
+    config.mysql.socket = ReadString(root, "mysql", "socket", config.mysql.socket);
+    config.mysql.charset = ReadString(root, "mysql", "charset", config.mysql.charset);
+    config.mysql.connect_timeout_seconds = ReadUInt(
+        root,
+        "mysql",
+        "connect_timeout_seconds",
+        config.mysql.connect_timeout_seconds
+    );
 
     config.redis.host = ReadString(root, "redis", "host", config.redis.host);
     config.redis.port = ReadPort(root, "redis", "port", config.redis.port);
@@ -123,6 +152,14 @@ AppConfig ConfigLoader::LoadFromFile(const std::filesystem::path& config_path) {
 
     config.auth.token_expire_minutes =
         ReadInt(root, "auth", "token_expire_minutes", config.auth.token_expire_minutes);
+    config.auth.token_secret =
+        ReadString(root, "auth", "token_secret", config.auth.token_secret);
+    config.auth.password_hash_rounds = ReadUInt(
+        root,
+        "auth",
+        "password_hash_rounds",
+        config.auth.password_hash_rounds
+    );
 
     config.logging.level = ReadString(root, "logging", "level", config.logging.level);
     config.logging.path = ReadString(root, "logging", "path", config.logging.path);
@@ -131,4 +168,3 @@ AppConfig ConfigLoader::LoadFromFile(const std::filesystem::path& config_path) {
 }
 
 }  // namespace auction::common::config
-

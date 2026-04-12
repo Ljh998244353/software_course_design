@@ -37,7 +37,8 @@ struct ApiResponse {
 
     [[nodiscard]] static ApiResponse Failure(
         const errors::ErrorCode error_code,
-        std::string custom_message = {}
+        std::string custom_message = {},
+        Json::Value payload = Json::Value(Json::objectValue)
     ) {
         if (custom_message.empty()) {
             custom_message = std::string(errors::ErrorCodeMessage(error_code));
@@ -45,10 +46,9 @@ struct ApiResponse {
         return ApiResponse{
             .code = error_code,
             .message = std::move(custom_message),
-            .data = Json::Value(Json::objectValue),
+            .data = std::move(payload),
         };
     }
 };
 
 }  // namespace auction::common::http
-
