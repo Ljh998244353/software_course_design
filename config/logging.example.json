@@ -1,0 +1,18 @@
+{
+  "level": "info",
+  "path": "./logs/app.log",
+  "fields": [
+    "trace_id",
+    "user_id",
+    "role",
+    "module",
+    "event",
+    "auction_id",
+    "order_id",
+    "result",
+    "error_code",
+    "latency_ms",
+    "created_at"
+  ]
+}
+

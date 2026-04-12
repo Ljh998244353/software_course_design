@@ -8,8 +8,7 @@ WSL2 Ubuntu24.04 zsh
 
 ## 要求与限制
 ## 要求和限制
-- 任何需要sudo的命令，任何执行删除的指令需要询问我
-- 修改面积过大的操作需要询问我
+- 任何需要sudo的命令需要询问我
 - 你应该始终用中文回答我！
 - Do only what is asked; nothing more, nothing less
 - ALWAYS prefer editing existing files over creating new ones
