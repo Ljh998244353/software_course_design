@@ -38,12 +38,15 @@ set(AUCTION_CORE_SOURCES
     src/common/logging/logger.cpp
     src/common/runtime/application_bootstrap.cpp
     src/middleware/auth_middleware.cpp
+    src/modules/audit/item_audit_service.cpp
     src/modules/auth/auth_service.cpp
     src/modules/auth/auth_session_store.cpp
+    src/modules/item/item_service.cpp
     src/modules/auth/password_hasher.cpp
     src/modules/auth/token_codec.cpp
     src/repository/auth_user_repository.cpp
     src/repository/database_meta_repository.cpp
+    src/repository/item_repository.cpp
 )
 
 add_library(auction_core STATIC ${AUCTION_CORE_SOURCES})
@@ -79,13 +82,17 @@ target_link_libraries(auction_database_smoke_tests PRIVATE auction_core)
 add_executable(auction_auth_tests tests/auth/auth_flow_tests.cpp)
 target_link_libraries(auction_auth_tests PRIVATE auction_core)
 
+add_executable(auction_item_tests tests/item/item_flow_tests.cpp)
+target_link_libraries(auction_item_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
     add_test(NAME auction_database_smoke COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_db.sh)
     add_test(NAME auction_auth_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auth.sh)
+    add_test(NAME auction_item_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_item.sh)
     set_tests_properties(
-        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow
+        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow auction_item_flow
         PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()

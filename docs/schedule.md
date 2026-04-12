@@ -25,8 +25,8 @@
 
 因此，真实进度应认定为：
 
-- `S00-S04`：已完成
-- `S05-S07`：设计文档已完成，代码未落地，整体应视为 `进行中`
+- `S00-S05`：已完成
+- `S06-S07`：设计文档已完成，代码未落地，整体应视为 `进行中`
 - `S08-S15`：未开始
 
 ## 3. 步骤完成判定
@@ -47,17 +47,17 @@
 
 ## 4. 当前推荐执行顺序
 
-虽然 `S05-S07` 的设计文档已经存在，但这些步骤目前仍缺少真实代码实现；当前工程骨架、数据库基线和认证权限模块已经分别在 `S02`、`S03`、`S04` 落地完成，后续可以直接从 `S05` 继续推进。
+虽然 `S06-S07` 的设计文档已经存在，但这些步骤目前仍缺少真实代码实现；当前工程骨架、数据库基线、认证权限模块和物品审核模块已经分别在 `S02`、`S03`、`S04`、`S05` 落地完成，后续可以直接从 `S06` 继续推进。
 
 建议严格按以下顺序推进实际开发：
 
-1. `S05 -> S06 -> S07 -> S08`
+1. `S06 -> S07 -> S08`
 2. `S09 -> S10 -> S11`
 3. `S12 -> S13 -> S14 -> S15`
 
 当前最优先的实际下一步是：
 
-- `S05`：实现物品发布与审核模块代码，并复用当前认证与数据库基线
+- `S06`：实现拍卖管理模块代码，并复用当前认证、物品审核和数据库基线
 
 ## 5. Step-by-Step Schedule
 
@@ -68,7 +68,7 @@
 | S02 | 建立可编译、可启动的工程骨架 | 已有环境配置说明 | 创建 `CMakeLists.txt`、`src/main.cpp`、基础目录结构、配置加载、统一响应模型、错误码基线、日志初始化、最小启动入口 | 本地可完成配置和编译，服务可启动，至少完成一次工程冒烟验证 | `CMakeLists.txt`、`src/`、`config/`、`scripts/`、`tests/` | [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md) | 已完成 | 已落地工程骨架并通过 `cmake`、构建和 `ctest` 验证；本机未安装 Drogon，当前默认运行在 bootstrap fallback 模式 |
 | S03 | 落地数据库初始化脚本与持久层基础能力 | 已有数据库设计说明 | 创建建表脚本、索引脚本、种子数据脚本、数据库连接配置、Repository 基础封装、数据库连通验证 | MySQL 可初始化核心表，应用可连库，至少有数据库冒烟验证 | `sql/schema.sql`、`sql/seed.sql`、`src/repository/`、`src/common/db/` | [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md) | 已完成 | 已落地 15 张核心表、基础种子数据、MySQL C API 封装、Repository 基类、`--check-db` 和数据库冒烟测试 |
 | S04 | 实现认证与权限模块代码 | 已有认证与权限模块设计文档 | 实现用户注册登录、密码哈希、Token 鉴权、中间件、RBAC、账号状态校验、认证相关测试 | 用户可注册/登录，受保护接口可鉴权，最小权限测试通过 | `src/modules/auth/`、`src/middleware/`、`tests/auth/` | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) | 已完成 | 已落地 MySQL 用户仓储、`SHA-512 crypt` 密码哈希、HMAC Token、进程内会话存储、鉴权中间件、管理员状态管理和认证自动化测试 |
-| S05 | 实现物品发布与审核模块代码 | 已有物品与审核模块设计文档 | 实现拍品 CRUD、图片元数据管理、提交审核、审核流转、审核日志、最小模块测试 | 卖家可提交拍品，管理员可审核，状态流转和日志落库可验证 | `src/modules/item/`、`src/modules/audit/`、`tests/item/` | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) | 进行中 | 目前只有状态机和接口设计，没有实际控制器、服务和持久化代码 |
+| S05 | 实现物品发布与审核模块代码 | 已有物品与审核模块设计文档 | 实现拍品 CRUD、图片元数据管理、提交审核、审核流转、审核日志、最小模块测试 | 卖家可提交拍品，管理员可审核，状态流转和日志落库可验证 | `src/modules/item/`、`src/modules/audit/`、`tests/item/` | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) | 已完成 | 已落地 `ItemService`、`ItemAuditService`、`ItemRepository` 和自动化测试，完成草稿、图片元数据、提交审核、驳回/通过和审核日志闭环 |
 | S06 | 实现拍卖管理模块代码 | 已有拍卖管理模块设计文档 | 实现活动创建、修改、取消、查询、开始调度、结束调度、活动状态切换、最小模块测试 | 管理员可创建活动，系统可按时间切换状态，拍卖和拍品状态协同可验证 | `src/modules/auction/`、`src/jobs/`、`tests/auction/` | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) | 进行中 | 目前只有状态机、接口和调度规则设计，没有真实活动代码 |
 | S07 | 实现竞价与实时通知模块代码 | 已有竞价与实时通知模块设计文档 | 实现出价接口、行级锁事务、幂等键、延时保护、竞价历史、Redis 热点缓存、WebSocket 推送、最小并发测试 | 并发出价下最高价一致，延时保护生效，通知失败不回滚事务 | `src/modules/bid/`、`src/modules/notification/`、`src/ws/`、`tests/bid/` | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) | 进行中 | 目前只有事务边界和接口设计，没有真实竞价代码，这是当前最高风险代码步骤 |
 | S08 | 实现订单与支付结算模块代码 | 拍卖与竞价设计已具备输入条件 | 实现结束后生成订单、支付发起、支付回调、幂等处理、超时关闭、审计日志、最小模块测试 | 一场拍卖最多生成一笔订单，重复回调不重复记账 | `src/modules/order/`、`src/modules/payment/`、`tests/order/`、`tests/payment/` | `docs/订单与支付模块说明.md` | 未开始 | 需先完成 `S07` 的最高价和结束态交接 |
@@ -84,11 +84,11 @@
 
 为了方便直接分配给 agent 执行，后续每一步建议拆成“一个模块、一个明确目标、一个明确代码目录”的粒度。
 
-按当前已确认进度，下一阶段应从 `S05` 开始拆分执行。
+按当前已确认进度，下一阶段应从 `S06` 开始拆分执行。
 
 例如：
 
-- `S05-S07` 每一步都应优先完成控制器、服务、仓储、测试四件套，再更新模块文档
+- `S06-S07` 每一步都应优先完成控制器、服务、仓储、测试四件套，再更新模块文档
 - 若某一步尚未形成最小可验证闭环，则继续保持 `进行中`，不要提前改成 `已完成`
 - 已完成步骤也要继续记录验证命令和 handoff，避免上下文压缩后丢失真实进度
 
@@ -101,12 +101,13 @@
 | 2026-04-12 | S02 | 已完成 | 已落地 `CMakeLists.txt`、`src/`、`tests/`、配置模板、日志与错误码基础代码、启动脚本和冒烟测试；已完成 `cmake`、构建与 `ctest` 验证 | [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt) | [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md) |
 | 2026-04-12 | S03 | 已完成 | 已落地 `sql/schema.sql`、`sql/seed.sql`、`src/common/db/`、`src/repository/`、`tests/integration/database_smoke_tests.cpp` 和 `scripts/test_db.sh`；已完成本地 MySQL schema/seed/连库验证 | [sql](/home/ljh/project/soft_course_design/sql) | [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md) |
 | 2026-04-12 | S04 | 已完成 | 已落地 `src/modules/auth/`、`src/middleware/`、`tests/auth/auth_flow_tests.cpp` 和 `scripts/test_auth.sh`；已完成注册、登录、登出、Token 鉴权、RBAC 和管理员冻结/禁用闭环验证 | [auth_service.cpp](/home/ljh/project/soft_course_design/src/modules/auth/auth_service.cpp) | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) |
-| 2026-04-12 | S05 | 进行中 | 已有物品与审核模块说明，但仓库中尚无物品与审核实现代码 | 待创建 `src/modules/item/`、`src/modules/audit/` | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) |
+| 2026-04-12 | S05 | 已完成 | 已落地 `src/modules/item/`、`src/modules/audit/`、`src/repository/item_repository.*`、`tests/item/item_flow_tests.cpp` 和 `scripts/test_item.sh`；已完成草稿创建、图片元数据管理、提交审核、管理员驳回/通过、审核日志和驳回后重提闭环验证 | [item_service.cpp](/home/ljh/project/soft_course_design/src/modules/item/item_service.cpp) | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) |
 | 2026-04-12 | S06 | 进行中 | 已有拍卖管理模块说明，但仓库中尚无活动与调度实现代码 | 待创建 `src/modules/auction/`、`src/jobs/` | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) |
 | 2026-04-12 | S07 | 进行中 | 已有竞价与实时通知模块说明，但仓库中尚无竞价、缓存和 WebSocket 实现代码 | 待创建 `src/modules/bid/`、`src/modules/notification/`、`src/ws/` | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) |
 | 2026-04-12 | S02-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`ctest --test-dir build --output-on-failure`，2 个测试全部通过 | [build](/home/ljh/project/soft_course_design/build) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-04-12 | S03-VERIFY | 已完成 | 顺序执行 `ctest --test-dir build --output-on-failure -E auction_database_smoke`、`ctest --test-dir build --output-on-failure -R auction_database_smoke`、`AUCTION_APP_CONFIG=build/test_config/app.mysql.test.json ./build/bin/auction_app --check-db`；数据库冒烟测试通过，`--check-db` 返回 15 张表、1 个管理员和 4 个基础分类 | [test_db.sh](/home/ljh/project/soft_course_design/scripts/test_db.sh) | [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md) |
 | 2026-04-12 | S04-VERIFY | 已完成 | 顺序执行 `ctest --test-dir build --output-on-failure`，4 个测试全部通过；其中 `auction_auth_flow` 已覆盖注册成功、重复账号、密码错误、Token 缺失、Token 过期、RBAC、冻结/禁用和登出失效 | [auth_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/auth/auth_flow_tests.cpp) | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) |
+| 2026-04-12 | S05-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_item.sh`、`ctest --test-dir build --output-on-failure`；`auction_item_flow` 已覆盖草稿创建、图片元数据管理、提交审核、驳回原因校验、驳回后回退 `DRAFT`、再次提交和审核通过，当前 `ctest` 5/5 全部通过 | [item_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/item/item_flow_tests.cpp) | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) |
 | 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
@@ -126,117 +127,107 @@
 ## 模块 Handoff
 
 ### 1. 基本信息
-- Step ID: S05
-- 模块名称: 物品发布与审核模块
+- Step ID: S06
+- 模块名称: 拍卖管理模块
 - 当前状态: 进行中
-- 对应文档: [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)
-- 对应代码目录: `src/modules/item/` `src/modules/audit/` `tests/item/`
-- 已有可复用基础目录: `src/common/db/` `src/repository/` `src/modules/auth/` `src/middleware/`
+- 对应文档: [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md)
+- 对应代码目录: `src/modules/auction/` `tests/auction/`
+- 已有可复用基础目录: `src/common/db/` `src/repository/` `src/modules/auth/` `src/modules/item/` `src/modules/audit/` `src/middleware/`
 
 ### 2. 本次实际完成
 - 已完成功能:
-  - `S00` 需求基线已确认
-  - `S01` 架构基线已确认
-  - `S02` 工程骨架已落地
-  - `S03` 数据库基线已落地
-  - `S04` 认证与权限模块已落地
-  - 已落地 `src/modules/auth/auth_service.*`
-  - 已落地 `src/modules/auth/password_hasher.*`
-  - 已落地 `src/modules/auth/token_codec.*`
-  - 已落地 `src/modules/auth/auth_session_store.*`
-  - 已落地 `src/repository/auth_user_repository.*`
-  - 已落地 `src/middleware/auth_middleware.*`
-  - 已落地 `tests/auth/auth_flow_tests.cpp` 与 `scripts/test_auth.sh`
-  - 已完成注册、登录、登出、Token 鉴权、RBAC、管理员冻结/禁用和会话失效验证
+  - `S00-S05` 已完成
+  - 已落地 `src/modules/item/item_service.*`
+  - 已落地 `src/modules/audit/item_audit_service.*`
+  - 已落地 `src/repository/item_repository.*`
+  - 已落地 `tests/item/item_flow_tests.cpp` 与 `scripts/test_item.sh`
+  - 已完成草稿创建、图片元数据管理、提交审核、待审列表、管理员驳回/通过、审核日志和驳回后重提闭环验证
 - 实际修改文件:
-  - [auth_service.cpp](/home/ljh/project/soft_course_design/src/modules/auth/auth_service.cpp)
-  - [password_hasher.cpp](/home/ljh/project/soft_course_design/src/modules/auth/password_hasher.cpp)
-  - [token_codec.cpp](/home/ljh/project/soft_course_design/src/modules/auth/token_codec.cpp)
-  - [auth_session_store.cpp](/home/ljh/project/soft_course_design/src/modules/auth/auth_session_store.cpp)
-  - [auth_user_repository.cpp](/home/ljh/project/soft_course_design/src/repository/auth_user_repository.cpp)
-  - [auth_middleware.cpp](/home/ljh/project/soft_course_design/src/middleware/auth_middleware.cpp)
-  - [auth_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/auth/auth_flow_tests.cpp)
-  - [test_auth.sh](/home/ljh/project/soft_course_design/scripts/test_auth.sh)
-  - [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md)
+  - [item_service.cpp](/home/ljh/project/soft_course_design/src/modules/item/item_service.cpp)
+  - [item_audit_service.cpp](/home/ljh/project/soft_course_design/src/modules/audit/item_audit_service.cpp)
+  - [item_repository.cpp](/home/ljh/project/soft_course_design/src/repository/item_repository.cpp)
+  - [item_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/item/item_flow_tests.cpp)
+  - [test_item.sh](/home/ljh/project/soft_course_design/scripts/test_item.sh)
+  - [setup_local_mysql.sh](/home/ljh/project/soft_course_design/scripts/db/setup_local_mysql.sh)
+  - [error_code.h](/home/ljh/project/soft_course_design/src/common/errors/error_code.h)
+  - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
+  - [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 未完成功能:
-  - 物品发布、编辑、图片元数据管理
-  - 提交审核、审核流转和审核日志
-  - 物品与审核模块测试
+  - 拍卖活动创建、修改、取消、查询
+  - 开始/结束调度与活动状态切换
+  - 拍卖管理模块测试
 - 明确不在本步处理的内容:
-  - 拍卖、竞价、订单等后续业务模块实现
+  - 竞价、订单、支付等后续业务模块实现
 
 ### 3. 关键设计决定
-- 决定 1: `S02` 先保证工程骨架、构建、配置、日志、测试入口真实落地，再继续数据库和业务模块
-- 原因: 当前仓库原本只有文档，没有任何可执行工程骨架，直接进入业务模块会导致后续步骤无法验证
+- 决定 1: `S05` 继续复用 `AuthMiddleware`，在服务层直接消费 Bearer Token
+- 原因: 当前本机未接入 Drogon HTTP 路由，但仍需先把登录态和 RBAC 真实跑通
 - 影响范围:
-  - `S03-S15` 都基于当前骨架继续开发
+  - `S06` 可继续沿用“service + middleware”的最小闭环模式
+  - 后续 HTTP 接入只需做薄路由适配
 
-- 决定 2: Drogon 采用“检测到则启用，否则 fallback”的可选集成策略
-- 原因: 当前本机未安装 Drogon，但 `S02` 仍需先完成可构建和可验证骨架
+- 决定 2: 图片能力当前仅落地 `image_url` 元数据管理，不实现真实文件上传
+- 原因: 当前 schema 只持久化元数据，`S05` 优先保证拍品状态流转和审核闭环
 - 影响范围:
-  - 当前可通过 bootstrap 模式完成配置校验与测试
-  - 后续安装 Drogon 后可直接启用 HTTP 模式和 `/healthz`
+  - 后续接入对象存储或本地上传时，应复用当前 `ItemService` 的校验和事务边界
 
-- 决定 3: `S03` 直接接入 MySQL C API，并用仓库内用户态本地 MySQL 做可复现验证
-- 原因: 本机具备 `mysqlclient` 与 `mysqld`，但现有系统库账号不可直接登录；用 Unix socket 启动本地测试库可以保证 `schema/seed/连库` 全链路真实可验证
+- 决定 3: 被驳回拍品在卖家再次编辑或增删图片时自动回退到 `DRAFT`
+- 原因: 对齐模块文档里的“修改后重提”业务流，避免 `REJECTED` 状态下出现不可再次提交的中间态
 - 影响范围:
-  - 后续模块可直接复用 `src/common/db/` 和 `src/repository/`
-  - 数据库冒烟验证统一走 `scripts/test_db.sh`
+  - `S06` 只需消费 `READY_FOR_AUCTION` 拍品，不必额外兼容驳回态变更细节
 
-- 决定 4: `S04` 采用“HMAC 签名 Token + 进程内会话存储 + MySQL 用户状态校验”的当前可运行方案
-- 原因: 当前仓库尚未落地 Redis，但 `S04` 需要先完成可运行的注册登录、登出、会话失效和 RBAC 闭环
+- 决定 4: 本地测试 MySQL 的运行时 socket 改为 `mysql-runtime.sock`
+- 原因: 旧固定 socket 在当前环境下可能残留 `.lock` 文件，导致 `mysqld` 无法重新绑定
 - 影响范围:
-  - 当前单进程测试和演示可直接运行
-  - 后续接入 Redis 时，只需替换 `AuthSessionStore` 实现，不必重写认证主流程
-
-- 决定 5: `S04` 密码哈希统一采用 `SHA-512 crypt`，兼容当前 `seed.sql` 的管理员和客服初始账号
-- 原因: `S03` 已生成的种子账号密码摘要就是 `$6$` 格式；继续沿用可避免重写种子密码和登录验证链路
-- 影响范围:
-  - 当前管理员 `admin` 和客服 `support` 可直接用于认证测试
-  - 后续如需升级到 PBKDF2/Argon2，可在保持 `VerifyPassword` 兼容旧哈希的前提下演进
+  - `scripts/test_db.sh`、`scripts/test_auth.sh`、`scripts/test_item.sh` 都继续复用同一套测试库配置生成逻辑
 
 ### 4. 验证结果
 - 执行命令:
   - `cmake -S . -B build`
   - `cmake --build build`
+  - `scripts/test_item.sh`
   - `ctest --test-dir build --output-on-failure`
 - 结果:
   - 配置成功
   - 构建成功
-  - 全部测试 4/4 通过
+  - `auction_item_flow_tests passed`
+  - 全部测试 5/5 通过
   - 数据库冒烟测试通过
   - 认证测试通过，已覆盖注册成功、重复账号、密码错误、Token 缺失、Token 过期、RBAC、冻结/禁用和登出失效
+  - 物品与审核测试通过，已覆盖草稿创建、图片元数据管理、提交审核、驳回原因校验、驳回后回退 `DRAFT`、再次提交和审核通过
 - 未执行的测试:
   - Drogon HTTP 路由真实启动测试
   - Redis 连通测试
 - 原因:
   - 本机当前未安装 Drogon
-  - `S04` 当前使用进程内会话存储，不依赖 Redis
+  - 当前 `S05` 不依赖 Redis，图片文件本体上传也尚未接入
 
 ### 5. 当前风险/阻塞
 - 风险 1: Drogon 目前不在本机环境里，HTTP 模式尚未实际验证
-- 风险 2: 当前认证会话存储是单进程内存实现，只适合当前课程设计单机验证
+- 风险 2: 当前图片能力只管理元数据，不包含真实文件上传与清理
 - 阻塞项:
-  - 无硬阻塞，可直接继续 `S05`
+  - 无硬阻塞，可直接继续 `S06`
 - 需要注意的坑:
   - 不能再把“仅文档完成”误记成“模块已完成”
-  - `S05` 以后的写路径继续坚持预编译 SQL，不要回退到字符串拼接
-  - `S05` 需要直接复用当前 `AuthMiddleware` 的登录态和角色校验，不要在物品模块重复造一套鉴权逻辑
+  - `S06` 的活动创建只能消费 `READY_FOR_AUCTION` 拍品
+  - 后续写路径继续坚持预编译 SQL，不要回退到字符串拼接
+  - 不要绕过当前 `ItemService` / `ItemAuditService` 已有状态约束直接写 `item` 表
   - 后续每一步都要同步写入代码路径、测试结果和下一步
 
 ### 6. 下一步
-- 下一步 Step ID: S05
-- 下一步目标: 实现拍品 CRUD、提交审核、审核流转、审核日志和最小模块测试
+- 下一步 Step ID: S06
+- 下一步目标: 实现活动创建、修改、取消、查询、开始/结束调度和活动状态切换
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md)
   - [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)
-  - [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md)
   - [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md)
+  - `src/modules/item/`
+  - `src/modules/audit/`
   - `src/common/db/`
   - `src/repository/`
   - `src/modules/auth/`
-  - `src/common/config/`
 
 ## 10. 模块 Handoff 模板
 
@@ -314,17 +305,18 @@
 
 请先读取并对齐以下内容后再继续：
 1. docs/schedule.md
-2. docs/物品与审核模块说明.md
-3. 对应代码目录 src/common/db/、src/repository/、src/modules/auth/、src/common/config/
+2. docs/拍卖管理模块说明.md
+3. 对应代码目录 src/common/db/、src/repository/、src/modules/item/、src/modules/audit/
 
-当前正在做：S05
+当前正在做：S06
 当前状态：进行中
 
 本次需要你继续：
-- 开始 `S05`
-- 先实现拍品 CRUD、提交审核、审核流转、审核日志和最小模块测试
-- 复用 `src/common/db/`、`src/repository/`、`src/modules/auth/` 和现有 `item`、`item_image`、`item_audit_log` 表
-- 完成后更新 `docs/物品与审核模块说明.md` 与 `docs/schedule.md`
+- 开始 `S06`
+- 先实现活动创建、修改、取消、查询、开始/结束调度和最小模块测试
+- 复用 `src/common/db/`、`src/repository/`、`src/modules/item/`、`src/modules/audit/` 和现有 `auction`、`item` 表
+- 仅允许 `READY_FOR_AUCTION` 拍品创建拍卖活动
+- 完成后更新 `docs/拍卖管理模块说明.md` 与 `docs/schedule.md`
 
 注意约束：
 - 以实际代码落地为准，不以仅写文档算完成

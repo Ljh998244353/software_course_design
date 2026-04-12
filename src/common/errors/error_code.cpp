@@ -30,6 +30,26 @@ std::string_view ErrorCodeMessage(const ErrorCode error_code) {
             return "auth permission denied";
         case ErrorCode::kAuthStatusTransitionInvalid:
             return "auth status transition invalid";
+        case ErrorCode::kItemNotFound:
+            return "item not found";
+        case ErrorCode::kItemOwnerMismatch:
+            return "item owner mismatch";
+        case ErrorCode::kItemEditStatusInvalid:
+            return "item edit status invalid";
+        case ErrorCode::kItemSubmitStatusInvalid:
+            return "item submit status invalid";
+        case ErrorCode::kItemAuditStatusInvalid:
+            return "item audit status invalid";
+        case ErrorCode::kItemCategoryInvalid:
+            return "item category invalid";
+        case ErrorCode::kItemImageUploadFailed:
+            return "item image upload failed";
+        case ErrorCode::kItemImageInvalid:
+            return "item image invalid";
+        case ErrorCode::kItemAuditReasonRequired:
+            return "item audit reason required";
+        case ErrorCode::kItemAuditResultInvalid:
+            return "item audit result invalid";
         case ErrorCode::kAuctionNotFound:
             return "auction not found";
         case ErrorCode::kBidConflict:
