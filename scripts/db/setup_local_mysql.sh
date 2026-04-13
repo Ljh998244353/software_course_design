@@ -22,6 +22,12 @@ if [[ ! -d "${DATADIR}/mysql" ]]; then
 fi
 
 if ! mysqladmin --socket="${SOCKET_FILE}" -uroot ping >/dev/null 2>&1; then
+    rm -f \
+        "${SOCKET_FILE}" \
+        "${SOCKET_FILE}.lock" \
+        "${PID_FILE}" \
+        "${MYSQL_ROOT_DIR}/mysql.sock.lock"
+
     mysqld \
         --datadir="${DATADIR}" \
         --basedir=/usr \

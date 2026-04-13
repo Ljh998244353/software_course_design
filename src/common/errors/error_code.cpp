@@ -52,6 +52,34 @@ std::string_view ErrorCodeMessage(const ErrorCode error_code) {
             return "item audit result invalid";
         case ErrorCode::kAuctionNotFound:
             return "auction not found";
+        case ErrorCode::kAuctionItemNotFound:
+            return "auction item not found";
+        case ErrorCode::kAuctionItemStatusInvalid:
+            return "auction item status invalid";
+        case ErrorCode::kAuctionStartTimeInvalid:
+            return "auction start time invalid";
+        case ErrorCode::kAuctionEndTimeInvalid:
+            return "auction end time invalid";
+        case ErrorCode::kAuctionStartPriceInvalid:
+            return "auction start price invalid";
+        case ErrorCode::kAuctionBidStepInvalid:
+            return "auction bid step invalid";
+        case ErrorCode::kAuctionAntiSnipingInvalid:
+            return "auction anti sniping invalid";
+        case ErrorCode::kAuctionDuplicateActiveByItem:
+            return "auction duplicate active by item";
+        case ErrorCode::kAuctionUpdateStatusInvalid:
+            return "auction update status invalid";
+        case ErrorCode::kAuctionCancelStatusInvalid:
+            return "auction cancel status invalid";
+        case ErrorCode::kAuctionStartStatusInvalid:
+            return "auction start status invalid";
+        case ErrorCode::kAuctionFinishStatusInvalid:
+            return "auction finish status invalid";
+        case ErrorCode::kAuctionStatusConflict:
+            return "auction status conflict";
+        case ErrorCode::kAuctionRelatedItemStatusInvalid:
+            return "auction related item status invalid";
         case ErrorCode::kBidConflict:
             return "bid conflict";
         case ErrorCode::kInternalError:
