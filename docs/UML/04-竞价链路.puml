@@ -1,0 +1,18 @@
+@startuml
+actor 买家 as Buyer
+participant "出价接口" as BidApi
+participant "鉴权" as Auth
+participant "竞价服务" as BidSvc
+database "Redis" as Cache
+database "MySQL" as DB
+participant "通知服务" as Notify
+
+Buyer -> BidApi : 提交出价
+BidApi -> Auth : 校验身份
+Auth -> BidSvc : 调用出价能力
+BidSvc -> Cache : 读取热点活动快照
+BidSvc -> DB : 事务校验并更新
+BidSvc -> Cache : 刷新缓存
+BidSvc -> Notify : 发送价格变更事件
+Notify -> Buyer : 推送最新价格
+@enduml

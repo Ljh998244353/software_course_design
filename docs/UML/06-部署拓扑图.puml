@@ -1,0 +1,18 @@
+@startuml
+left to right direction
+
+node "浏览器" as Client
+node "Nginx" as Nginx
+node "在线拍卖平台 C++ 应用" as App
+database "MySQL" as MySQL
+database "Redis" as Redis
+node "本地文件或对象存储" as Storage
+cloud "第三方支付" as Pay
+
+Client --> Nginx
+Nginx --> App
+App --> MySQL
+App --> Redis
+App --> Storage
+App --> Pay
+@enduml

@@ -1,0 +1,23 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor 买家 as Buyer
+actor 卖家 as Seller
+actor 管理员 as Admin
+actor "运维/客服" as Support
+rectangle "在线拍卖平台" as System
+rectangle "第三方支付服务" as Pay
+rectangle "图片或对象存储" as Storage
+rectangle "邮件或短信服务" as Notify
+
+Buyer --> System : 浏览活动/出价/支付/评价
+Seller --> System : 发布物品/查看审核/确认交易/评价
+Admin --> System : 审核物品/配置活动/查看报表/处理异常
+Support --> System : 查看日志/协助处理纠纷
+
+System --> Pay : 支付下单/支付查询
+Pay --> System : 支付回调
+System --> Storage : 上传图片/读取图片
+System --> Notify : 发送邮件或短信
+@enduml

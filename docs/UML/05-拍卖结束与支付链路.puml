@@ -1,0 +1,19 @@
+@startuml
+participant "调度任务" as Job
+participant "拍卖服务" as AuctionSvc
+participant "订单服务" as OrderSvc
+participant "支付服务" as PaymentSvc
+database "MySQL" as DB
+participant "第三方支付" as Pay
+participant "通知服务" as Notify
+
+Job -> AuctionSvc : 扫描到期活动
+AuctionSvc -> DB : 关闭活动并判定结果
+AuctionSvc -> OrderSvc : 触发生成订单
+OrderSvc -> DB : 生成待支付订单
+OrderSvc -> Notify : 发送待支付通知
+PaymentSvc -> Pay : 发起支付
+Pay -> PaymentSvc : 支付回调
+PaymentSvc -> DB : 幂等更新支付和订单状态
+PaymentSvc -> Notify : 发送支付结果通知
+@enduml

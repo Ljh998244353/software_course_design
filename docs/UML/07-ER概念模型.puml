@@ -1,0 +1,114 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "USER" as USER {
+    * user_id : bigint <<PK>>
+    --
+    username : varchar
+    password_hash : varchar
+    phone : varchar
+    role : varchar
+    status : varchar
+    created_at : datetime
+}
+
+entity "ITEM" as ITEM {
+    * item_id : bigint <<PK>>
+    --
+    seller_id : bigint <<FK>>
+    title : varchar
+    description : text
+    start_price : decimal
+    category_id : bigint
+    audit_status : varchar
+    reject_reason : varchar
+    created_at : datetime
+}
+
+entity "ITEM_IMAGE" as ITEM_IMAGE {
+    * image_id : bigint <<PK>>
+    --
+    item_id : bigint <<FK>>
+    image_url : varchar
+    sort_no : int
+}
+
+entity "AUCTION" as AUCTION {
+    * auction_id : bigint <<PK>>
+    --
+    item_id : bigint <<FK>>
+    start_time : datetime
+    end_time : datetime
+    start_price : decimal
+    current_price : decimal
+    bid_step : decimal
+    status : varchar
+    highest_bidder_id : bigint
+    extend_seconds : int
+}
+
+entity "BID_RECORD" as BID_RECORD {
+    * bid_id : bigint <<PK>>
+    --
+    auction_id : bigint <<FK>>
+    bidder_id : bigint <<FK>>
+    bid_amount : decimal
+    bid_time : datetime
+    bid_status : varchar
+}
+
+entity "ORDER_INFO" as ORDER_INFO {
+    * order_id : bigint <<PK>>
+    --
+    auction_id : bigint <<FK>>
+    buyer_id : bigint <<FK>>
+    seller_id : bigint <<FK>>
+    final_amount : decimal
+    order_status : varchar
+    created_at : datetime
+}
+
+entity "PAYMENT_RECORD" as PAYMENT_RECORD {
+    * payment_id : bigint <<PK>>
+    --
+    order_id : bigint <<FK>>
+    pay_channel : varchar
+    transaction_no : varchar
+    pay_amount : decimal
+    pay_status : varchar
+    paid_at : datetime
+}
+
+entity "REVIEW" as REVIEW {
+    * review_id : bigint <<PK>>
+    --
+    order_id : bigint <<FK>>
+    reviewer_id : bigint <<FK>>
+    reviewee_id : bigint <<FK>>
+    rating : int
+    content : varchar
+    created_at : datetime
+}
+
+entity "NOTIFICATION" as NOTIFICATION {
+    * notice_id : bigint <<PK>>
+    --
+    user_id : bigint <<FK>>
+    notice_type : varchar
+    content : varchar
+    read_flag : varchar
+    created_at : datetime
+}
+
+USER ||--o{ ITEM : publishes
+ITEM ||--o{ ITEM_IMAGE : has
+ITEM ||--o| AUCTION : enters
+USER ||--o{ BID_RECORD : places
+AUCTION ||--o{ BID_RECORD : contains
+AUCTION ||--o| ORDER_INFO : generates
+ORDER_INFO ||--o| PAYMENT_RECORD : has
+ORDER_INFO ||--o{ REVIEW : has
+USER ||--o{ REVIEW : writes
+USER ||--o{ NOTIFICATION : receives
+@enduml

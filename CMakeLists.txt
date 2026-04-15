@@ -43,13 +43,19 @@ set(AUCTION_CORE_SOURCES
     src/modules/auction/auction_service.cpp
     src/modules/auth/auth_service.cpp
     src/modules/auth/auth_session_store.cpp
+    src/modules/bid/bid_cache_store.cpp
+    src/modules/bid/bid_service.cpp
     src/modules/item/item_service.cpp
+    src/modules/notification/notification_service.cpp
     src/modules/auth/password_hasher.cpp
     src/modules/auth/token_codec.cpp
     src/repository/auction_repository.cpp
     src/repository/auth_user_repository.cpp
+    src/repository/bid_repository.cpp
     src/repository/database_meta_repository.cpp
     src/repository/item_repository.cpp
+    src/repository/notification_repository.cpp
+    src/ws/auction_event_gateway.cpp
 )
 
 add_library(auction_core STATIC ${AUCTION_CORE_SOURCES})
@@ -91,6 +97,9 @@ target_link_libraries(auction_item_tests PRIVATE auction_core)
 add_executable(auction_auction_tests tests/auction/auction_flow_tests.cpp)
 target_link_libraries(auction_auction_tests PRIVATE auction_core)
 
+add_executable(auction_bid_tests tests/bid/bid_flow_tests.cpp)
+target_link_libraries(auction_bid_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
@@ -98,8 +107,9 @@ if(BUILD_TESTING)
     add_test(NAME auction_auth_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auth.sh)
     add_test(NAME auction_item_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_item.sh)
     add_test(NAME auction_auction_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auction.sh)
+    add_test(NAME auction_bid_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_bid.sh)
     set_tests_properties(
-        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow auction_item_flow auction_auction_flow
+        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow auction_item_flow auction_auction_flow auction_bid_flow
         PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()

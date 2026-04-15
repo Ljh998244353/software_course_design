@@ -1,0 +1,58 @@
+@startuml
+top to bottom direction
+skinparam packageStyle rectangle
+
+actor "浏览器前台 / 管理后台" as Client
+node "Nginx 反向代理" as Nginx
+
+package "在线拍卖平台应用" as App {
+    package "接入层" as Access {
+        component "REST API" as Rest
+        component "WebSocket Gateway" as Ws
+        component "管理接口" as AdminApi
+    }
+
+    package "应用层" as Application {
+        component "认证与权限应用服务" as AuthApp
+        component "物品与审核应用服务" as ItemApp
+        component "拍卖管理应用服务" as AuctionApp
+        component "竞价应用服务" as BidApp
+        component "订单应用服务" as OrderApp
+        component "支付应用服务" as PaymentApp
+        component "评价应用服务" as ReviewApp
+        component "统计应用服务" as StatsApp
+        component "通知应用服务" as NotifyApp
+        component "调度与补偿任务" as JobApp
+    }
+
+    package "领域层" as Domain {
+        component "用户域" as UserDomain
+        component "物品域" as ItemDomain
+        component "拍卖域" as AuctionDomain
+        component "竞价域" as BidDomain
+        component "订单域" as OrderDomain
+        component "支付域" as PaymentDomain
+        component "评价域" as ReviewDomain
+    }
+
+    package "基础设施层" as Infra {
+        component "MySQL Repository" as Repo
+        component "Redis Cache" as Cache
+        component "文件存储适配器" as FileAdapter
+        component "支付适配器" as PayAdapter
+        component "日志与审计" as LogAudit
+    }
+}
+
+Client --> Nginx
+Nginx --> Rest
+Nginx --> Ws
+Nginx --> AdminApi
+
+Rest --> Application
+Ws --> NotifyApp
+AdminApi --> Application
+
+Application --> Domain
+Application --> Infra
+@enduml

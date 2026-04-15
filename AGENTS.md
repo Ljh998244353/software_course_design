@@ -69,13 +69,3 @@ The repository currently has a CMake + CTest smoke-test baseline. For documentat
 
 If more code is introduced, keep test names aligned to the module under test, extend the existing `tests/` directory, and document how to run those tests locally.
 
-## Commit & Pull Request Guidelines
-
-Git history is minimal (`first commit`, `AI v.0.1`), so prefer short, explicit commit subjects such as `docs: refine auction role definitions`. Keep each commit focused on one logical change.
-
-Pull requests should include:
-
-- a brief summary of what changed
-- the affected files or sections
-- screenshots only when diagram rendering or formatted output changed
-- links to related task or course requirements when applicable

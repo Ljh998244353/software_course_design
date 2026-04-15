@@ -1,0 +1,19 @@
+@startuml
+actor 卖家 as Seller
+actor 管理员 as Admin
+participant "物品接口" as ItemApi
+participant "物品与审核服务" as ItemSvc
+database "MySQL" as DB
+collections "文件存储" as Storage
+participant "通知服务" as Notify
+
+Seller -> ItemApi : 提交物品信息与图片
+ItemApi -> ItemSvc : 保存拍品
+ItemSvc -> Storage : 存储图片
+ItemSvc -> DB : 写入物品与图片元数据
+Admin -> ItemApi : 审核拍品
+ItemApi -> ItemSvc : 提交审核请求
+ItemSvc -> DB : 写审核结果与日志
+ItemSvc -> Notify : 发送审核结果通知
+Notify -> Seller : 审核结果通知
+@enduml

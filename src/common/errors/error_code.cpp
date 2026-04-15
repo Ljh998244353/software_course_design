@@ -80,8 +80,30 @@ std::string_view ErrorCodeMessage(const ErrorCode error_code) {
             return "auction status conflict";
         case ErrorCode::kAuctionRelatedItemStatusInvalid:
             return "auction related item status invalid";
+        case ErrorCode::kBidAuctionNotFound:
+            return "bid auction not found";
+        case ErrorCode::kBidAuctionNotStarted:
+            return "bid auction not started";
+        case ErrorCode::kBidAuctionClosed:
+            return "bid auction closed";
+        case ErrorCode::kBidAuctionStatusInvalid:
+            return "bid auction status invalid";
+        case ErrorCode::kBidAmountInvalid:
+            return "bid amount invalid";
+        case ErrorCode::kBidAmountTooLow:
+            return "bid amount too low";
+        case ErrorCode::kBidUserStatusInvalid:
+            return "bid user status invalid";
+        case ErrorCode::kBidIdempotencyConflict:
+            return "bid idempotency conflict";
+        case ErrorCode::kBidRateLimited:
+            return "bid rate limited";
         case ErrorCode::kBidConflict:
             return "bid conflict";
+        case ErrorCode::kBidSubscriptionInvalid:
+            return "bid subscription invalid";
+        case ErrorCode::kBidHistoryQueryInvalid:
+            return "bid history query invalid";
         case ErrorCode::kInternalError:
             return "internal error";
         case ErrorCode::kConfigError:
