@@ -7,14 +7,13 @@
 WSL2 Ubuntu24.04 zsh
 
 ## 要求与限制
-## 要求和限制
 - 任何需要sudo的命令需要询问我
+- 不用sudo，所有操作你都可以直接执行
 - 你应该始终用中文回答我！
 - Do only what is asked; nothing more, nothing less
 - ALWAYS prefer editing existing files over creating new ones
 - NEVER proactively create documentation (*.md) or README files unless explicitly requested
 - NEVER leave trailing spaces in files
-- Only use emojis if explicitly requested
 - Stop and ask if anything is unclear or a step fails
 
 ## 上下文恢复规则

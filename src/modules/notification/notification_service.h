@@ -33,6 +33,15 @@ struct AuctionBidNotificationContext {
     std::optional<std::uint64_t> outbid_user_id;
 };
 
+struct StationNoticeRequest {
+    std::uint64_t user_id{0};
+    std::string notice_type;
+    std::string title;
+    std::string content;
+    std::string biz_type;
+    std::optional<std::uint64_t> biz_id;
+};
+
 class NotificationService {
 public:
     NotificationService(
@@ -42,6 +51,7 @@ public:
     );
 
     void PublishBidEvents(const AuctionBidNotificationContext& context);
+    void CreateStationNotice(const StationNoticeRequest& request);
 
 private:
     [[nodiscard]] common::db::MysqlConnection CreateConnection() const;

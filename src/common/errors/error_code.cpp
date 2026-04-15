@@ -104,6 +104,28 @@ std::string_view ErrorCodeMessage(const ErrorCode error_code) {
             return "bid subscription invalid";
         case ErrorCode::kBidHistoryQueryInvalid:
             return "bid history query invalid";
+        case ErrorCode::kOrderNotFound:
+            return "order not found";
+        case ErrorCode::kOrderStatusInvalid:
+            return "order status invalid";
+        case ErrorCode::kOrderOwnerMismatch:
+            return "order owner mismatch";
+        case ErrorCode::kOrderPaymentDeadlineExpired:
+            return "order payment deadline expired";
+        case ErrorCode::kOrderSettlementConflict:
+            return "order settlement conflict";
+        case ErrorCode::kPaymentNotFound:
+            return "payment not found";
+        case ErrorCode::kPaymentChannelInvalid:
+            return "payment channel invalid";
+        case ErrorCode::kPaymentStatusInvalid:
+            return "payment status invalid";
+        case ErrorCode::kPaymentSignatureInvalid:
+            return "payment signature invalid";
+        case ErrorCode::kPaymentAmountMismatch:
+            return "payment amount mismatch";
+        case ErrorCode::kPaymentCallbackInvalid:
+            return "payment callback invalid";
         case ErrorCode::kInternalError:
             return "internal error";
         case ErrorCode::kConfigError:

@@ -153,6 +153,22 @@ void NotificationService::PublishBidEvents(const AuctionBidNotificationContext& 
     }
 }
 
+void NotificationService::CreateStationNotice(const StationNoticeRequest& request) {
+    auto connection = CreateConnection();
+    repository::NotificationRepository repository(connection);
+    const auto notification = repository.CreateNotification(repository::CreateNotificationParams{
+        .user_id = request.user_id,
+        .notice_type = request.notice_type,
+        .title = request.title,
+        .content = request.content,
+        .biz_type = request.biz_type,
+        .biz_id = request.biz_id,
+        .read_status = std::string(kReadStatusUnread),
+        .push_status = std::string(kPushStatusPending),
+    });
+    (void)notification;
+}
+
 common::db::MysqlConnection NotificationService::CreateConnection() const {
     return common::db::MysqlConnection(mysql_config_, project_root_);
 }
