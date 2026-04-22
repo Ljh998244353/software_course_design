@@ -89,6 +89,10 @@ std::optional<std::uint64_t> ReadRowOptionalUint64(MYSQL_ROW row, const unsigned
     return std::stoull(row[index]);
 }
 
+double ReadRowDouble(MYSQL_ROW row, const unsigned int index) {
+    return row[index] == nullptr ? 0.0 : std::stod(row[index]);
+}
+
 NotificationRecord BuildNotificationRecord(MYSQL_ROW row) {
     return NotificationRecord{
         .notification_id = ReadRowUint64(row, 0),
@@ -225,11 +229,74 @@ NotificationRecord NotificationRepository::CreateNotification(
     statement.BindParams(params_bind);
     statement.Execute();
 
-    const auto created = FindNotificationById(connection(), statement.InsertId());
+    const auto created =
+        ::auction::repository::FindNotificationById(connection(), statement.InsertId());
     if (!created.has_value()) {
         throw std::runtime_error("created notification could not be loaded");
     }
     return *created;
+}
+
+std::optional<NotificationRecord> NotificationRepository::FindNotificationById(
+    const std::uint64_t notification_id
+) const {
+    return ::auction::repository::FindNotificationById(connection(), notification_id);
+}
+
+std::vector<std::uint64_t> NotificationRepository::ListFailedNotificationIds(const int limit) const {
+    const auto result = ExecuteQuery(
+        connection(),
+        "SELECT notification_id FROM notification WHERE push_status = 'FAILED' "
+        "ORDER BY created_at ASC, notification_id ASC LIMIT " +
+            std::to_string(limit)
+    );
+
+    std::vector<std::uint64_t> notification_ids;
+    MYSQL_ROW row = nullptr;
+    while ((row = mysql_fetch_row(result.get())) != nullptr) {
+        notification_ids.push_back(ReadRowUint64(row, 0));
+    }
+    return notification_ids;
+}
+
+int NotificationRepository::QueryMaxTaskRetryCount(
+    const std::string& task_type,
+    const std::string& biz_key
+) const {
+    return std::stoi(QueryString(
+        "SELECT COALESCE(CAST(MAX(retry_count) AS CHAR), '0') FROM task_log "
+        "WHERE task_type = '" +
+        EscapeString(task_type) + "' AND biz_key = '" + EscapeString(biz_key) + "'"
+    ));
+}
+
+std::optional<NotificationRetryCandidate> NotificationRepository::FindAuctionRetryCandidate(
+    const std::uint64_t notification_id
+) const {
+    const auto result = ExecuteQuery(
+        connection(),
+        "SELECT n.notification_id, n.user_id, n.notice_type, n.title, n.content, "
+        "COALESCE(n.biz_type, ''), n.biz_id, n.read_status, n.push_status, "
+        "CAST(n.created_at AS CHAR), COALESCE(a.auction_id, 0), "
+        "COALESCE(CAST(a.current_price AS CHAR), '0'), COALESCE(u.username, ''), "
+        "COALESCE(CAST(a.end_time AS CHAR), '') "
+        "FROM notification n "
+        "LEFT JOIN auction a ON n.biz_type = 'AUCTION' AND n.biz_id = a.auction_id "
+        "LEFT JOIN user_account u ON a.highest_bidder_id = u.user_id "
+        "WHERE n.notification_id = " +
+            std::to_string(notification_id) + " LIMIT 1"
+    );
+
+    if (MYSQL_ROW row = mysql_fetch_row(result.get()); row != nullptr) {
+        return NotificationRetryCandidate{
+            .notification = BuildNotificationRecord(row),
+            .auction_id = ReadRowUint64(row, 10),
+            .current_price = ReadRowDouble(row, 11),
+            .highest_bidder_username = ReadRowString(row, 12),
+            .end_time = ReadRowString(row, 13),
+        };
+    }
+    return std::nullopt;
 }
 
 void NotificationRepository::UpdatePushStatus(

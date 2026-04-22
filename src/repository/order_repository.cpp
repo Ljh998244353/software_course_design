@@ -177,7 +177,8 @@ void BindIntParam(MYSQL_BIND& bind, int& value, bool& is_null) {
 
 std::optional<modules::order::OrderRecord> FindOrderById(
     common::db::MysqlConnection& connection,
-    const std::uint64_t order_id
+    const std::uint64_t order_id,
+    const bool for_update
 ) {
     const auto result = ExecuteQuery(
         connection,
@@ -187,7 +188,7 @@ std::optional<modules::order::OrderRecord> FindOrderById(
         "COALESCE(CAST(completed_at AS CHAR), ''), COALESCE(CAST(closed_at AS CHAR), ''), "
         "CAST(created_at AS CHAR), CAST(updated_at AS CHAR) "
         "FROM order_info WHERE order_id = " +
-            std::to_string(order_id) + " LIMIT 1"
+            std::to_string(order_id) + " LIMIT 1" + (for_update ? " FOR UPDATE" : "")
     );
 
     if (MYSQL_ROW row = mysql_fetch_row(result.get()); row != nullptr) {
@@ -301,6 +302,18 @@ std::optional<modules::order::OrderRecord> OrderRepository::FindOrderByAuctionId
     return LoadOrderByAuctionId(connection(), auction_id);
 }
 
+std::optional<modules::order::OrderRecord> OrderRepository::FindOrderById(
+    const std::uint64_t order_id
+) const {
+    return ::auction::repository::FindOrderById(connection(), order_id, false);
+}
+
+std::optional<modules::order::OrderRecord> OrderRepository::FindOrderByIdForUpdate(
+    const std::uint64_t order_id
+) const {
+    return ::auction::repository::FindOrderById(connection(), order_id, true);
+}
+
 modules::order::OrderRecord OrderRepository::CreateOrder(const CreateOrderParams& params) const {
     PreparedStatement statement(
         connection().native_handle(),
@@ -333,7 +346,7 @@ modules::order::OrderRecord OrderRepository::CreateOrder(const CreateOrderParams
     statement.BindParams(params_bind);
     statement.Execute();
 
-    const auto created = FindOrderById(connection(), statement.InsertId());
+    const auto created = ::auction::repository::FindOrderById(connection(), statement.InsertId(), false);
     if (!created.has_value()) {
         throw std::runtime_error("created order could not be loaded");
     }
@@ -399,6 +412,36 @@ void OrderRepository::UpdateOrderStatusToClosed(const std::uint64_t order_id) co
     PreparedStatement statement(
         connection().native_handle(),
         "UPDATE order_info SET order_status = 'CLOSED', closed_at = CURRENT_TIMESTAMP(3), "
+        "updated_at = CURRENT_TIMESTAMP(3) WHERE order_id = ?"
+    );
+
+    auto mutable_order_id = order_id;
+    bool order_id_is_null = false;
+    MYSQL_BIND params_bind[1]{};
+    BindUint64Param(params_bind[0], mutable_order_id, order_id_is_null);
+    statement.BindParams(params_bind);
+    statement.Execute();
+}
+
+void OrderRepository::UpdateOrderStatusToShipped(const std::uint64_t order_id) const {
+    PreparedStatement statement(
+        connection().native_handle(),
+        "UPDATE order_info SET order_status = 'SHIPPED', shipped_at = CURRENT_TIMESTAMP(3), "
+        "updated_at = CURRENT_TIMESTAMP(3) WHERE order_id = ?"
+    );
+
+    auto mutable_order_id = order_id;
+    bool order_id_is_null = false;
+    MYSQL_BIND params_bind[1]{};
+    BindUint64Param(params_bind[0], mutable_order_id, order_id_is_null);
+    statement.BindParams(params_bind);
+    statement.Execute();
+}
+
+void OrderRepository::UpdateOrderStatusToCompleted(const std::uint64_t order_id) const {
+    PreparedStatement statement(
+        connection().native_handle(),
+        "UPDATE order_info SET order_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP(3), "
         "updated_at = CURRENT_TIMESTAMP(3) WHERE order_id = ?"
     );
 

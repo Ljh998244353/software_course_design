@@ -140,6 +140,18 @@ std::string_view ErrorCodeMessage(const ErrorCode error_code) {
             return "statistics date invalid";
         case ErrorCode::kStatisticsRangeInvalid:
             return "statistics range invalid";
+        case ErrorCode::kOpsQueryLimitInvalid:
+            return "ops query limit invalid";
+        case ErrorCode::kOpsCompensationTypeInvalid:
+            return "ops compensation type invalid";
+        case ErrorCode::kOpsExceptionTypeInvalid:
+            return "ops exception type invalid";
+        case ErrorCode::kOpsBizKeyInvalid:
+            return "ops biz key invalid";
+        case ErrorCode::kOpsMarkDetailInvalid:
+            return "ops mark detail invalid";
+        case ErrorCode::kOpsQueryTokenInvalid:
+            return "ops query token invalid";
         case ErrorCode::kInternalError:
             return "internal error";
         case ErrorCode::kConfigError:

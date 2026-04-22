@@ -96,6 +96,7 @@ set(AUCTION_CORE_SOURCES
     src/modules/bid/bid_service.cpp
     src/modules/item/item_service.cpp
     src/modules/notification/notification_service.cpp
+    src/modules/ops/ops_service.cpp
     src/modules/order/order_service.cpp
     src/modules/auth/password_hasher.cpp
     src/modules/payment/payment_signature.cpp
@@ -109,6 +110,7 @@ set(AUCTION_CORE_SOURCES
     src/repository/database_meta_repository.cpp
     src/repository/item_repository.cpp
     src/repository/notification_repository.cpp
+    src/repository/ops_repository.cpp
     src/repository/order_repository.cpp
     src/repository/payment_repository.cpp
     src/repository/review_repository.cpp
@@ -146,6 +148,9 @@ target_link_libraries(auction_smoke_tests PRIVATE auction_core)
 add_executable(auction_database_smoke_tests tests/integration/database_smoke_tests.cpp)
 target_link_libraries(auction_database_smoke_tests PRIVATE auction_core)
 
+add_executable(auction_integration_tests tests/integration/full_flow_tests.cpp)
+target_link_libraries(auction_integration_tests PRIVATE auction_core)
+
 add_executable(auction_auth_tests tests/auth/auth_flow_tests.cpp)
 target_link_libraries(auction_auth_tests PRIVATE auction_core)
 
@@ -170,10 +175,14 @@ target_link_libraries(auction_review_tests PRIVATE auction_core)
 add_executable(auction_statistics_tests tests/statistics/statistics_flow_tests.cpp)
 target_link_libraries(auction_statistics_tests PRIVATE auction_core)
 
+add_executable(auction_ops_tests tests/ops/ops_flow_tests.cpp)
+target_link_libraries(auction_ops_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
     add_test(NAME auction_database_smoke COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_db.sh)
+    add_test(NAME auction_integration_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_integration.sh)
     add_test(NAME auction_auth_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auth.sh)
     add_test(NAME auction_item_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_item.sh)
     add_test(NAME auction_auction_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auction.sh)
@@ -182,8 +191,74 @@ if(BUILD_TESTING)
     add_test(NAME auction_payment_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_payment.sh)
     add_test(NAME auction_review_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_review.sh)
     add_test(NAME auction_statistics_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_statistics.sh)
+    add_test(NAME auction_ops_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_ops.sh)
+
     set_tests_properties(
-        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow auction_item_flow auction_auction_flow auction_bid_flow auction_order_flow auction_payment_flow auction_review_flow auction_statistics_flow
-        PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        auction_smoke_tests auction_check_config
+        PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_tests_properties(
+        auction_database_smoke
+        auction_integration_flow
+        auction_auth_flow
+        auction_item_flow
+        auction_auction_flow
+        auction_bid_flow
+        auction_order_flow
+        auction_payment_flow
+        auction_review_flow
+        auction_statistics_flow
+        auction_ops_flow
+        PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            RESOURCE_LOCK auction_mysql_test_runtime
+    )
+
+    set_tests_properties(auction_smoke_tests PROPERTIES LABELS "suite_unit;suite_smoke")
+    set_tests_properties(auction_check_config PROPERTIES LABELS "suite_unit;suite_smoke;suite_config")
+    set_tests_properties(
+        auction_database_smoke
+        PROPERTIES LABELS "suite_db;suite_integration;requires_mysql"
+    )
+    set_tests_properties(
+        auction_integration_flow
+        PROPERTIES LABELS "suite_integration;suite_contract;requires_mysql"
+    )
+    set_tests_properties(
+        auction_auth_flow
+        PROPERTIES LABELS "suite_module;module_auth;requires_mysql"
+    )
+    set_tests_properties(
+        auction_item_flow
+        PROPERTIES LABELS "suite_module;module_item;requires_mysql"
+    )
+    set_tests_properties(
+        auction_auction_flow
+        PROPERTIES LABELS "suite_module;module_auction;requires_mysql"
+    )
+    set_tests_properties(
+        auction_bid_flow
+        PROPERTIES LABELS "suite_module;module_bid;requires_mysql"
+    )
+    set_tests_properties(
+        auction_order_flow
+        PROPERTIES LABELS "suite_module;module_order;requires_mysql"
+    )
+    set_tests_properties(
+        auction_payment_flow
+        PROPERTIES LABELS "suite_module;module_payment;requires_mysql"
+    )
+    set_tests_properties(
+        auction_review_flow
+        PROPERTIES LABELS "suite_module;module_review;requires_mysql"
+    )
+    set_tests_properties(
+        auction_statistics_flow
+        PROPERTIES LABELS "suite_module;module_statistics;requires_mysql"
+    )
+    set_tests_properties(
+        auction_ops_flow
+        PROPERTIES LABELS "suite_module;module_ops;requires_mysql"
     )
 endif()

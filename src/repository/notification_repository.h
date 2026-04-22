@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "repository/base_repository.h"
 
@@ -41,10 +42,29 @@ struct NotificationTaskLogParams {
     std::string scheduled_at;
 };
 
+struct NotificationRetryCandidate {
+    NotificationRecord notification;
+    std::uint64_t auction_id{0};
+    double current_price{0.0};
+    std::string highest_bidder_username;
+    std::string end_time;
+};
+
 class NotificationRepository : public BaseRepository {
 public:
     using BaseRepository::BaseRepository;
 
+    [[nodiscard]] std::optional<NotificationRecord> FindNotificationById(
+        std::uint64_t notification_id
+    ) const;
+    [[nodiscard]] std::vector<std::uint64_t> ListFailedNotificationIds(int limit) const;
+    [[nodiscard]] int QueryMaxTaskRetryCount(
+        const std::string& task_type,
+        const std::string& biz_key
+    ) const;
+    [[nodiscard]] std::optional<NotificationRetryCandidate> FindAuctionRetryCandidate(
+        std::uint64_t notification_id
+    ) const;
     [[nodiscard]] NotificationRecord CreateNotification(
         const CreateNotificationParams& params
     ) const;

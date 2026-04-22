@@ -118,9 +118,11 @@ std::string DescribeException(const std::exception& exception) {
 OrderService::OrderService(
     const common::config::AppConfig& config,
     std::filesystem::path project_root,
+    middleware::AuthMiddleware& auth_middleware,
     notification::NotificationService& notification_service
 ) : mysql_config_(config.mysql),
     project_root_(std::move(project_root)),
+    auth_middleware_(&auth_middleware),
     notification_service_(&notification_service) {}
 
 OrderScheduleResult OrderService::GenerateSettlementOrders() {
@@ -519,6 +521,166 @@ OrderScheduleResult OrderService::CloseExpiredOrders() {
     }
 
     return result;
+}
+
+OrderTransitionResult OrderService::ShipOrder(
+    const std::string_view authorization_header,
+    const std::uint64_t order_id
+) {
+    const auto auth_context = auth_middleware_->RequireAnyRole(
+        authorization_header,
+        {modules::auth::kRoleUser}
+    );
+
+    auto connection = CreateConnection();
+    auto repository = MakeRepository(connection);
+    bool transaction_started = false;
+    try {
+        connection.BeginTransaction();
+        transaction_started = true;
+
+        const auto order = repository.FindOrderByIdForUpdate(order_id);
+        if (!order.has_value()) {
+            ThrowOrderError(common::errors::ErrorCode::kOrderNotFound, "order not found");
+        }
+        if (order->seller_id != auth_context.user_id) {
+            ThrowOrderError(
+                common::errors::ErrorCode::kOrderOwnerMismatch,
+                "user does not own this order as seller"
+            );
+        }
+        if (order->order_status != kOrderStatusPaid) {
+            ThrowOrderError(
+                common::errors::ErrorCode::kOrderStatusInvalid,
+                "order status does not allow shipment confirmation"
+            );
+        }
+
+        repository.UpdateOrderStatusToShipped(order_id);
+        repository.InsertOperationLog(
+            auth_context.user_id,
+            auth_context.role_code,
+            "ship_order",
+            std::to_string(order_id),
+            "SUCCESS",
+            "order shipped by seller"
+        );
+        connection.Commit();
+        transaction_started = false;
+
+        CreateStationNoticeSafely(
+            *notification_service_,
+            notification::StationNoticeRequest{
+                .user_id = order->buyer_id,
+                .notice_type = "ORDER_SHIPPED",
+                .title = "Order shipped",
+                .content = "Order " + order->order_no +
+                           " has been shipped by the seller. Please confirm receipt after delivery.",
+                .biz_type = "ORDER",
+                .biz_id = order_id,
+            }
+        );
+
+        return OrderTransitionResult{
+            .order_id = order_id,
+            .old_status = order->order_status,
+            .new_status = std::string(kOrderStatusShipped),
+        };
+    } catch (...) {
+        if (transaction_started) {
+            connection.Rollback();
+        }
+        InsertOperationLogSafely(
+            repository,
+            auth_context.user_id,
+            auth_context.role_code,
+            "ship_order",
+            std::to_string(order_id),
+            "FAILED",
+            "order shipment confirmation failed"
+        );
+        throw;
+    }
+}
+
+OrderTransitionResult OrderService::ConfirmReceipt(
+    const std::string_view authorization_header,
+    const std::uint64_t order_id
+) {
+    const auto auth_context = auth_middleware_->RequireAnyRole(
+        authorization_header,
+        {modules::auth::kRoleUser}
+    );
+
+    auto connection = CreateConnection();
+    auto repository = MakeRepository(connection);
+    bool transaction_started = false;
+    try {
+        connection.BeginTransaction();
+        transaction_started = true;
+
+        const auto order = repository.FindOrderByIdForUpdate(order_id);
+        if (!order.has_value()) {
+            ThrowOrderError(common::errors::ErrorCode::kOrderNotFound, "order not found");
+        }
+        if (order->buyer_id != auth_context.user_id) {
+            ThrowOrderError(
+                common::errors::ErrorCode::kOrderOwnerMismatch,
+                "user does not own this order as buyer"
+            );
+        }
+        if (order->order_status != kOrderStatusShipped) {
+            ThrowOrderError(
+                common::errors::ErrorCode::kOrderStatusInvalid,
+                "order status does not allow receipt confirmation"
+            );
+        }
+
+        repository.UpdateOrderStatusToCompleted(order_id);
+        repository.InsertOperationLog(
+            auth_context.user_id,
+            auth_context.role_code,
+            "confirm_receipt",
+            std::to_string(order_id),
+            "SUCCESS",
+            "order completed by buyer"
+        );
+        connection.Commit();
+        transaction_started = false;
+
+        CreateStationNoticeSafely(
+            *notification_service_,
+            notification::StationNoticeRequest{
+                .user_id = order->seller_id,
+                .notice_type = "ORDER_COMPLETED",
+                .title = "Order completed",
+                .content = "Order " + order->order_no +
+                           " has been confirmed received by the buyer.",
+                .biz_type = "ORDER",
+                .biz_id = order_id,
+            }
+        );
+
+        return OrderTransitionResult{
+            .order_id = order_id,
+            .old_status = order->order_status,
+            .new_status = std::string(kOrderStatusCompleted),
+        };
+    } catch (...) {
+        if (transaction_started) {
+            connection.Rollback();
+        }
+        InsertOperationLogSafely(
+            repository,
+            auth_context.user_id,
+            auth_context.role_code,
+            "confirm_receipt",
+            std::to_string(order_id),
+            "FAILED",
+            "order receipt confirmation failed"
+        );
+        throw;
+    }
 }
 
 common::db::MysqlConnection OrderService::CreateConnection() const {

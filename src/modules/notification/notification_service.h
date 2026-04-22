@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "common/config/app_config.h"
 #include "common/db/mysql_connection.h"
@@ -22,6 +23,7 @@ inline constexpr std::string_view kTaskTypeNotificationPush = "NOTIFICATION_PUSH
 inline constexpr std::string_view kTaskTypeAuctionEventPush = "AUCTION_EVENT_PUSH";
 inline constexpr std::string_view kTaskStatusSuccess = "SUCCESS";
 inline constexpr std::string_view kTaskStatusFailed = "FAILED";
+inline constexpr std::string_view kTaskStatusSkipped = "SKIPPED";
 
 struct AuctionBidNotificationContext {
     std::uint64_t auction_id{0};
@@ -42,6 +44,19 @@ struct StationNoticeRequest {
     std::optional<std::uint64_t> biz_id;
 };
 
+struct NotificationRetryRequest {
+    std::optional<std::uint64_t> notification_id;
+    int limit{20};
+};
+
+struct NotificationRetryResult {
+    int scanned{0};
+    int succeeded{0};
+    int failed{0};
+    int skipped{0};
+    std::vector<std::uint64_t> affected_notification_ids;
+};
+
 class NotificationService {
 public:
     NotificationService(
@@ -52,6 +67,9 @@ public:
 
     void PublishBidEvents(const AuctionBidNotificationContext& context);
     void CreateStationNotice(const StationNoticeRequest& request);
+    [[nodiscard]] NotificationRetryResult RetryFailedNotifications(
+        const NotificationRetryRequest& request
+    );
 
 private:
     [[nodiscard]] common::db::MysqlConnection CreateConnection() const;

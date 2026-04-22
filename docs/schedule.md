@@ -25,8 +25,8 @@
 
 因此，真实进度应认定为：
 
-- `S00-S10`：已完成
-- `S11-S15`：未开始
+- `S00-S13`：已完成
+- `S14-S15`：未开始
 
 ## 3. 步骤完成判定
 
@@ -46,17 +46,16 @@
 
 ## 4. 当前推荐执行顺序
 
-`S10` 已完成代码落地与验证；当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块、订单支付模块、评价模块以及统计模块均已具备可复用实现，后续可以直接从 `S11` 继续推进。
+`S13` 已完成代码落地与验证；当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块、订单支付模块、评价模块、统计模块、运维异常模块以及统一测试基线均已具备可复用实现，后续可以直接从 `S14` 继续推进。
 
 建议严格按以下顺序推进实际开发：
 
-1. `S11`
-2. `S12 -> S13`
-3. `S14 -> S15`
+1. `S14`
+2. `S15`
 
 当前最优先的实际下一步是：
 
-- `S11`：实现系统监控与异常处理模块代码，并复用现有 `task_log`、`operation_log` 和统计任务基础能力
+- `S14`：补齐高风险专项测试与测试报告
 
 ## 5. Step-by-Step Schedule
 
@@ -73,9 +72,9 @@
 | S08 | 实现订单与支付结算模块代码 | 拍卖与竞价设计已具备输入条件 | 实现结束后生成订单、支付发起、支付回调、幂等处理、超时关闭、审计日志、最小模块测试 | 一场拍卖最多生成一笔订单，重复回调不重复记账 | `src/modules/order/`、`src/modules/payment/`、`tests/order/`、`tests/payment/` | `docs/订单与支付模块说明.md` | 已完成 | 已落地 `OrderService`、`PaymentService`、`OrderScheduler`、订单/支付仓储、mock 回调签名与自动化测试闭环 |
 | S09 | 实现评价与反馈模块代码 | 已具备 `review` 表、订单终态字段和通知基础设施 | 实现互评、评价查询、评价约束、信用汇总基础能力、最小模块测试 | 买卖双方可在订单完成后互评，评价与订单正确绑定 | `src/modules/review/`、`tests/review/` | `docs/评价与反馈模块说明.md` | 已完成 | 已落地 `ReviewService`、`ReviewRepository`、自动评价方向推导、重复评价约束、信用汇总查询和自动化测试闭环 |
 | S10 | 实现统计分析与报表模块代码 | 数据模型和业务链路设计已具备基础 | 实现日报表聚合、成交统计、流拍统计、出价统计、导出接口、统计任务测试 | 管理端可查看主要统计指标，统计结果可复算 | `src/modules/statistics/`、`src/jobs/`、`tests/statistics/` | `docs/统计分析与报表模块说明.md` | 已完成 | 已落地 `StatisticsService`、`StatisticsRepository`、`StatisticsScheduler`、CSV 导出与自动化测试闭环 |
-| S11 | 实现系统监控与异常处理模块代码 | 已有顶层日志、任务、降级设计 | 实现操作日志、任务日志、通知失败重试、异常标记、补偿入口、降级处理、最小验证 | 关键异常可观测、可追踪、可重试 | `src/modules/ops/`、`src/jobs/retry/`、`tests/ops/` | `docs/系统监控与异常处理模块说明.md` | 未开始 | 重点覆盖 Redis 降级、通知失败和任务补偿 |
-| S12 | 完成接口联调与主流程闭环 | 核心模块代码已具备后才能开始 | 联调认证、拍品、审核、活动、竞价、订单、支付、评价全链路，修正接口和状态切换问题 | 主流程可完整走通并可演示 | `src/`、`tests/integration/` | `docs/接口联调记录.md` | 未开始 | 必须在 `S04-S11` 有实际代码后执行 |
-| S13 | 落地自动化测试基线 | 需要已有可运行工程 | 建立 CTest/GoogleTest、单元测试、集成测试、接口测试目录、基础测试脚本和执行方式 | 测试框架可运行，核心模块都有最小自动化覆盖 | `tests/`、`CMakeLists.txt`、`scripts/test/` | `docs/测试计划与用例说明.md` | 未开始 | 虽然测试应随模块推进，但这里单列为统一收口步骤 |
+| S11 | 实现系统监控与异常处理模块代码 | 已有顶层日志、任务、降级设计 | 实现操作日志、任务日志、通知失败重试、异常标记、补偿入口、降级处理、最小验证 | 关键异常可观测、可追踪、可重试 | `src/modules/ops/`、`src/repository/`、`src/modules/notification/`、`tests/ops/` | `docs/系统监控与异常处理模块说明.md` | 已完成 | 已落地统一运维服务、异常看板、手工异常标记、失败通知重试和补偿入口，并通过自动化验证 |
+| S12 | 完成接口联调与主流程闭环 | 核心模块代码已具备后才能开始 | 联调认证、拍品、审核、活动、竞价、订单、支付、评价全链路，修正接口和状态切换问题 | 主流程可完整走通并可演示 | `src/`、`tests/integration/` | `docs/接口联调记录.md` | 已完成 | 已补齐支付后履约状态推进，新增 `tests/integration/full_flow_tests.cpp` 与 `scripts/test_integration.sh`，完成主流程联调与自动化验证 |
+| S13 | 落地自动化测试基线 | 需要已有可运行工程 | 统一 CTest、断言式测试二进制、单元测试、模块测试、集成/契约测试入口、基础测试脚本和执行方式 | 测试框架可运行，核心模块都有最小自动化覆盖，且可按分层/模块统一执行 | `tests/`、`CMakeLists.txt`、`scripts/` | `docs/测试计划与用例说明.md` | 已完成 | 已统一 `CTest + test_*.sh + 断言式测试二进制` 基线，新增 suite/module 标签、MySQL 资源锁和 `scripts/test.sh` 分组入口；当前接口契约测试继续复用 `tests/integration/`，不额外创建空骨架 |
 | S14 | 完成高风险专项测试 | 需要主链路代码和测试基线 | 执行并发出价、拍卖结束竞争、支付回调幂等、Redis 降级、通知失败、安全负向测试 | 高风险链路均有验证结果和问题闭环 | `tests/stress/`、`tests/integration/`、`tests/security/` | `docs/测试报告.md` | 未开始 | 核心关注竞价、拍卖结束、支付回调 |
 | S15 | 完成部署、演示与答辩交付 | 需要联调与专项测试完成 | 补齐部署脚本、初始化流程、演示数据、演示账号、答辩脚本与最终交付说明 | 系统可在目标环境复现并完成完整演示 | `scripts/deploy/`、`config/` | `docs/部署与答辩说明.md` | 未开始 | 最终交付前需完成一次全量回归 |
 
@@ -83,11 +82,11 @@
 
 为了方便直接分配给 agent 执行，后续每一步建议拆成“一个模块、一个明确目标、一个明确代码目录”的粒度。
 
-按当前已确认进度，下一阶段应从 `S11` 开始拆分执行。
+按当前已确认进度，下一阶段应从 `S14` 开始拆分执行。
 
 例如：
 
-- `S11-S13` 每一步都应优先完成控制器、服务、仓储、测试四件套，再更新模块文档
+- `S14-S15` 每一步都应优先完成代码、测试、验证记录和文档同步，再更新模块文档
 - 若某一步尚未形成最小可验证闭环，则继续保持 `进行中`，不要提前改成 `已完成`
 - 已完成步骤也要继续记录验证命令和 handoff，避免上下文压缩后丢失真实进度
 
@@ -117,6 +116,12 @@
 | 2026-04-22 | S09-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_review.sh`、`ctest --test-dir build --output-on-failure`；`auction_review_flow` 已覆盖买卖双方互评、重复评价、非订单参与方拒绝、订单状态约束和信用汇总；后续已修正 `auction_smoke_tests` 配置断言，`S09` 收尾时全量 `ctest` 为 10/10 通过 | [review_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/review/review_flow_tests.cpp) | [评价与反馈模块说明.md](/home/ljh/project/soft_course_design/docs/评价与反馈模块说明.md) |
 | 2026-04-22 | S10 | 已完成 | 已落地 `src/modules/statistics/`、`src/repository/statistics_repository.*`、`src/jobs/statistics_scheduler.*`、`tests/statistics/statistics_flow_tests.cpp` 和 `scripts/test_statistics.sh`；已完成日报聚合、成交/流拍/出价统计、管理员查询、CSV 导出、按天重跑覆盖和任务日志闭环 | [statistics_service.cpp](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.cpp) | [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md) |
 | 2026-04-22 | S10-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_statistics.sh`、`ctest --test-dir build --output-on-failure`；`auction_statistics_flow` 已覆盖日报聚合、同日重跑覆盖、管理员查询、CSV 导出、日期范围校验和非管理员拒绝，当前全量 `ctest` 为 11/11 全部通过 | [statistics_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/statistics/statistics_flow_tests.cpp) | [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md) |
+| 2026-04-22 | S11 | 已完成 | 已落地 `src/modules/ops/`、`src/repository/ops_repository.*`、`tests/ops/ops_flow_tests.cpp` 和 `scripts/test_ops.sh`，并扩展 `src/modules/notification/` 与 `src/repository/notification_repository.*`；已完成操作日志查询、任务日志查询、异常看板、失败通知重试、手工异常标记和统一补偿入口闭环 | [ops_service.cpp](/home/ljh/project/soft_course_design/src/modules/ops/ops_service.cpp) | [系统监控与异常处理模块说明.md](/home/ljh/project/soft_course_design/docs/系统监控与异常处理模块说明.md) |
+| 2026-04-22 | S11-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_ops.sh`、`ctest --test-dir build --output-on-failure`；`auction_ops_flow` 已覆盖失败通知重试、Redis 降级手工标记、订单结算补偿、支付回调拒绝异常聚合、运维日志查询和权限校验，当前全量 `ctest` 为 12/12 全部通过 | [ops_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/ops/ops_flow_tests.cpp) | [系统监控与异常处理模块说明.md](/home/ljh/project/soft_course_design/docs/系统监控与异常处理模块说明.md) |
+| 2026-04-22 | S12 | 已完成 | 已扩展 `src/modules/order/`、`src/repository/order_repository.*`，补齐卖家发货与买家确认收货状态推进；已新增 `tests/integration/full_flow_tests.cpp` 和 `scripts/test_integration.sh`，完成认证、拍品、审核、活动、竞价、订单、支付、评价、统计、运维的主流程联调闭环 | [full_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/integration/full_flow_tests.cpp) | [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md) |
+| 2026-04-22 | S12-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_integration.sh`、`ctest --test-dir build --output-on-failure`；`auction_integration_flow` 已覆盖支付后履约、互评、统计和运维查询联调，当前全量 `ctest` 为 13/13 全部通过 | [test_integration.sh](/home/ljh/project/soft_course_design/scripts/test_integration.sh) | [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md) |
+| 2026-04-22 | S13 | 已完成 | 已扩展 `CMakeLists.txt` 和 `scripts/test.sh`，统一 `CTest` 标签、模块分组入口与 MySQL 资源锁；已新增 `docs/测试计划与用例说明.md`，明确当前测试分层、执行方式和覆盖边界 | [scripts/test.sh](/home/ljh/project/soft_course_design/scripts/test.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
+| 2026-04-22 | S13-VERIFY | 已完成 | 顺序执行 `scripts/test.sh smoke`、`scripts/test.sh db`、`scripts/test.sh module`、`scripts/test.sh contract`、`ctest --test-dir build --output-on-failure`；已验证分层入口、`CTest` 标签筛选和 MySQL 共享资源锁，当前全量 `ctest` 为 13/13 全部通过 | [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
@@ -136,106 +141,92 @@
 ## 模块 Handoff
 
 ### 1. 基本信息
-- Step ID: S11
-- 模块名称: 系统监控与异常处理模块
+- Step ID: S14
+- 模块名称: 高风险专项测试
 - 当前状态: 未开始
-- 对应文档: `docs/系统监控与异常处理模块说明.md`
-- 对应代码目录: `src/modules/ops/` `tests/ops/`
-- 已有可复用基础目录: `src/common/db/` `src/repository/` `src/modules/notification/` `src/modules/order/` `src/modules/payment/` `src/modules/review/` `src/modules/statistics/` `src/jobs/` `src/middleware/`
+- 对应文档: `docs/测试报告.md`
+- 对应代码目录: `tests/` `scripts/test.sh` `CMakeLists.txt`
+- 已有可复用基础目录: `tests/bid/` `tests/order/` `tests/payment/` `tests/ops/` `tests/integration/`
 
 ### 2. 本次实际完成
 - 已完成功能:
-  - `S10` 已完成
-  - 已落地 `StatisticsService`、`StatisticsRepository`、`StatisticsScheduler`
-  - 已落地 `tests/statistics/statistics_flow_tests.cpp` 与 `scripts/test_statistics.sh`
-  - 已完成日报聚合、成交统计、流拍统计、出价统计、管理员查询、CSV 导出和按天重跑覆盖闭环
+  - `S13` 已完成
+  - 已为现有 `CTest` 用例统一增加 `suite_*`、`module_*` 与 `requires_mysql` 标签
+  - 已为全部依赖本地 MySQL 的测试增加 `RESOURCE_LOCK auction_mysql_test_runtime`
+  - 已扩展 `scripts/test.sh`，支持 `smoke`、`db`、`module`、`integration`、`contract` 和模块级执行
+  - 已新增 `docs/测试计划与用例说明.md`，明确测试分层、统一入口与覆盖边界
 - 实际修改文件:
-  - [statistics_service.cpp](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.cpp)
-  - [statistics_service.h](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.h)
-  - [statistics_types.h](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_types.h)
-  - [statistics_exception.h](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_exception.h)
-  - [statistics_repository.cpp](/home/ljh/project/soft_course_design/src/repository/statistics_repository.cpp)
-  - [statistics_repository.h](/home/ljh/project/soft_course_design/src/repository/statistics_repository.h)
-  - [statistics_scheduler.cpp](/home/ljh/project/soft_course_design/src/jobs/statistics_scheduler.cpp)
-  - [statistics_scheduler.h](/home/ljh/project/soft_course_design/src/jobs/statistics_scheduler.h)
-  - [statistics_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/statistics/statistics_flow_tests.cpp)
-  - [test_statistics.sh](/home/ljh/project/soft_course_design/scripts/test_statistics.sh)
-  - [error_code.h](/home/ljh/project/soft_course_design/src/common/errors/error_code.h)
-  - [error_code.cpp](/home/ljh/project/soft_course_design/src/common/errors/error_code.cpp)
   - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
-  - [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md)
+  - [test.sh](/home/ljh/project/soft_course_design/scripts/test.sh)
+  - [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md)
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 未完成功能:
-  - `S11` 操作日志查询与异常处理入口
-  - 通知失败重试、补偿入口和最小监控看板
+  - `S14` 并发出价、拍卖结束竞争、支付回调幂等回归、Redis 降级、通知失败与安全负向专项测试
 - 明确不在本步处理的内容:
-  - Drogon 控制器与真实 HTTP 下载响应
-  - 高风险专项测试与最终部署交付
+  - Drogon 控制器批量接入
+  - 最终部署与答辩交付
 
 ### 3. 关键设计决定
-- 决定 1: 活动类日报统一按 `auction.end_time` 的自然日归档，出价次数按 `bid_record.bid_time` 的自然日统计
-- 原因: 这样能把“活动结束事实”和“出价事实”分别落在最稳定的业务时间字段上，避免混用 `created_at`
+- 决定 1: 测试基线继续沿用 `CTest + 断言式测试二进制 + Shell 脚本`
+- 原因: 现有测试已稳定运行，`S13` 的目标是统一收口，而不是平移到另一套测试框架
 - 影响范围:
-  - `statistics_daily` 的 `auction_count`、`sold_count`、`unsold_count` 以已结束拍卖为主轴
-  - `bid_count` 独立按出价日汇总
+  - 测试文档和 `schedule` 均按代码现状描述
+  - 不为满足字面计划额外引入空的 `GoogleTest` 骨架
 
-- 决定 2: `sold_count` 与 `gmv_amount` 只统计存在成功支付记录且订单未关闭的活动；`unsold_count` 统计显式流拍或订单超时关闭
-- 原因: 统计口径必须消费真实支付与订单终态，不能把未支付的中间态误记为最终成交
+- 决定 2: 当前接口契约测试继续由 `auction_integration_flow` 承载，并新增 `suite_contract` 标签
+- 原因: Drogon 控制器尚未批量接入，当前可验证的接口契约仍以服务层联调映射为主
 - 影响范围:
-  - 在支付仍待完成时，`sold_count + unsold_count` 允许小于 `auction_count`
-  - 后续若新增补偿任务，只需按日重跑即可覆盖旧值
+  - `scripts/test.sh contract` 可直接执行当前契约映射验证
+  - 真正 HTTP 接口级自动化测试继续留给后续控制器接入阶段
 
-- 决定 3: `statistics_daily` 采用按 `stat_date` 唯一 upsert，而不是追加多条快照
-- 原因: 课程设计阶段更强调可复算、可演示和易排障，不需要保留同一日的多版本统计快照
+- 决定 3: 依赖数据库的测试统一共享本地 MySQL 资源锁
+- 原因: 避免 `ctest -j` 或分层回归时并发争用 `build/test_mysql`
 - 影响范围:
-  - 重跑同一天时直接覆盖旧日报
-  - 测试已验证同一 `stat_date` 只保留一条记录
+  - 共享同一 `datadir`、`socket` 的测试将按资源锁顺序执行
+  - 可减少 `ibdata1`、socket 文件和 seed 重置导致的伪失败
 
 ### 4. 验证结果
 - 执行命令:
-  - `cmake -S . -B build`
-  - `cmake --build build`
-  - `scripts/test_statistics.sh`
+  - `scripts/test.sh smoke`
+  - `scripts/test.sh db`
+  - `scripts/test.sh module`
+  - `scripts/test.sh contract`
   - `ctest --test-dir build --output-on-failure`
 - 结果:
-  - 配置成功
-  - 构建成功
-  - `auction_statistics_flow` 通过
-  - 已覆盖日报聚合、同日重跑覆盖、管理员查询、CSV 导出、日期范围校验和非管理员拒绝
-  - 当前全量 `ctest` 为 11/11 全部通过
+  - 统一入口可按分层与模块执行
+  - `CTest` 标签筛选生效
+  - MySQL 共享资源锁生效
+  - 当前全量 `ctest` 为 13/13 全部通过
 - 未执行的测试:
-  - Drogon HTTP 路由真实启动测试
-  - 导出文件持久化或对象存储集成测试
+  - 高风险专项测试
+  - Drogon HTTP 控制器级自动化测试
 - 原因:
-  - 当前仍以服务层闭环和脚本验证为主
-  - 本步没有展开 Web 接入层实现
+  - 两者分别归属后续 `S14` 和控制器接入阶段
 
 ### 5. 当前风险/阻塞
-- 风险 1: `statistics_daily` 是聚合缓存表，如果历史交易事实被补偿修正，需要按日重跑才能同步报表
-- 风险 2: 当前导出实现为内存 CSV 内容，尚未接入真实下载响应和文件存储
-- 风险 3: 统计任务目前只记录执行日志，还没有失败重试和统一补偿入口
+- 风险 1: 真实 HTTP 控制器仍未批量接入，当前契约测试仍是服务层映射验证
+- 风险 2: 若本地残留旧 `mysqld`，仍可能出现 `ibdata1` 或 socket 锁冲突
+- 风险 3: `S13` 已统一测试基线，但高风险竞争和安全负向链路仍未专项收口
 - 阻塞项:
-  - 无硬阻塞，可直接继续 `S11`
+  - 无硬阻塞，可直接继续 `S14`
 - 需要注意的坑:
-  - `S11` 应尽量复用现有 `task_log`、`operation_log`，不要重新造一套日志表
-  - 通知失败、统计重跑失败和支付异常都需要纳入统一异常视角
-  - 现有测试 MySQL 目录是持久的，后续测试需继续采用“先取基线、再看增量”或隔离数据的策略
+  - 若测试脚本卡住，优先检查 `build/test_mysql/data/ibdata1` 是否被残留 `mysqld` 占用
+  - `S14` 应优先复用现有 `suite_*` 标签和 `scripts/test.sh` 入口，不要另起一套测试体系
+  - 在控制器未批量接入前，不要把当前 `suite_contract` 误写为真实 HTTP 接口级全覆盖
 
 ### 6. 下一步
-- 下一步 Step ID: S11
-- 下一步目标: 实现操作日志、任务日志、通知失败重试、异常标记、补偿入口和最小验证
+- 下一步 Step ID: S14
+- 下一步目标: 基于已统一的测试基线补齐并发、幂等、降级与安全负向专项测试，并沉淀测试报告
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
-  - [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md)
-  - [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md)
-  - [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md)
-  - `sql/schema.sql` 中 `task_log`、`operation_log`、`notification`、`payment_callback_log`
-  - `src/modules/notification/`
-  - `src/modules/order/`
-  - `src/modules/payment/`
-  - `src/modules/statistics/`
-  - `src/jobs/`
-  - `src/repository/`
+  - [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md)
+  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
+  - [tests/bid](/home/ljh/project/soft_course_design/tests/bid)
+  - [tests/payment](/home/ljh/project/soft_course_design/tests/payment)
+  - [tests/ops](/home/ljh/project/soft_course_design/tests/ops)
+  - [tests/integration](/home/ljh/project/soft_course_design/tests/integration)
+  - [test.sh](/home/ljh/project/soft_course_design/scripts/test.sh)
+  - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
 
 ## 10. 模块 Handoff 模板
 
@@ -313,19 +304,19 @@
 
 请先读取并对齐以下内容后再继续：
 1. docs/schedule.md
-2. docs/统计分析与报表模块说明.md
-3. docs/系统概要设计报告.md
-4. 对应代码目录 src/common/db/、src/repository/、src/modules/notification/、src/modules/order/、src/modules/payment/、src/modules/statistics/、src/jobs/
+2. docs/测试计划与用例说明.md
+3. docs/接口联调记录.md
+4. docs/系统概要设计报告.md
+5. 对应代码目录 tests/、scripts/test.sh、CMakeLists.txt
 
-当前正在做：S11
+当前正在做：S14
 当前状态：未开始
 
 本次需要你继续：
-- 开始 `S11`
-- 先实现操作日志、任务日志查询、通知失败重试、异常标记、补偿入口和最小测试
-- 复用 `src/common/db/`、`src/repository/`、`src/modules/notification/`、`src/modules/order/`、`src/modules/payment/`、`src/modules/statistics/`、`src/jobs/` 和现有 `task_log`、`operation_log`、`notification`、`payment_callback_log` 表
-- 不要改写主交易事实，只在外围监控、补偿和异常处理层补能力
-- 完成后更新对应运维模块文档与 `docs/schedule.md`
+- 开始 `S14`
+- 基于现有 `suite_*` 标签和 `scripts/test.sh` 统一入口，补齐并发、幂等、降级与安全负向专项测试
+- 优先复用 `tests/bid/`、`tests/payment/`、`tests/ops/`、`tests/integration/` 现有结构，必要时再新增专项目录
+- 完成后更新对应测试报告与 `docs/schedule.md`
 
 注意约束：
 - 以实际代码落地为准，不以仅写文档算完成

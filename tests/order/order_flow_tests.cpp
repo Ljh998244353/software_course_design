@@ -362,6 +362,7 @@ int main() {
     auction::modules::order::OrderService order_service(
         config,
         project_root,
+        auth_middleware,
         notification_service
     );
     auction::jobs::AuctionScheduler auction_scheduler(auction_service);

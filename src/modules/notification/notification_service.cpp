@@ -1,10 +1,13 @@
 #include "modules/notification/notification_service.h"
 
+#include <chrono>
 #include <cmath>
+#include <ctime>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "common/logging/logger.h"
 #include "repository/notification_repository.h"
@@ -17,6 +20,27 @@ std::string FormatAmount(const double value) {
     std::ostringstream output;
     output << std::fixed << std::setprecision(2) << (std::round(value * 100.0) / 100.0);
     return output.str();
+}
+
+std::string CurrentTimestampText() {
+    const auto now = std::chrono::system_clock::now();
+    const auto time_value = std::chrono::system_clock::to_time_t(now);
+    std::tm local_tm{};
+    localtime_r(&time_value, &local_tm);
+
+    std::ostringstream output;
+    output << std::put_time(&local_tm, "%Y-%m-%d %H:%M:%S");
+    return output.str();
+}
+
+std::string MaskUsername(const std::string& username) {
+    if (username.empty()) {
+        return {};
+    }
+    if (username.size() <= 2) {
+        return username.substr(0, 1) + "***";
+    }
+    return username.substr(0, 1) + "***" + username.substr(username.size() - 1);
 }
 
 ws::AuctionEventMessage BuildAuctionEventMessage(
@@ -167,6 +191,120 @@ void NotificationService::CreateStationNotice(const StationNoticeRequest& reques
         .push_status = std::string(kPushStatusPending),
     });
     (void)notification;
+}
+
+NotificationRetryResult NotificationService::RetryFailedNotifications(
+    const NotificationRetryRequest& request
+) {
+    if (!request.notification_id.has_value() && (request.limit <= 0 || request.limit > 100)) {
+        throw std::invalid_argument("notification retry limit must be between 1 and 100");
+    }
+
+    auto connection = CreateConnection();
+    repository::NotificationRepository repository(connection);
+
+    std::vector<std::uint64_t> notification_ids;
+    if (request.notification_id.has_value()) {
+        notification_ids.push_back(*request.notification_id);
+    } else {
+        notification_ids = repository.ListFailedNotificationIds(request.limit);
+    }
+
+    NotificationRetryResult result;
+    result.scanned = static_cast<int>(notification_ids.size());
+
+    for (const auto notification_id : notification_ids) {
+        const auto retry_candidate = repository.FindAuctionRetryCandidate(notification_id);
+        const auto retry_count = repository.QueryMaxTaskRetryCount(
+                                     std::string(kTaskTypeNotificationPush),
+                                     std::to_string(notification_id)
+                                 ) +
+                                 1;
+        if (!retry_candidate.has_value()) {
+            ++result.skipped;
+            InsertTaskLogSafely(
+                repository,
+                repository::NotificationTaskLogParams{
+                    .task_type = std::string(kTaskTypeNotificationPush),
+                    .biz_key = std::to_string(notification_id),
+                    .task_status = std::string(kTaskStatusSkipped),
+                    .retry_count = retry_count,
+                    .last_error = "notification not found for retry",
+                    .scheduled_at = CurrentTimestampText(),
+                }
+            );
+            continue;
+        }
+
+        const auto& candidate = *retry_candidate;
+        if (candidate.notification.push_status != kPushStatusFailed ||
+            candidate.notification.notice_type != kNoticeTypeOutbid ||
+            candidate.notification.biz_type != "AUCTION" ||
+            !candidate.notification.biz_id.has_value() || candidate.auction_id == 0 ||
+            candidate.end_time.empty()) {
+            ++result.skipped;
+            InsertTaskLogSafely(
+                repository,
+                repository::NotificationTaskLogParams{
+                    .task_type = std::string(kTaskTypeNotificationPush),
+                    .biz_key = std::to_string(notification_id),
+                    .task_status = std::string(kTaskStatusSkipped),
+                    .retry_count = retry_count,
+                    .last_error = "notification is not eligible for direct retry",
+                    .scheduled_at = candidate.notification.created_at,
+                }
+            );
+            continue;
+        }
+
+        try {
+            const auto server_time = CurrentTimestampText();
+            event_gateway_->PushToUser(
+                candidate.notification.user_id,
+                ws::AuctionEventMessage{
+                    .event = "OUTBID",
+                    .auction_id = candidate.auction_id,
+                    .current_price = candidate.current_price,
+                    .highest_bidder_masked = MaskUsername(candidate.highest_bidder_username),
+                    .end_time = candidate.end_time,
+                    .server_time = server_time,
+                }
+            );
+            repository.UpdatePushStatus(notification_id, std::string(kPushStatusSent));
+            InsertTaskLogSafely(
+                repository,
+                repository::NotificationTaskLogParams{
+                    .task_type = std::string(kTaskTypeNotificationPush),
+                    .biz_key = std::to_string(notification_id),
+                    .task_status = std::string(kTaskStatusSuccess),
+                    .retry_count = retry_count,
+                    .last_error = "",
+                    .scheduled_at = candidate.notification.created_at,
+                }
+            );
+            ++result.succeeded;
+            result.affected_notification_ids.push_back(notification_id);
+        } catch (const std::exception& exception) {
+            common::logging::Logger::Instance().Warn(
+                "notification retry failed: " + std::string(exception.what())
+            );
+            repository.UpdatePushStatus(notification_id, std::string(kPushStatusFailed));
+            InsertTaskLogSafely(
+                repository,
+                repository::NotificationTaskLogParams{
+                    .task_type = std::string(kTaskTypeNotificationPush),
+                    .biz_key = std::to_string(notification_id),
+                    .task_status = std::string(kTaskStatusFailed),
+                    .retry_count = retry_count,
+                    .last_error = exception.what(),
+                    .scheduled_at = candidate.notification.created_at,
+                }
+            );
+            ++result.failed;
+        }
+    }
+
+    return result;
 }
 
 common::db::MysqlConnection NotificationService::CreateConnection() const {

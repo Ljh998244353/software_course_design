@@ -65,6 +65,12 @@ public:
     [[nodiscard]] std::optional<modules::order::OrderRecord> FindOrderByAuctionId(
         std::uint64_t auction_id
     ) const;
+    [[nodiscard]] std::optional<modules::order::OrderRecord> FindOrderById(
+        std::uint64_t order_id
+    ) const;
+    [[nodiscard]] std::optional<modules::order::OrderRecord> FindOrderByIdForUpdate(
+        std::uint64_t order_id
+    ) const;
     [[nodiscard]] modules::order::OrderRecord CreateOrder(const CreateOrderParams& params) const;
 
     [[nodiscard]] std::vector<std::uint64_t> ListExpiredPendingOrderIds() const;
@@ -74,6 +80,8 @@ public:
     [[nodiscard]] bool IsOrderPaymentDeadlineExpired(std::uint64_t order_id) const;
 
     void UpdateOrderStatusToClosed(std::uint64_t order_id) const;
+    void UpdateOrderStatusToShipped(std::uint64_t order_id) const;
+    void UpdateOrderStatusToCompleted(std::uint64_t order_id) const;
     void CloseOpenPaymentsByOrder(std::uint64_t order_id) const;
     void UpdateAuctionStatus(std::uint64_t auction_id, const std::string& status) const;
     void UpdateItemStatus(std::uint64_t item_id, const std::string& item_status) const;

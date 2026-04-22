@@ -458,6 +458,7 @@ int main() {
     auction::modules::order::OrderService order_service(
         config,
         project_root,
+        auth_middleware,
         notification_service
     );
     auction::modules::payment::PaymentService payment_service(

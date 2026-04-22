@@ -55,4 +55,10 @@ struct OrderScheduleResult {
     std::vector<std::uint64_t> affected_order_ids;
 };
 
+struct OrderTransitionResult {
+    std::uint64_t order_id{0};
+    std::string old_status;
+    std::string new_status;
+};
+
 }  // namespace auction::modules::order
