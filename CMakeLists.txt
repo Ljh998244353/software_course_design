@@ -86,6 +86,7 @@ set(AUCTION_CORE_SOURCES
     src/common/runtime/application_bootstrap.cpp
     src/jobs/auction_scheduler.cpp
     src/jobs/order_scheduler.cpp
+    src/jobs/statistics_scheduler.cpp
     src/middleware/auth_middleware.cpp
     src/modules/audit/item_audit_service.cpp
     src/modules/auction/auction_service.cpp
@@ -99,6 +100,8 @@ set(AUCTION_CORE_SOURCES
     src/modules/auth/password_hasher.cpp
     src/modules/payment/payment_signature.cpp
     src/modules/payment/payment_service.cpp
+    src/modules/review/review_service.cpp
+    src/modules/statistics/statistics_service.cpp
     src/modules/auth/token_codec.cpp
     src/repository/auction_repository.cpp
     src/repository/auth_user_repository.cpp
@@ -108,6 +111,8 @@ set(AUCTION_CORE_SOURCES
     src/repository/notification_repository.cpp
     src/repository/order_repository.cpp
     src/repository/payment_repository.cpp
+    src/repository/review_repository.cpp
+    src/repository/statistics_repository.cpp
     src/ws/auction_event_gateway.cpp
 )
 
@@ -159,6 +164,12 @@ target_link_libraries(auction_order_tests PRIVATE auction_core)
 add_executable(auction_payment_tests tests/payment/payment_flow_tests.cpp)
 target_link_libraries(auction_payment_tests PRIVATE auction_core)
 
+add_executable(auction_review_tests tests/review/review_flow_tests.cpp)
+target_link_libraries(auction_review_tests PRIVATE auction_core)
+
+add_executable(auction_statistics_tests tests/statistics/statistics_flow_tests.cpp)
+target_link_libraries(auction_statistics_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
@@ -169,8 +180,10 @@ if(BUILD_TESTING)
     add_test(NAME auction_bid_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_bid.sh)
     add_test(NAME auction_order_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_order.sh)
     add_test(NAME auction_payment_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_payment.sh)
+    add_test(NAME auction_review_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_review.sh)
+    add_test(NAME auction_statistics_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_statistics.sh)
     set_tests_properties(
-        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow auction_item_flow auction_auction_flow auction_bid_flow auction_order_flow auction_payment_flow
+        auction_smoke_tests auction_check_config auction_database_smoke auction_auth_flow auction_item_flow auction_auction_flow auction_bid_flow auction_order_flow auction_payment_flow auction_review_flow auction_statistics_flow
         PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()

@@ -11,10 +11,10 @@ int main() {
     namespace fs = std::filesystem;
 
     const fs::path project_root(AUCTION_PROJECT_ROOT);
-    const fs::path config_path = auction::common::config::ConfigLoader::ResolveConfigPath(project_root);
+    const fs::path config_path = project_root / "config/app.example.json";
     const auto config = auction::common::config::ConfigLoader::LoadFromFile(config_path);
 
-    assert(config.server.port == 8080);
+    assert(config.server.port == 18080);
     assert(config.mysql.database == "auction_system");
     assert(config.mysql.charset == "utf8mb4");
     assert(config.mysql.connect_timeout_seconds == 3U);

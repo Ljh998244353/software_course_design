@@ -126,6 +126,20 @@ std::string_view ErrorCodeMessage(const ErrorCode error_code) {
             return "payment amount mismatch";
         case ErrorCode::kPaymentCallbackInvalid:
             return "payment callback invalid";
+        case ErrorCode::kReviewRatingInvalid:
+            return "review rating invalid";
+        case ErrorCode::kReviewContentTooLong:
+            return "review content too long";
+        case ErrorCode::kReviewOrderStatusInvalid:
+            return "review order status invalid";
+        case ErrorCode::kReviewDuplicateSubmitted:
+            return "review duplicate submitted";
+        case ErrorCode::kReviewPermissionDenied:
+            return "review permission denied";
+        case ErrorCode::kStatisticsDateInvalid:
+            return "statistics date invalid";
+        case ErrorCode::kStatisticsRangeInvalid:
+            return "statistics range invalid";
         case ErrorCode::kInternalError:
             return "internal error";
         case ErrorCode::kConfigError:

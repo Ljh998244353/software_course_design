@@ -21,12 +21,12 @@
 - 已有环境、数据库、认证、物品、拍卖、竞价、订单与支付模块设计文档
 - 已落地 `CMakeLists.txt`、`src/`、`tests/`、`config/`、`scripts/` 等工程骨架
 - 已完成配置加载、日志初始化、统一响应模型、错误码基线和冒烟测试
-- Drogon 当前未安装在本机环境中，因此 HTTP 服务入口采用“检测到 Drogon 时启用，否则 fallback 到 bootstrap 校验模式”的实现策略
+- Drogon 当前已可在本机环境中被 CMake 检测到，HTTP 服务目标可启用；当前自动化验证仍以服务层和脚本闭环为主
 
 因此，真实进度应认定为：
 
-- `S00-S08`：已完成
-- `S09-S15`：未开始
+- `S00-S10`：已完成
+- `S11-S15`：未开始
 
 ## 3. 步骤完成判定
 
@@ -46,17 +46,17 @@
 
 ## 4. 当前推荐执行顺序
 
-`S08` 已完成代码落地与验证；当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块以及订单支付模块均已具备可复用实现，后续可以直接从 `S09` 继续推进。
+`S10` 已完成代码落地与验证；当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块、订单支付模块、评价模块以及统计模块均已具备可复用实现，后续可以直接从 `S11` 继续推进。
 
 建议严格按以下顺序推进实际开发：
 
-1. `S09`
-2. `S10 -> S11`
-3. `S12 -> S13 -> S14 -> S15`
+1. `S11`
+2. `S12 -> S13`
+3. `S14 -> S15`
 
 当前最优先的实际下一步是：
 
-- `S09`：实现评价与反馈模块代码，并消费 `S08` 已落地的订单终态
+- `S11`：实现系统监控与异常处理模块代码，并复用现有 `task_log`、`operation_log` 和统计任务基础能力
 
 ## 5. Step-by-Step Schedule
 
@@ -71,8 +71,8 @@
 | S06 | 实现拍卖管理模块代码 | 已有拍卖管理模块设计文档 | 实现活动创建、修改、取消、查询、开始调度、结束调度、活动状态切换、最小模块测试 | 管理员可创建活动，系统可按时间切换状态，拍卖和拍品状态协同可验证 | `src/modules/auction/`、`src/jobs/`、`tests/auction/` | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) | 已完成 | 已落地 `AuctionService`、`AuctionRepository`、`AuctionScheduler`、拍卖自动化测试和调度任务日志闭环 |
 | S07 | 实现竞价与实时通知模块代码 | 已有竞价与实时通知模块设计文档 | 实现出价接口、行级锁事务、幂等键、延时保护、竞价历史、Redis 热点缓存、WebSocket 推送、最小并发测试 | 并发出价下最高价一致，延时保护生效，通知失败不回滚事务 | `src/modules/bid/`、`src/modules/notification/`、`src/ws/`、`tests/bid/` | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) | 已完成 | 已落地竞价服务、通知服务、缓存/推送抽象、仓储与自动化测试；当前环境因未接入 Redis/Drogon，默认使用可替换的进程内实现 |
 | S08 | 实现订单与支付结算模块代码 | 拍卖与竞价设计已具备输入条件 | 实现结束后生成订单、支付发起、支付回调、幂等处理、超时关闭、审计日志、最小模块测试 | 一场拍卖最多生成一笔订单，重复回调不重复记账 | `src/modules/order/`、`src/modules/payment/`、`tests/order/`、`tests/payment/` | `docs/订单与支付模块说明.md` | 已完成 | 已落地 `OrderService`、`PaymentService`、`OrderScheduler`、订单/支付仓储、mock 回调签名与自动化测试闭环 |
-| S09 | 实现评价与反馈模块代码 | 订单完成态定义待落地 | 实现互评、评价查询、评价约束、信用汇总基础能力、最小模块测试 | 买卖双方可在订单完成后互评，评价与订单正确绑定 | `src/modules/review/`、`tests/review/` | `docs/评价与反馈模块说明.md` | 未开始 | 依赖 `S08` 的订单终态 |
-| S10 | 实现统计分析与报表模块代码 | 数据模型和业务链路设计已具备基础 | 实现日报表聚合、成交统计、流拍统计、出价统计、导出接口、统计任务测试 | 管理端可查看主要统计指标，统计结果可复算 | `src/modules/statistics/`、`src/jobs/statistics/`、`tests/statistics/` | `docs/统计分析与报表模块说明.md` | 未开始 | 建议在主链路闭环后推进 |
+| S09 | 实现评价与反馈模块代码 | 已具备 `review` 表、订单终态字段和通知基础设施 | 实现互评、评价查询、评价约束、信用汇总基础能力、最小模块测试 | 买卖双方可在订单完成后互评，评价与订单正确绑定 | `src/modules/review/`、`tests/review/` | `docs/评价与反馈模块说明.md` | 已完成 | 已落地 `ReviewService`、`ReviewRepository`、自动评价方向推导、重复评价约束、信用汇总查询和自动化测试闭环 |
+| S10 | 实现统计分析与报表模块代码 | 数据模型和业务链路设计已具备基础 | 实现日报表聚合、成交统计、流拍统计、出价统计、导出接口、统计任务测试 | 管理端可查看主要统计指标，统计结果可复算 | `src/modules/statistics/`、`src/jobs/`、`tests/statistics/` | `docs/统计分析与报表模块说明.md` | 已完成 | 已落地 `StatisticsService`、`StatisticsRepository`、`StatisticsScheduler`、CSV 导出与自动化测试闭环 |
 | S11 | 实现系统监控与异常处理模块代码 | 已有顶层日志、任务、降级设计 | 实现操作日志、任务日志、通知失败重试、异常标记、补偿入口、降级处理、最小验证 | 关键异常可观测、可追踪、可重试 | `src/modules/ops/`、`src/jobs/retry/`、`tests/ops/` | `docs/系统监控与异常处理模块说明.md` | 未开始 | 重点覆盖 Redis 降级、通知失败和任务补偿 |
 | S12 | 完成接口联调与主流程闭环 | 核心模块代码已具备后才能开始 | 联调认证、拍品、审核、活动、竞价、订单、支付、评价全链路，修正接口和状态切换问题 | 主流程可完整走通并可演示 | `src/`、`tests/integration/` | `docs/接口联调记录.md` | 未开始 | 必须在 `S04-S11` 有实际代码后执行 |
 | S13 | 落地自动化测试基线 | 需要已有可运行工程 | 建立 CTest/GoogleTest、单元测试、集成测试、接口测试目录、基础测试脚本和执行方式 | 测试框架可运行，核心模块都有最小自动化覆盖 | `tests/`、`CMakeLists.txt`、`scripts/test/` | `docs/测试计划与用例说明.md` | 未开始 | 虽然测试应随模块推进，但这里单列为统一收口步骤 |
@@ -83,11 +83,11 @@
 
 为了方便直接分配给 agent 执行，后续每一步建议拆成“一个模块、一个明确目标、一个明确代码目录”的粒度。
 
-按当前已确认进度，下一阶段应从 `S09` 开始拆分执行。
+按当前已确认进度，下一阶段应从 `S11` 开始拆分执行。
 
 例如：
 
-- `S09-S11` 每一步都应优先完成控制器、服务、仓储、测试四件套，再更新模块文档
+- `S11-S13` 每一步都应优先完成控制器、服务、仓储、测试四件套，再更新模块文档
 - 若某一步尚未形成最小可验证闭环，则继续保持 `进行中`，不要提前改成 `已完成`
 - 已完成步骤也要继续记录验证命令和 handoff，避免上下文压缩后丢失真实进度
 
@@ -113,6 +113,10 @@
 | 2026-04-15 | S07-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_bid.sh`、`ctest --test-dir build --output-on-failure`；`auction_bid_flow` 已覆盖首次出价、幂等重试、最低加价校验、延时保护、通知失败不回滚和最小并发竞价，当前 `ctest` 7/7 全部通过 | [bid_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/bid/bid_flow_tests.cpp) | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) |
 | 2026-04-15 | S08 | 已完成 | 已落地 `src/modules/order/`、`src/modules/payment/`、`src/repository/order_repository.*`、`src/repository/payment_repository.*`、`src/jobs/order_scheduler.*`、`tests/order/order_flow_tests.cpp`、`tests/payment/payment_flow_tests.cpp`、`scripts/test_order.sh` 和 `scripts/test_payment.sh`；已完成 `SETTLING` 建单、支付发起、回调验签与金额校验、重复成功回调幂等、超时关闭和站内通知/审计日志闭环 | [order_service.cpp](/home/ljh/project/soft_course_design/src/modules/order/order_service.cpp) | [订单与支付模块说明.md](/home/ljh/project/soft_course_design/docs/订单与支付模块说明.md) |
 | 2026-04-15 | S08-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_order.sh`、`scripts/test_payment.sh`、`ctest --test-dir build --output-on-failure`；`auction_order_flow` 已覆盖唯一建单与超时关闭，`auction_payment_flow` 已覆盖支付发起复用、成功回调、重复成功回调、金额不一致和验签失败，当前 `ctest` 9/9 全部通过 | [payment_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/payment/payment_flow_tests.cpp) | [订单与支付模块说明.md](/home/ljh/project/soft_course_design/docs/订单与支付模块说明.md) |
+| 2026-04-22 | S09 | 已完成 | 已落地 `src/modules/review/`、`src/repository/review_repository.*`、`tests/review/review_flow_tests.cpp` 和 `scripts/test_review.sh`；已完成互评提交、自动评价方向推导、重复评价约束、按订单查询互评记录、按用户汇总信用评分和第二条评价后订单推进到 `REVIEWED` 的闭环 | [review_service.cpp](/home/ljh/project/soft_course_design/src/modules/review/review_service.cpp) | [评价与反馈模块说明.md](/home/ljh/project/soft_course_design/docs/评价与反馈模块说明.md) |
+| 2026-04-22 | S09-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_review.sh`、`ctest --test-dir build --output-on-failure`；`auction_review_flow` 已覆盖买卖双方互评、重复评价、非订单参与方拒绝、订单状态约束和信用汇总；后续已修正 `auction_smoke_tests` 配置断言，`S09` 收尾时全量 `ctest` 为 10/10 通过 | [review_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/review/review_flow_tests.cpp) | [评价与反馈模块说明.md](/home/ljh/project/soft_course_design/docs/评价与反馈模块说明.md) |
+| 2026-04-22 | S10 | 已完成 | 已落地 `src/modules/statistics/`、`src/repository/statistics_repository.*`、`src/jobs/statistics_scheduler.*`、`tests/statistics/statistics_flow_tests.cpp` 和 `scripts/test_statistics.sh`；已完成日报聚合、成交/流拍/出价统计、管理员查询、CSV 导出、按天重跑覆盖和任务日志闭环 | [statistics_service.cpp](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.cpp) | [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md) |
+| 2026-04-22 | S10-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_statistics.sh`、`ctest --test-dir build --output-on-failure`；`auction_statistics_flow` 已覆盖日报聚合、同日重跑覆盖、管理员查询、CSV 导出、日期范围校验和非管理员拒绝，当前全量 `ctest` 为 11/11 全部通过 | [statistics_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/statistics/statistics_flow_tests.cpp) | [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md) |
 | 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
@@ -132,117 +136,106 @@
 ## 模块 Handoff
 
 ### 1. 基本信息
-- Step ID: S09
-- 模块名称: 评价与反馈模块
+- Step ID: S11
+- 模块名称: 系统监控与异常处理模块
 - 当前状态: 未开始
-- 对应文档: `docs/评价与反馈模块说明.md`
-- 对应代码目录: `src/modules/review/` `tests/review/`
-- 已有可复用基础目录: `src/common/db/` `src/repository/` `src/modules/auth/` `src/modules/item/` `src/modules/auction/` `src/modules/bid/` `src/modules/order/` `src/modules/payment/` `src/modules/notification/` `src/jobs/` `src/middleware/`
+- 对应文档: `docs/系统监控与异常处理模块说明.md`
+- 对应代码目录: `src/modules/ops/` `tests/ops/`
+- 已有可复用基础目录: `src/common/db/` `src/repository/` `src/modules/notification/` `src/modules/order/` `src/modules/payment/` `src/modules/review/` `src/modules/statistics/` `src/jobs/` `src/middleware/`
 
 ### 2. 本次实际完成
 - 已完成功能:
-  - `S08` 已完成
-  - 已落地 `OrderService`、`OrderRepository`、`OrderScheduler`
-  - 已落地 `PaymentService`、`PaymentRepository`、`payment_signature`
-  - 已落地 `tests/order/order_flow_tests.cpp` 与 `tests/payment/payment_flow_tests.cpp`
-  - 已完成 `SETTLING` 唯一建单、支付发起复用、成功回调、重复成功回调幂等、金额不一致拒绝、验签失败拒绝和超时关闭闭环
+  - `S10` 已完成
+  - 已落地 `StatisticsService`、`StatisticsRepository`、`StatisticsScheduler`
+  - 已落地 `tests/statistics/statistics_flow_tests.cpp` 与 `scripts/test_statistics.sh`
+  - 已完成日报聚合、成交统计、流拍统计、出价统计、管理员查询、CSV 导出和按天重跑覆盖闭环
 - 实际修改文件:
-  - [order_service.cpp](/home/ljh/project/soft_course_design/src/modules/order/order_service.cpp)
-  - [order_service.h](/home/ljh/project/soft_course_design/src/modules/order/order_service.h)
-  - [order_types.h](/home/ljh/project/soft_course_design/src/modules/order/order_types.h)
-  - [order_exception.h](/home/ljh/project/soft_course_design/src/modules/order/order_exception.h)
-  - [payment_service.cpp](/home/ljh/project/soft_course_design/src/modules/payment/payment_service.cpp)
-  - [payment_service.h](/home/ljh/project/soft_course_design/src/modules/payment/payment_service.h)
-  - [payment_types.h](/home/ljh/project/soft_course_design/src/modules/payment/payment_types.h)
-  - [payment_exception.h](/home/ljh/project/soft_course_design/src/modules/payment/payment_exception.h)
-  - [payment_signature.cpp](/home/ljh/project/soft_course_design/src/modules/payment/payment_signature.cpp)
-  - [payment_signature.h](/home/ljh/project/soft_course_design/src/modules/payment/payment_signature.h)
-  - [order_repository.cpp](/home/ljh/project/soft_course_design/src/repository/order_repository.cpp)
-  - [order_repository.h](/home/ljh/project/soft_course_design/src/repository/order_repository.h)
-  - [payment_repository.cpp](/home/ljh/project/soft_course_design/src/repository/payment_repository.cpp)
-  - [payment_repository.h](/home/ljh/project/soft_course_design/src/repository/payment_repository.h)
-  - [order_scheduler.cpp](/home/ljh/project/soft_course_design/src/jobs/order_scheduler.cpp)
-  - [order_scheduler.h](/home/ljh/project/soft_course_design/src/jobs/order_scheduler.h)
-  - [notification_service.cpp](/home/ljh/project/soft_course_design/src/modules/notification/notification_service.cpp)
-  - [notification_service.h](/home/ljh/project/soft_course_design/src/modules/notification/notification_service.h)
-  - [order_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/order/order_flow_tests.cpp)
-  - [payment_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/payment/payment_flow_tests.cpp)
-  - [test_order.sh](/home/ljh/project/soft_course_design/scripts/test_order.sh)
-  - [test_payment.sh](/home/ljh/project/soft_course_design/scripts/test_payment.sh)
+  - [statistics_service.cpp](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.cpp)
+  - [statistics_service.h](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.h)
+  - [statistics_types.h](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_types.h)
+  - [statistics_exception.h](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_exception.h)
+  - [statistics_repository.cpp](/home/ljh/project/soft_course_design/src/repository/statistics_repository.cpp)
+  - [statistics_repository.h](/home/ljh/project/soft_course_design/src/repository/statistics_repository.h)
+  - [statistics_scheduler.cpp](/home/ljh/project/soft_course_design/src/jobs/statistics_scheduler.cpp)
+  - [statistics_scheduler.h](/home/ljh/project/soft_course_design/src/jobs/statistics_scheduler.h)
+  - [statistics_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/statistics/statistics_flow_tests.cpp)
+  - [test_statistics.sh](/home/ljh/project/soft_course_design/scripts/test_statistics.sh)
   - [error_code.h](/home/ljh/project/soft_course_design/src/common/errors/error_code.h)
+  - [error_code.cpp](/home/ljh/project/soft_course_design/src/common/errors/error_code.cpp)
   - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
-  - [订单与支付模块说明.md](/home/ljh/project/soft_course_design/docs/订单与支付模块说明.md)
+  - [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md)
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 未完成功能:
-  - `S09` 评价提交
-  - 评价查询与互评约束
-  - 买卖双方信用汇总
+  - `S11` 操作日志查询与异常处理入口
+  - 通知失败重试、补偿入口和最小监控看板
 - 明确不在本步处理的内容:
-  - 统计、运维与异常处理后续模块
+  - Drogon 控制器与真实 HTTP 下载响应
+  - 高风险专项测试与最终部署交付
 
 ### 3. 关键设计决定
-- 决定 1: 拍卖结束后的活动继续保持 `SETTLING`，直到支付成功或超时关闭再推进到 `SOLD/UNSOLD`
-- 原因: 这样可以和 `S06` 的状态机保持一致，避免建单成功但未付款时过早标记成交
+- 决定 1: 活动类日报统一按 `auction.end_time` 的自然日归档，出价次数按 `bid_record.bid_time` 的自然日统计
+- 原因: 这样能把“活动结束事实”和“出价事实”分别落在最稳定的业务时间字段上，避免混用 `created_at`
 - 影响范围:
-  - `S09` 只能消费订单终态，不能把 `SETTLING` 或 `PENDING_PAYMENT` 当成可评价状态
-  - 评价模块更适合依赖订单状态，而不是重新推导拍卖结果
+  - `statistics_daily` 的 `auction_count`、`sold_count`、`unsold_count` 以已结束拍卖为主轴
+  - `bid_count` 独立按出价日汇总
 
-- 决定 2: 支付回调当前采用 mock 契约，`merchantNo = COURSE_AUCTION`，签名 secret 复用 `auth.token_secret`
-- 原因: 当前环境没有真实第三方支付配置，但需要先把回调验签、金额校验和幂等闭环做实
+- 决定 2: `sold_count` 与 `gmv_amount` 只统计存在成功支付记录且订单未关闭的活动；`unsold_count` 统计显式流拍或订单超时关闭
+- 原因: 统计口径必须消费真实支付与订单终态，不能把未支付的中间态误记为最终成交
 - 影响范围:
-  - 后续接真实支付网关时优先替换 `payment_signature` 和回调字段映射
-  - 订单与支付主事务边界无需改动
+  - 在支付仍待完成时，`sold_count + unsold_count` 允许小于 `auction_count`
+  - 后续若新增补偿任务，只需按日重跑即可覆盖旧值
 
-- 决定 3: 通知继续遵循“主状态先提交、站内信后补发”的旁路原则
-- 原因: 订单生成、支付成功和超时关闭属于交易事实，不能被通知失败回滚
+- 决定 3: `statistics_daily` 采用按 `stat_date` 唯一 upsert，而不是追加多条快照
+- 原因: 课程设计阶段更强调可复算、可演示和易排障，不需要保留同一日的多版本统计快照
 - 影响范围:
-  - `S09` 的评价成功通知也应延续这一原则
-  - 后续运维重试任务可直接消费 `notification` 与 `task_log`
+  - 重跑同一天时直接覆盖旧日报
+  - 测试已验证同一 `stat_date` 只保留一条记录
 
 ### 4. 验证结果
 - 执行命令:
   - `cmake -S . -B build`
   - `cmake --build build`
-  - `scripts/test_order.sh`
-  - `scripts/test_payment.sh`
+  - `scripts/test_statistics.sh`
   - `ctest --test-dir build --output-on-failure`
 - 结果:
   - 配置成功
   - 构建成功
-  - `auction_order_flow` 通过
-  - `auction_payment_flow` 通过
-  - 全部测试 9/9 通过
-  - 已覆盖唯一建单、支付发起复用、成功回调、重复成功回调、金额不一致、验签失败和超时关闭
+  - `auction_statistics_flow` 通过
+  - 已覆盖日报聚合、同日重跑覆盖、管理员查询、CSV 导出、日期范围校验和非管理员拒绝
+  - 当前全量 `ctest` 为 11/11 全部通过
 - 未执行的测试:
   - Drogon HTTP 路由真实启动测试
-  - 真实第三方支付联调
+  - 导出文件持久化或对象存储集成测试
 - 原因:
-  - 本机当前未安装 Drogon
-  - `S08` 当前采用 mock 支付契约
+  - 当前仍以服务层闭环和脚本验证为主
+  - 本步没有展开 Web 接入层实现
 
 ### 5. 当前风险/阻塞
-- 风险 1: Drogon 目前不在本机环境里，HTTP 与 WebSocket 模式尚未实际验证
-- 风险 2: mock 支付配置仍复用 `auth.token_secret`，后续接真实支付网关时需要拆出独立支付配置
+- 风险 1: `statistics_daily` 是聚合缓存表，如果历史交易事实被补偿修正，需要按日重跑才能同步报表
+- 风险 2: 当前导出实现为内存 CSV 内容，尚未接入真实下载响应和文件存储
+- 风险 3: 统计任务目前只记录执行日志，还没有失败重试和统一补偿入口
 - 阻塞项:
-  - 无硬阻塞，可直接继续 `S09`
+  - 无硬阻塞，可直接继续 `S11`
 - 需要注意的坑:
-  - `S09` 不能对 `PENDING_PAYMENT` 或 `CLOSED` 订单开放评价
-  - `review(order_id, reviewer_id)` 的唯一约束应直接用于防重
-  - 评价模块应优先消费订单状态，而不是重新推导拍卖结果
+  - `S11` 应尽量复用现有 `task_log`、`operation_log`，不要重新造一套日志表
+  - 通知失败、统计重跑失败和支付异常都需要纳入统一异常视角
+  - 现有测试 MySQL 目录是持久的，后续测试需继续采用“先取基线、再看增量”或隔离数据的策略
 
 ### 6. 下一步
-- 下一步 Step ID: S09
-- 下一步目标: 实现买卖双方互评、评价查询、重复评价约束和最小评价测试
+- 下一步 Step ID: S11
+- 下一步目标: 实现操作日志、任务日志、通知失败重试、异常标记、补偿入口和最小验证
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
-  - [订单与支付模块说明.md](/home/ljh/project/soft_course_design/docs/订单与支付模块说明.md)
+  - [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md)
+  - [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md)
   - [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md)
-  - `sql/schema.sql` 中 `review` 表定义
+  - `sql/schema.sql` 中 `task_log`、`operation_log`、`notification`、`payment_callback_log`
+  - `src/modules/notification/`
   - `src/modules/order/`
   - `src/modules/payment/`
-  - `src/common/db/`
+  - `src/modules/statistics/`
+  - `src/jobs/`
   - `src/repository/`
-  - `src/modules/auth/`
 
 ## 10. 模块 Handoff 模板
 
@@ -320,18 +313,19 @@
 
 请先读取并对齐以下内容后再继续：
 1. docs/schedule.md
-2. docs/竞价与实时通知模块说明.md
-3. 对应代码目录 src/common/db/、src/repository/、src/modules/auction/、src/modules/bid/、src/modules/notification/、src/jobs/
+2. docs/统计分析与报表模块说明.md
+3. docs/系统概要设计报告.md
+4. 对应代码目录 src/common/db/、src/repository/、src/modules/notification/、src/modules/order/、src/modules/payment/、src/modules/statistics/、src/jobs/
 
-当前正在做：S08
+当前正在做：S11
 当前状态：未开始
 
 本次需要你继续：
-- 开始 `S08`
-- 先实现拍卖结束后生成订单、支付发起、支付回调幂等、超时关闭和最小测试
-- 复用 `src/common/db/`、`src/repository/`、`src/modules/auction/`、`src/modules/bid/`、`src/modules/notification/`、`src/jobs/` 和现有 `auction`、`order_info`、`payment_record`、`payment_callback_log`、`task_log` 表
-- 仅允许 `SETTLING` 且存在 `highest_bidder_id` 的活动进入订单生成
-- 完成后更新对应订单/支付模块文档与 `docs/schedule.md`
+- 开始 `S11`
+- 先实现操作日志、任务日志查询、通知失败重试、异常标记、补偿入口和最小测试
+- 复用 `src/common/db/`、`src/repository/`、`src/modules/notification/`、`src/modules/order/`、`src/modules/payment/`、`src/modules/statistics/`、`src/jobs/` 和现有 `task_log`、`operation_log`、`notification`、`payment_callback_log` 表
+- 不要改写主交易事实，只在外围监控、补偿和异常处理层补能力
+- 完成后更新对应运维模块文档与 `docs/schedule.md`
 
 注意约束：
 - 以实际代码落地为准，不以仅写文档算完成
