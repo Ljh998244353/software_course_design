@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>在线拍卖平台业务工作台</title>
+    <link rel="stylesheet" href="/assets/app/app.css">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/app" aria-label="在线拍卖平台">
+            <span>拍卖平台</span>
+            <strong>Business Console</strong>
+        </a>
+        <nav class="role-nav" aria-label="角色导航">
+            <button class="nav-button" type="button" data-route="home" data-roles="USER,ADMIN,SUPPORT">首页</button>
+            <button class="nav-button" type="button" data-route="buyer" data-roles="USER">买家</button>
+            <button class="nav-button" type="button" data-route="seller" data-roles="USER">卖家</button>
+            <button class="nav-button" type="button" data-route="admin" data-roles="ADMIN">管理</button>
+            <button class="nav-button" type="button" data-route="support" data-roles="SUPPORT">运维</button>
+            <button class="nav-button" type="button" data-route="api" data-roles="USER,ADMIN,SUPPORT">接口</button>
+        </nav>
+        <div class="session-box">
+            <span id="sessionLabel">未登录</span>
+            <button id="logoutButton" class="icon-text-button" type="button" hidden>退出</button>
+        </div>
+    </header>
+
+    <main class="app-shell">
+        <section class="route-view auth-grid" data-view="gate">
+            <form id="loginForm" class="surface-panel auth-panel">
+                <div class="panel-head">
+                    <span class="eyebrow">Login</span>
+                    <h1>登录</h1>
+                </div>
+                <label>
+                    <span>用户名</span>
+                    <input id="usernameInput" name="username" type="text" value="admin" autocomplete="username">
+                </label>
+                <label>
+                    <span>密码</span>
+                    <input id="passwordInput" name="password" type="password" value="Admin@123" autocomplete="current-password">
+                </label>
+                <button class="primary-button" type="submit">登录</button>
+            </form>
+
+            <form id="registerForm" class="surface-panel auth-panel">
+                <div class="panel-head">
+                    <span class="eyebrow">Register</span>
+                    <h2>注册</h2>
+                </div>
+                <div class="compact-grid">
+                    <label>
+                        <span>用户名</span>
+                        <input id="registerUsernameInput" name="username" type="text" autocomplete="username">
+                    </label>
+                    <label>
+                        <span>昵称</span>
+                        <input id="registerNicknameInput" name="nickname" type="text" autocomplete="nickname">
+                    </label>
+                </div>
+                <div class="compact-grid">
+                    <label>
+                        <span>手机号</span>
+                        <input id="registerPhoneInput" name="phone" type="tel" autocomplete="tel">
+                    </label>
+                    <label>
+                        <span>邮箱</span>
+                        <input id="registerEmailInput" name="email" type="email" autocomplete="email">
+                    </label>
+                </div>
+                <label>
+                    <span>密码</span>
+                    <input id="registerPasswordInput" name="password" type="password" autocomplete="new-password">
+                </label>
+                <button class="secondary-button" type="submit">创建账号</button>
+            </form>
+        </section>
+
+        <section class="route-view dashboard-grid" data-view="home" hidden>
+            <article class="surface-panel profile-panel">
+                <div class="panel-head">
+                    <span class="eyebrow">Session</span>
+                    <h1 id="profileName">当前用户</h1>
+                </div>
+                <dl class="profile-list">
+                    <div><dt>用户 ID</dt><dd id="profileUserId">-</dd></div>
+                    <div><dt>角色</dt><dd id="profileRole">-</dd></div>
+                    <div><dt>状态</dt><dd id="profileStatus">-</dd></div>
+                    <div><dt>Token 到期</dt><dd id="profileExpireAt">-</dd></div>
+                </dl>
+            </article>
+
+            <article class="surface-panel role-panel" data-role-entry="USER">
+                <span class="eyebrow">User</span>
+                <h2>买家与卖家入口</h2>
+                <div class="entry-actions">
+                    <button class="secondary-button" type="button" data-route-jump="buyer">买家视图</button>
+                    <button class="secondary-button" type="button" data-route-jump="seller">卖家视图</button>
+                </div>
+            </article>
+
+            <article class="surface-panel role-panel" data-role-entry="ADMIN">
+                <span class="eyebrow">Admin</span>
+                <h2>后台管理入口</h2>
+                <button class="secondary-button" type="button" data-route-jump="admin">用户状态管理</button>
+            </article>
+
+            <article class="surface-panel role-panel" data-role-entry="SUPPORT">
+                <span class="eyebrow">Support</span>
+                <h2>运维客服入口</h2>
+                <button class="secondary-button" type="button" data-route-jump="support">运维视图</button>
+            </article>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="buyer" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">Buyer</span>
+                <h1>买家视图</h1>
+            </div>
+            <div class="placeholder-grid">
+                <div><strong>拍卖大厅</strong><span>待 S21 接入</span></div>
+                <div><strong>我的出价</strong><span>待 S22 接入</span></div>
+                <div><strong>我的订单</strong><span>待 S23 接入</span></div>
+            </div>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="seller" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">Seller</span>
+                <h1>拍品管理</h1>
+            </div>
+            <div class="seller-layout">
+                <form id="itemForm" class="work-panel item-form">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Item</span>
+                        <h2 id="itemFormTitle">新建拍品</h2>
+                    </div>
+                    <input id="itemEditIdInput" type="hidden">
+                    <label>
+                        <span>标题</span>
+                        <input id="itemTitleInput" name="title" type="text" maxlength="200">
+                    </label>
+                    <label>
+                        <span>描述</span>
+                        <textarea id="itemDescriptionInput" name="description" rows="4"></textarea>
+                    </label>
+                    <div class="compact-grid">
+                        <label>
+                            <span>分类 ID</span>
+                            <input id="itemCategoryInput" name="categoryId" type="number" min="1" value="1">
+                        </label>
+                        <label>
+                            <span>建议起拍价</span>
+                            <input id="itemStartPriceInput" name="startPrice" type="number" min="0.01" step="0.01">
+                        </label>
+                    </div>
+                    <label>
+                        <span>封面图地址</span>
+                        <input id="itemCoverInput" name="coverImageUrl" type="url">
+                    </label>
+                    <div class="form-actions">
+                        <button class="primary-button" type="submit">保存拍品</button>
+                        <button id="resetItemFormButton" class="text-button" type="button">清空</button>
+                    </div>
+                </form>
+
+                <section class="work-panel image-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Images</span>
+                        <h2>图片元数据</h2>
+                    </div>
+                    <form id="imageForm">
+                        <label>
+                            <span>拍品 ID</span>
+                            <input id="imageItemIdInput" name="itemId" type="number" min="1">
+                        </label>
+                        <label>
+                            <span>图片地址</span>
+                            <input id="imageUrlInput" name="imageUrl" type="url">
+                        </label>
+                        <div class="compact-grid">
+                            <label>
+                                <span>排序</span>
+                                <input id="imageSortInput" name="sortNo" type="number" min="1">
+                            </label>
+                            <label class="checkbox-label">
+                                <input id="imageCoverInput" name="isCover" type="checkbox">
+                                <span>设为封面</span>
+                            </label>
+                        </div>
+                        <button class="secondary-button" type="submit">添加图片</button>
+                    </form>
+                    <div class="selected-item-box">
+                        <span id="selectedItemLabel">未选择拍品</span>
+                        <button id="submitAuditButton" class="primary-button" type="button">提交审核</button>
+                    </div>
+                </section>
+
+                <section class="work-panel item-list-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Mine</span>
+                            <h2>我的拍品</h2>
+                        </div>
+                        <div class="toolbar-actions">
+                            <select id="itemStatusFilter" aria-label="拍品状态筛选">
+                                <option value="">全部状态</option>
+                                <option value="DRAFT">DRAFT</option>
+                                <option value="PENDING_AUDIT">PENDING_AUDIT</option>
+                                <option value="REJECTED">REJECTED</option>
+                                <option value="READY_FOR_AUCTION">READY_FOR_AUCTION</option>
+                            </select>
+                            <button id="refreshItemsButton" class="text-button" type="button">刷新</button>
+                        </div>
+                    </div>
+                    <div id="sellerItemList" class="item-list"></div>
+                    <div id="itemDetailPanel" class="item-detail-panel" hidden>
+                        <dl class="profile-list" id="itemDetailList"></dl>
+                        <div id="itemImageList" class="image-list"></div>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="admin" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">Admin</span>
+                <h1>用户状态管理</h1>
+            </div>
+            <form id="statusForm" class="status-form">
+                <label>
+                    <span>目标用户 ID</span>
+                    <input id="statusUserIdInput" name="userId" type="number" min="1">
+                </label>
+                <label>
+                    <span>状态</span>
+                    <select id="statusSelect" name="status">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="FROZEN">FROZEN</option>
+                        <option value="DISABLED">DISABLED</option>
+                    </select>
+                </label>
+                <label>
+                    <span>原因</span>
+                    <input id="statusReasonInput" name="reason" type="text" value="admin update from app">
+                </label>
+                <button class="primary-button" type="submit">更新状态</button>
+            </form>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="support" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">Support</span>
+                <h1>运维视图</h1>
+            </div>
+            <div class="placeholder-grid">
+                <div><strong>操作日志</strong><span>待 S25 接入</span></div>
+                <div><strong>任务日志</strong><span>待 S25 接入</span></div>
+                <div><strong>异常看板</strong><span>待 S25 接入</span></div>
+            </div>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="api" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">API</span>
+                <h1>认证接口</h1>
+            </div>
+            <dl class="endpoint-list" id="endpointList"></dl>
+            <div class="console-head">
+                <span id="statusBadge" class="status-badge">等待请求</span>
+                <button id="contextButton" class="text-button" type="button">刷新当前用户</button>
+                <button id="notFoundButton" class="text-button" type="button">验证 404</button>
+            </div>
+            <pre id="responseViewer" class="response-viewer">{
+  "message": "等待真实接口返回"
+}</pre>
+        </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/assets/app/app.js"></script>
+</body>
+</html>

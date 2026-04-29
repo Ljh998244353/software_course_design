@@ -76,14 +76,22 @@ else()
 endif()
 
 set(AUCTION_CORE_SOURCES
+    src/access/http/api_error_http.cpp
+    src/access/http/app_http.cpp
+    src/access/http/auth_http.cpp
+    src/access/http/business_http.cpp
     src/access/http/demo_http.cpp
     src/access/http/health_http.cpp
+    src/access/http/item_http.cpp
+    src/access/http/system_http.cpp
     src/application/database_health_service.cpp
     src/application/demo_dashboard_service.cpp
     src/application/health_service.cpp
     src/common/config/config_loader.cpp
     src/common/db/mysql_connection.cpp
     src/common/errors/error_code.cpp
+    src/common/http/http_service_context.cpp
+    src/common/http/http_utils.cpp
     src/common/logging/logger.cpp
     src/common/runtime/application_bootstrap.cpp
     src/jobs/auction_scheduler.cpp
@@ -206,6 +214,7 @@ if(BUILD_TESTING)
     add_test(NAME auction_high_risk_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_high_risk.sh)
     add_test(NAME auction_security_negative COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_security.sh)
     add_test(NAME auction_demo_dashboard COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_demo_frontend.sh)
+    add_test(NAME auction_http_baseline COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_http.sh)
 
     set_tests_properties(
         auction_smoke_tests auction_check_config
@@ -227,6 +236,7 @@ if(BUILD_TESTING)
         auction_high_risk_flow
         auction_security_negative
         auction_demo_dashboard
+        auction_http_baseline
         PROPERTIES
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             RESOURCE_LOCK auction_mysql_test_runtime
@@ -289,5 +299,9 @@ if(BUILD_TESTING)
     set_tests_properties(
         auction_demo_dashboard
         PROPERTIES LABELS "suite_demo;module_frontend;requires_mysql"
+    )
+    set_tests_properties(
+        auction_http_baseline
+        PROPERTIES LABELS "suite_http;suite_contract;requires_mysql"
     )
 endif()

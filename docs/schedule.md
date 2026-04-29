@@ -25,8 +25,8 @@
 
 因此，真实进度应认定为：
 
-- `S00-S16`：已完成
-- `S17-S30`：已规划，未开始，用于完整前端全量接入真实业务后端
+- `S00-S19`：已完成
+- `S20-S30`：已规划，未开始，用于完整前端全量接入真实业务后端
 
 ## 3. 步骤完成判定
 
@@ -52,13 +52,17 @@
 
 1. `S00-S16`
 
-当前已追加完整前端全量接入后端的扩展计划：
+当前完整前端扩展计划的已完成步骤如下：
 
-1. `S17-S30`
+1. `S17-S19`
+
+当前完整前端扩展计划中待继续执行的步骤如下：
+
+1. `S20-S30`
 
 当前最优先的实际下一步是：
 
-- `S17`：先补齐真实业务 HTTP 接入基线和前端工程骨架，避免后续页面继续遇到业务接口 `404 Not Found`。
+- `S20`：在 `S19` 已有卖家拍品发布与管理页面之上，接入管理员审核与拍卖管理页面。
 
 ## 5. Step-by-Step Schedule
 
@@ -86,7 +90,7 @@
 
 为了方便直接分配给 agent 执行，后续每一步建议拆成“一个模块、一个明确目标、一个明确代码目录”的粒度。
 
-按当前已确认进度，`S00-S16` 均已完成，`S17-S30` 为新增扩展计划且均未开始。完整前端接入步骤见本文第 13 节。
+按当前已确认进度，`S00-S19` 均已完成，`S20-S30` 为完整前端后续扩展计划且均未开始。完整前端接入步骤见本文第 13 节。
 
 例如：
 
@@ -132,7 +136,13 @@
 | 2026-04-29 | S15-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/deploy/init_demo_env.sh`、`scripts/deploy/verify_release.sh`，并启动 `scripts/deploy/run_demo_server.sh` 后访问 `curl http://127.0.0.1:18080/healthz`；演示库 `auction_demo` schema/seed 检查通过，高风险专项 2/2 通过，全量 `ctest` 15/15 通过，健康检查返回 `status=ok` | [verify_release.sh](/home/ljh/project/soft_course_design/scripts/deploy/verify_release.sh) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-04-29 | S16 | 已完成 | 已新增 `assets/demo/` 浏览器前端演示台、`/api/demo/dashboard` 只读演示数据接口、`scripts/test.sh frontend` 前端专项验证和答辩操作手册；页面从 `auction_demo` 聚合展示拍品、拍卖、出价、订单、支付、评价、通知、任务日志、操作日志和统计日报 | [demo_http.cpp](/home/ljh/project/soft_course_design/src/access/http/demo_http.cpp) | [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md) |
 | 2026-04-29 | S16-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test.sh frontend`、`ctest --test-dir build --output-on-failure` 和 `scripts/deploy/verify_release.sh`；启动演示服务后验证 `/healthz`、`/demo`、`/assets/demo/app.css`、`/api/demo/dashboard` 均返回 200；前端演示数据测试通过，全量 `ctest` 更新为 16/16 通过 | [test_demo_frontend.sh](/home/ljh/project/soft_course_design/scripts/test_demo_frontend.sh) | [答辩演示操作手册.md](/home/ljh/project/soft_course_design/docs/答辩演示操作手册.md) |
-| 2026-04-29 | S17-S30-PLAN | 未开始 | 追加完整前端全量接入真实业务后端的开发 schedule，明确先接业务 HTTP 控制器，再分角色落地前台、卖家、管理端、竞价、订单支付、评价、统计运维和最终验收 | 待创建 `assets/app/`，待扩展 `src/access/http/`、`tests/http/`、`scripts/` | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-04-29 | S17-S30-PLAN | 已完成 | 已追加完整前端全量接入真实业务后端的开发 schedule，明确先接业务 HTTP 控制器，再分角色落地前台、卖家、管理端、竞价、订单支付、评价、统计运维和最终验收 | [assets/app](/home/ljh/project/soft_course_design/assets/app) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-04-29 | S17 | 已完成 | 已新增真实业务 HTTP 接入基线：`/app`、`/assets/app/*`、`POST /api/auth/login`、`GET /api/system/context`、统一 JSON `404`；已新增 `HttpServiceContext`、请求解析/错误映射公共层和 `scripts/test_http.sh` | [business_http.cpp](/home/ljh/project/soft_course_design/src/access/http/business_http.cpp) | [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md) |
+| 2026-04-29 | S17-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_http.sh`、`scripts/test.sh http`、`ctest --test-dir build --output-on-failure`；`auction_http_baseline` 已覆盖 `/app`、`/app/`、`/assets/app/app.css`、`/assets/app/app.js`、登录、受保护上下文和统一 JSON `404`；全量 `ctest` 为 `17/17` 通过。本轮复核中，Codex 沙箱内本地 MySQL 绑定 Unix socket 受限，已在沙箱外完成验证。 | [test_http.sh](/home/ljh/project/soft_course_design/scripts/test_http.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
+| 2026-04-29 | S18 | 已完成 | 已扩展真实认证 HTTP 接口：`POST /api/auth/register`、`POST /api/auth/logout`、`GET /api/auth/me`、`PATCH /api/admin/users/{id}/status`；已将 `/app` 升级为认证工作台，支持注册、登录、会话恢复、角色导航和路由守卫 | [auth_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auth_http.cpp) | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) |
+| 2026-04-29 | S18-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_http.sh`、`scripts/test.sh http`、`ctest --test-dir build --output-on-failure`；`auction_http_baseline` 已覆盖注册、登录、当前用户、登出、管理员改状态、`SUPPORT` 越权拒绝、冻结后登录拒绝、受保护上下文和统一 JSON `404`；全量 `ctest` 为 `17/17` 通过。本轮验证中先清理了本项目 `build/test_mysql` 残留 `mysqld`，并在沙箱外完成依赖本地 MySQL/HTTP 的验证。 | [test_http.sh](/home/ljh/project/soft_course_design/scripts/test_http.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
+| 2026-04-29 | S19 | 已完成 | 已新增卖家拍品真实 HTTP 控制器：创建、编辑、图片元数据、删除图片、我的拍品、详情和提交审核；已将 `/app` 卖家视图升级为拍品管理页面，支持状态筛选、表单编辑、图片元数据和驳回原因展示 | [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp) | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) |
+| 2026-04-29 | S19-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_http.sh`、`ctest --test-dir build --output-on-failure`；`auction_http_baseline` 已覆盖拍品创建、非法字段、图片元数据、删除图片、编辑、列表、详情、提交审核和提审后禁止编辑；全量 `ctest` 为 `17/17` 通过。Codex 沙箱内首次启动本地 `mysqld` 失败，已按权限流程在沙箱外完成 HTTP 与全量验证。 | [test_http.sh](/home/ljh/project/soft_course_design/scripts/test_http.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
 | 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
@@ -339,6 +349,279 @@
   - [demo_dashboard_service.cpp](/home/ljh/project/soft_course_design/src/application/demo_dashboard_service.cpp)
   - [assets/demo](/home/ljh/project/soft_course_design/assets/demo)
 
+## 模块 Handoff
+
+### 1. 基本信息
+- Step ID: S17
+- 模块名称: 真实业务 HTTP 接入基线与完整前端工程骨架
+- 当前状态: 已完成
+- 对应文档: `docs/接口联调记录.md`、`docs/前端演示模块说明.md`、`docs/测试计划与用例说明.md`
+- 对应代码目录: `src/access/http/`、`src/common/http/`、`assets/app/`、`tests/http/`、`scripts/`
+
+### 2. 本次实际完成
+- 已完成功能:
+  - 新增完整前端骨架入口 `/app` 和静态资源 `/assets/app/app.css`、`/assets/app/app.js`
+  - 新增真实业务登录接口 `POST /api/auth/login`
+  - 新增受保护测试接口 `GET /api/system/context`
+  - 新增统一 JSON 请求解析、异常到错误码映射、错误码到 HTTP 状态映射和认证上下文缓存
+  - 新增 `HttpServiceContext`，统一装配认证、中间件、通知、拍卖、订单、支付、评价、统计和运维服务
+  - 新增统一 JSON `404`，未注册 `/api/...` 不再直接返回裸 `404 Not Found`
+  - 新增 `tests/http/auth_login_request.json`、`scripts/test_http.sh`、`scripts/test.sh http` 和 `suite_http`
+- 实际修改文件:
+  - [index.html](/home/ljh/project/soft_course_design/assets/app/index.html)
+  - [app.css](/home/ljh/project/soft_course_design/assets/app/app.css)
+  - [app.js](/home/ljh/project/soft_course_design/assets/app/app.js)
+  - [app_http.cpp](/home/ljh/project/soft_course_design/src/access/http/app_http.cpp)
+  - [auth_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auth_http.cpp)
+  - [system_http.cpp](/home/ljh/project/soft_course_design/src/access/http/system_http.cpp)
+  - [business_http.cpp](/home/ljh/project/soft_course_design/src/access/http/business_http.cpp)
+  - [api_error_http.cpp](/home/ljh/project/soft_course_design/src/access/http/api_error_http.cpp)
+  - [http_service_context.cpp](/home/ljh/project/soft_course_design/src/common/http/http_service_context.cpp)
+  - [http_utils.cpp](/home/ljh/project/soft_course_design/src/common/http/http_utils.cpp)
+  - [test_http.sh](/home/ljh/project/soft_course_design/scripts/test_http.sh)
+  - [auth_login_request.json](/home/ljh/project/soft_course_design/tests/http/auth_login_request.json)
+  - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
+  - [test.sh](/home/ljh/project/soft_course_design/scripts/test.sh)
+- 未完成功能:
+  - 注册、登出、当前用户接口和前端登录态保持
+  - 卖家拍品、管理员审核建拍、买家浏览出价、订单支付、评价、统计运维页面
+- 明确不在本步处理的内容:
+  - 完整业务 HTTP 控制器批量接入
+  - 浏览器自动化 UI 测试
+  - 200 并发在线性能压测
+
+### 3. 关键设计决定
+- 决定 1: `S17` 只补真实 HTTP 地基，不提前吞掉 `S18` 的完整认证前端范围
+- 原因: 需要先保证后续页面有稳定入口、统一响应和最小受保护链路，再逐步接入注册、登出、路由守卫和角色导航
+- 影响范围:
+  - 当前仅新增 `POST /api/auth/login` 和 `GET /api/system/context`
+  - 其他真实业务 `/api/...` 路由仍待后续步骤继续接入
+
+- 决定 2: 为接入层新增 `HttpServiceContext` 和 `http_utils`
+- 原因: 后续 `S18-S30` 会连续新增多个控制器；若继续在 `bootstrap` 或控制器中零散 new 服务，会迅速失控
+- 影响范围:
+  - 统一服务装配、请求解析、认证上下文和错误映射
+  - 后续控制器可以直接复用当前公共层，不必重复实现
+
+### 4. 验证结果
+- 执行命令:
+  - `cmake -S . -B build`
+  - `cmake --build build`
+  - `scripts/test_http.sh`
+  - `scripts/test.sh http`
+  - `ctest --test-dir build --output-on-failure`
+- 结果:
+  - `/app`、`/app/`、`/assets/app/app.css`、`/assets/app/app.js` 返回 `200`
+  - `POST /api/auth/login` 可成功返回 Token
+  - `GET /api/system/context` 带 Token 返回成功，缺少 Token 返回统一 `401`
+  - 未注册 `/api/not-found` 返回统一 JSON `404`
+  - `auction_http_baseline` 通过
+  - 全量 `ctest` 更新为 `17/17` 通过
+- 未执行的测试:
+  - 页面级浏览器自动化
+- 原因:
+  - `S17` 当前目标是最小真实 HTTP 基线，不是完整页面验收
+
+### 5. 当前风险/阻塞
+- 风险 1: 当前只完成最小登录和受保护基线，除 `POST /api/auth/login`、`GET /api/system/context` 和只读演示接口外，其余业务 HTTP 控制器仍未接入
+- 风险 2: `scripts/test_http.sh` 依赖本地测试 MySQL 和本地监听端口，在 Codex 沙箱内可能需要沙箱外权限
+- 风险 3: 若 `build/test_mysql/data/ibdata1` 被残留 `mysqld` 占用，测试脚本会卡在本地 MySQL 初始化
+- 阻塞项:
+  - 无
+- 需要注意的坑:
+  - 若 HTTP 测试卡住，先检查 `lsof build/test_mysql/data/ibdata1`
+  - `/demo` 仍保留为只读答辩演示台，不要把 `/api/demo/dashboard` 当成真实业务数据源
+
+### 6. 下一步
+- 下一步 Step ID: S18（已完成，最新交接见下方 S18 Handoff）
+- 下一步目标: 接入注册、登录态保持、角色导航和路由守卫；当前实际下一步为 S19
+- 建议先读文件:
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
+  - [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)
+  - [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md)
+  - [auth_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auth_http.cpp)
+  - [system_http.cpp](/home/ljh/project/soft_course_design/src/access/http/system_http.cpp)
+  - [http_service_context.cpp](/home/ljh/project/soft_course_design/src/common/http/http_service_context.cpp)
+  - [assets/app](/home/ljh/project/soft_course_design/assets/app)
+
+## 模块 Handoff
+
+### 1. 基本信息
+- Step ID: S18
+- 模块名称: 认证、会话和角色路由
+- 当前状态: 已完成
+- 对应文档: `docs/认证与权限模块说明.md`、`docs/前端演示模块说明.md`、`docs/接口联调记录.md`、`docs/测试计划与用例说明.md`
+- 对应代码目录: `src/access/http/`、`assets/app/`、`tests/http/`、`scripts/`
+
+### 2. 本次实际完成
+- 已完成功能:
+  - 新增 `POST /api/auth/register`
+  - 新增 `POST /api/auth/logout`
+  - 新增 `GET /api/auth/me`
+  - 新增 `PATCH /api/admin/users/{id}/status`
+  - `/app` 已支持注册、登录、登出、会话恢复、角色导航和 hash 路由守卫
+  - `scripts/test_http.sh` 已覆盖注册、登录态恢复、登出失效、管理员状态变更、`SUPPORT` 越权拒绝和冻结后登录拒绝
+- 实际修改文件:
+  - [auth_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auth_http.cpp)
+  - [index.html](/home/ljh/project/soft_course_design/assets/app/index.html)
+  - [app.css](/home/ljh/project/soft_course_design/assets/app/app.css)
+  - [app.js](/home/ljh/project/soft_course_design/assets/app/app.js)
+  - [test_http.sh](/home/ljh/project/soft_course_design/scripts/test_http.sh)
+  - [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md)
+  - [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)
+  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
+  - [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md)
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+- 未完成功能:
+  - `GET /api/admin/users` 用户列表查询暂未接入
+  - 管理员审核建拍、买家浏览出价、订单支付、评价、统计运维页面仍待 S20-S25
+- 明确不在本步处理的内容:
+  - 拍品 CRUD HTTP 控制器
+  - 真实出价、订单支付和评价页面
+  - 浏览器自动化 UI 测试
+
+### 3. 关键设计决定
+- 决定 1: 继续复用 `AuthService` 和 `AuthMiddleware`，HTTP 层只做请求解析、统一响应和路径参数转换
+- 原因: 服务层已经完成密码哈希、Token、会话、RBAC、状态变更和审计日志，S18 不重复实现业务规则
+- 影响范围:
+  - HTTP 认证接口与服务层状态机保持一致
+  - 后续业务控制器继续通过 `HttpServiceContext` 复用认证上下文
+
+- 决定 2: `/app` 继续采用静态 HTML/CSS/JS，不引入前端构建链
+- 原因: 当前课程设计答辩环境以本地 C++ 服务和静态资源托管为主，减少 Node/Vite 依赖
+- 影响范围:
+  - 前端会话保存到 `sessionStorage`
+  - 角色路由使用 hash 路由和前端守卫实现
+
+### 4. 验证结果
+- 执行命令:
+  - `cmake -S . -B build`
+  - `cmake --build build`
+  - `scripts/test_http.sh`
+  - `scripts/test.sh http`
+  - `ctest --test-dir build --output-on-failure`
+- 结果:
+  - `auction_http_baseline` 通过
+  - HTTP 注册、登录、当前用户、登出、管理员状态变更、越权拒绝和统一 `404` 均通过
+  - 全量 `ctest` 为 `17/17` 通过
+- 未执行的测试:
+  - 页面级浏览器自动化
+- 原因:
+  - `S18` 当前目标是认证前端与真实 HTTP 回归，不是完整 UI 自动化验收
+
+### 5. 当前风险/阻塞
+- 风险 1: 当前 HTTP 回归仍集中在认证模块，后续业务控制器尚未接入
+- 风险 2: `scripts/test_http.sh` 依赖本地 MySQL 和本地 HTTP 监听，Codex 沙箱内可能无法启动 Unix socket
+- 阻塞项:
+  - 无
+- 需要注意的坑:
+  - 若 `build/test_mysql/data/ibdata1` 被残留 `mysqld` 占用，需要先停止命令行明确指向本项目 `build/test_mysql` 的残留进程
+
+### 6. 下一步
+- 下一步 Step ID: S19（已完成，最新交接见下方 S19 Handoff）
+- 下一步目标: 接入卖家拍品发布与管理页面；当前实际下一步为 S20
+- 建议先读文件:
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)
+  - [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)
+  - [item_service.cpp](/home/ljh/project/soft_course_design/src/modules/item/item_service.cpp)
+  - [item_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/item/item_flow_tests.cpp)
+  - [assets/app](/home/ljh/project/soft_course_design/assets/app)
+
+## 模块 Handoff
+
+### 1. 基本信息
+- Step ID: S19
+- 模块名称: 卖家拍品发布与管理页面
+- 当前状态: 已完成
+- 对应文档: `docs/物品与审核模块说明.md`、`docs/前端演示模块说明.md`、`docs/接口联调记录.md`、`docs/测试计划与用例说明.md`
+- 对应代码目录: `src/access/http/`、`assets/app/`、`tests/http/`、`scripts/`
+
+### 2. 本次实际完成
+- 已完成功能:
+  - 新增 `src/access/http/item_http.*`
+  - 新增 `POST /api/items`
+  - 新增 `PUT /api/items/{id}`
+  - 新增 `POST /api/items/{id}/images`
+  - 新增 `DELETE /api/items/{itemId}/images/{imageId}`
+  - 新增 `GET /api/items/mine`
+  - 新增 `GET /api/items/{id}`
+  - 新增 `POST /api/items/{id}/submit-audit`
+  - `/app` 卖家视图支持拍品创建、编辑、图片元数据、列表筛选、详情查看、驳回原因展示和提交审核
+  - `scripts/test_http.sh` 已覆盖卖家拍品真实 HTTP 回归
+- 实际修改文件:
+  - [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp)
+  - [item_http.h](/home/ljh/project/soft_course_design/src/access/http/item_http.h)
+  - [business_http.cpp](/home/ljh/project/soft_course_design/src/access/http/business_http.cpp)
+  - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
+  - [index.html](/home/ljh/project/soft_course_design/assets/app/index.html)
+  - [app.css](/home/ljh/project/soft_course_design/assets/app/app.css)
+  - [app.js](/home/ljh/project/soft_course_design/assets/app/app.js)
+  - [test_http.sh](/home/ljh/project/soft_course_design/scripts/test_http.sh)
+  - [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)
+  - [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)
+  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
+  - [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md)
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+- 未完成功能:
+  - 管理员待审列表、审核通过/驳回和拍卖创建页面仍待 S20
+  - 真实文件 multipart 上传仍未接入，本步只处理图片元数据
+- 明确不在本步处理的内容:
+  - 管理员审核建拍
+  - 买家拍卖大厅与出价
+  - 订单支付、评价、统计运维页面
+  - 页面级浏览器自动化 UI 测试
+
+### 3. 关键设计决定
+- 决定 1: HTTP 层复用 `ItemService`，不在控制器中重写所有权、状态机和图片完整性规则
+- 原因: S05 服务层已具备拍品草稿、图片元数据、提审和状态约束，HTTP 层应只负责 JSON 解析、路径参数和统一响应
+- 影响范围:
+  - 卖家只能操作自己的拍品
+  - 提审后禁止编辑、缺图禁止提审等规则继续由服务层保证
+
+- 决定 2: `/app` 继续使用静态 HTML/CSS/JS，不引入前端构建链
+- 原因: 当前课程答辩环境以本地 C++ 服务和静态资源托管为主，保持 S17-S18 的低依赖路线
+- 影响范围:
+  - 卖家页面通过 hash 路由和原有 `sessionStorage` Token 访问真实 `/api/items...` 接口
+  - 前端使用 DOM API 渲染拍品和图片，避免直接插入未转义 HTML
+
+### 4. 验证结果
+- 执行命令:
+  - `cmake -S . -B build`
+  - `cmake --build build`
+  - `scripts/test_http.sh`
+  - `ctest --test-dir build --output-on-failure`
+- 结果:
+  - `auction_http_baseline` 通过
+  - HTTP 回归已覆盖拍品创建、非法字段、图片元数据、删除图片、编辑、列表、详情、提交审核和提审后禁止编辑
+  - 全量 `ctest` 为 `17/17` 通过
+- 未执行的测试:
+  - 页面级浏览器自动化
+- 原因:
+  - S19 验收重点是真实 HTTP 接口和静态前端接入，页面级自动化规划在 S28
+
+### 5. 当前风险/阻塞
+- 风险 1: 图片能力当前只保存 `imageUrl` 元数据，尚未接入真实 multipart 上传和文件清理任务
+- 风险 2: 管理员审核和建拍仍未接入真实 HTTP，卖家提交审核后需要等 S20 才能在页面完成管理员流转
+- 风险 3: `scripts/test_http.sh` 依赖本地 MySQL 和 HTTP 监听，Codex 沙箱内可能无法启动用户态 `mysqld`
+- 阻塞项:
+  - 无
+- 需要注意的坑:
+  - 若 HTTP 测试提示 `Failed to start mysqld daemon`，按权限流程在沙箱外运行或检查 `build/test_mysql` 残留进程
+
+### 6. 下一步
+- 下一步 Step ID: S20
+- 下一步目标: 接入管理员审核与拍卖管理页面
+- 建议先读文件:
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)
+  - [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md)
+  - [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp)
+  - [item_audit_service.cpp](/home/ljh/project/soft_course_design/src/modules/audit/item_audit_service.cpp)
+  - [auction_service.cpp](/home/ljh/project/soft_course_design/src/modules/auction/auction_service.cpp)
+  - [assets/app](/home/ljh/project/soft_course_design/assets/app)
+
 ## 10. 模块 Handoff 模板
 
 每完成一个模块，建议至少按以下模板补齐一次 handoff 记录，再进行 Codex 上下文压缩：
@@ -427,13 +710,13 @@
 11. 对应代码目录 assets/demo/、src/access/http/、src/application/、src/modules/、scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
 12. 若开始完整前端开发，还要检查计划目录 assets/app/、tests/http/ 是否已存在；不存在则按 S17 创建
 
-当前正在做：完整前端全量接入真实业务后端的扩展计划，下一步从 S17 开始
-当前状态：S00-S16 已完成；S17-S30 已规划但均未开始
+当前正在做：完整前端全量接入真实业务后端的扩展计划，下一步从 S20 开始
+当前状态：S00-S19 已完成；S20-S30 已规划但均未开始
 
 本次若需要继续：
 - 先确认用户指定的新目标，不要默认新增功能
 - 若只是交付或答辩复现，优先使用 `scripts/deploy/init_demo_env.sh`、`scripts/deploy/run_demo_server.sh`、`http://127.0.0.1:18080/demo`、`scripts/deploy/show_demo_walkthrough.sh` 和 `scripts/deploy/verify_release.sh`
-- 若继续开发完整前端，先执行 `S17`，补真实业务 HTTP 控制器接入基线和前端工程骨架，再进入认证、拍品、拍卖、竞价、订单支付、评价、统计运维等页面开发
+- 若继续开发完整前端，先执行 `S20`，在 `S19` 已有卖家拍品发布与管理页面之上接入管理员审核与拍卖管理页面，再继续浏览出价、订单支付、评价、统计运维等页面开发
 - 任一 S17-S30 步骤完成后，同步更新 `docs/schedule.md`、相关模块文档、测试计划和 handoff
 
 注意约束：
@@ -477,24 +760,26 @@ S16 已完成。已落地 `assets/demo/` 浏览器前端演示台、`src/access/
 HTTP 验证：`/healthz`、`/demo`、`/assets/demo/app.css`、`/api/demo/dashboard` 均返回 200。
 最终脚本：`scripts/deploy/verify_release.sh` 通过。
 
-注意：除 `/demo`、`/healthz` 和 `/api/demo/dashboard` 外，真实业务 HTTP 写接口仍未批量接入；若访问其他 `/api/...` 返回 404，属于当前边界。
+注意：后续已接入认证和卖家拍品真实业务接口；未接入的其他 `/api/...` 仍会返回统一 JSON `404`，属于当前边界。
 ```
 
 历史 S17-S30 恢复重点：
 
 ```text
-S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均未开始。
+S17-S19 已完成，S20-S30 是后续完整前端全量接入真实业务后端计划，当前均未开始。
 
 执行顺序要求：
-- 先做 S17，补齐业务 HTTP 控制器接入基线、统一鉴权上下文、请求解析、错误映射、静态前端入口和最小 HTTP 测试。
-- 再按角色和业务流开发完整前端：认证、卖家拍品、管理员审核与拍卖、买家浏览与出价、订单支付、评价通知、统计运维。
+- 已完成 S17，当前已具备 `/app`、`/assets/app/*`、`POST /api/auth/login`、`GET /api/system/context` 和统一 JSON `404`。
+- 已完成 S18，当前已具备 `POST /api/auth/register`、`POST /api/auth/logout`、`GET /api/auth/me`、`PATCH /api/admin/users/{id}/status`、前端会话保持、角色导航和路由守卫。
+- 已完成 S19，当前已具备 `POST /api/items`、`PUT /api/items/{id}`、`POST /api/items/{id}/images`、`DELETE /api/items/{itemId}/images/{imageId}`、`GET /api/items/mine`、`GET /api/items/{id}`、`POST /api/items/{id}/submit-audit` 和卖家拍品管理页面。
+- 下一步从 S20 开始，再按角色和业务流开发完整前端：管理员审核与拍卖、买家浏览与出价、订单支付、评价通知、统计运维。
 - 当前 `/demo` 仍保留为只读答辩演示台，不要用它替代真实业务页面。
 
 关键边界：
 - MySQL 仍是交易事实唯一来源。
 - Redis 只能作为缓存或旁路，不能决定出价合法性。
 - 出价、结算、支付回调等写路径必须保持服务层事务和幂等约束。
-- 在 S17 完成前，其他业务 `/api/...` 返回 404 仍属于已知边界。
+- 当前已接入的真实业务 HTTP 包括认证、用户状态和卖家拍品接口；审核、拍卖、出价、订单支付、评价、统计运维等业务 `/api/...` 仍待后续步骤接入。
 ```
 
 说明如下：
@@ -504,12 +789,12 @@ S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均
 
 ## 13. 全量接入后端的完整前端开发 Schedule
 
-本节用于规划 `S17-S30`，目标是把当前只读答辩演示台扩展为完整浏览器前端，并接入真实业务后端接口。当前所有步骤均为 `未开始`。
+本节用于规划 `S17-S30`，目标是把当前只读答辩演示台扩展为完整浏览器前端，并接入真实业务后端接口。当前 `S17-S19` 已完成，`S20-S30` 均为 `未开始`。
 
 ### 13.1 目标与边界
 
 - 目标：提供面向买家、卖家、管理员、运维/客服的完整浏览器前端，覆盖注册登录、拍品发布、审核、拍卖配置、浏览出价、订单支付、履约、评价、通知、统计和异常处理。
-- 前提：当前后端服务层已具备主流程能力，但 Drogon 接入层只落地 `/healthz`、`/demo` 和 `/api/demo/dashboard`，因此必须先补真实业务 HTTP 控制器。
+- 前提：当前后端服务层已具备主流程能力，Drogon 接入层已落地 `/healthz`、`/demo`、`/api/demo/dashboard`、认证和卖家拍品接口；后续仍需继续补审核、拍卖、出价、订单支付、评价、统计运维等真实业务 HTTP 控制器。
 - 边界：`/demo` 保留为只读答辩演示台；完整前端应使用真实业务 `/api/...` 接口，不应复用 `/api/demo/dashboard` 作为业务数据源。
 - 技术取向：除非用户明确要求引入 Node/Vite/React，否则优先沿用静态 HTML/CSS/JS 加 C++ 后端静态资源托管，降低课程答辩环境复杂度。
 - 数据约束：MySQL 仍是交易事实唯一来源；Redis 只能作为缓存或旁路能力，不能决定出价、结算和支付状态。
@@ -528,9 +813,9 @@ S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均
 
 | 步骤 ID | 可分配给 agent 的实际目标 | 前置条件 | 需要实际完成的代码/脚本 | 完成判定 | 预计代码位置 | 完成后文档位置 | 当前状态 |
 |---|---|---|---|---|---|---|---|
-| S17 | 建立真实业务 HTTP 接入基线和完整前端工程骨架 | S16 已完成，服务层模块可复用 | 注册业务路由分组、统一请求解析、统一错误映射、认证上下文、静态完整前端入口、最小 API 客户端、HTTP 冒烟测试脚本 | `/api/auth/login` 之外至少有一个受保护测试接口可返回统一响应；未知接口 404 有明确 JSON 错误；完整前端首页可打开 | `src/access/http/`、`src/common/http/`、`assets/app/`、`tests/http/`、`scripts/test_http.sh` | `docs/接口联调记录.md`、`docs/前端演示模块说明.md`、`docs/schedule.md` | 未开始 |
-| S18 | 接入认证、会话和角色路由 | S17 | 实现注册、登录、登出、当前用户、管理员用户状态接口；前端登录页、注册页、会话保持、角色导航、路由守卫 | 用户可注册登录；不同角色看到不同入口；未登录访问受保护页面会跳转登录 | `src/access/http/auth_http.*`、`assets/app/`、`tests/http/` | `docs/认证与权限模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
-| S19 | 接入卖家拍品发布与管理页面 | S18 | 实现拍品创建、编辑、图片元数据、我的拍品、提交审核接口；前端卖家拍品列表、表单、状态提示和驳回原因展示 | 卖家可从页面创建拍品并提交审核；非法字段显示业务错误；数据落库可查 | `src/access/http/item_http.*`、`assets/app/`、`tests/http/` | `docs/物品与审核模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
+| S17 | 建立真实业务 HTTP 接入基线和完整前端工程骨架 | S16 已完成，服务层模块可复用 | 注册业务路由分组、统一请求解析、统一错误映射、认证上下文、静态完整前端入口、最小 API 客户端、HTTP 冒烟测试脚本 | `/api/auth/login` 之外至少有一个受保护测试接口可返回统一响应；未知接口 404 有明确 JSON 错误；完整前端首页可打开 | `src/access/http/`、`src/common/http/`、`assets/app/`、`tests/http/`、`scripts/test_http.sh` | `docs/接口联调记录.md`、`docs/前端演示模块说明.md`、`docs/schedule.md` | 已完成 |
+| S18 | 接入认证、会话和角色路由 | S17 | 实现注册、登录、登出、当前用户、管理员用户状态接口；前端登录页、注册页、会话保持、角色导航、路由守卫 | 用户可注册登录；不同角色看到不同入口；未登录访问受保护页面会跳转登录 | `src/access/http/auth_http.*`、`assets/app/`、`tests/http/` | `docs/认证与权限模块说明.md`、`docs/前端演示模块说明.md` | 已完成 |
+| S19 | 接入卖家拍品发布与管理页面 | S18 | 实现拍品创建、编辑、图片元数据、我的拍品、提交审核接口；前端卖家拍品列表、表单、状态提示和驳回原因展示 | 卖家可从页面创建拍品并提交审核；非法字段显示业务错误；数据落库可查 | `src/access/http/item_http.*`、`assets/app/`、`tests/http/` | `docs/物品与审核模块说明.md`、`docs/前端演示模块说明.md` | 已完成 |
 | S20 | 接入管理员审核与拍卖管理页面 | S19 | 实现待审拍品、审核通过/驳回、创建/修改/取消拍卖、管理端拍卖查询接口；前端管理台表格、审核弹窗、拍卖规则表单 | 管理员可审核拍品并创建拍卖；卖家可看到审核结果；活动状态与拍品状态一致 | `src/access/http/audit_http.*`、`src/access/http/auction_admin_http.*`、`assets/app/`、`tests/http/` | `docs/拍卖管理模块说明.md`、`docs/物品与审核模块说明.md` | 未开始 |
 | S21 | 接入买家拍卖大厅与详情页 | S20 | 实现公开拍卖列表、详情、出价历史、当前最高价查询接口；前端首页、筛选、详情页、倒计时和状态标签 | 买家可浏览拍卖、进入详情、看到当前最高价和历史出价；结束或未开始活动按钮状态正确 | `src/access/http/auction_public_http.*`、`assets/app/`、`tests/http/` | `docs/拍卖管理模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
 | S22 | 接入真实出价和实时通知 | S21 | 实现出价接口、幂等键传递、出价错误映射、WebSocket 或轮询通知入口；前端出价面板、价格刷新、被超越提示和失败重试提示 | 并发出价后页面最高价与数据库一致；低价、过期、冻结用户和重复幂等键均有明确提示 | `src/access/http/bid_http.*`、`src/access/http/notification_http.*`、`src/ws/`、`assets/app/`、`tests/http/` | `docs/竞价与实时通知模块说明.md`、`docs/测试计划与用例说明.md` | 未开始 |
@@ -557,11 +842,12 @@ S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均
 
 ### 13.5 推荐执行顺序
 
-1. 先执行 `S17`，补后端 HTTP 接入基线和前端工程骨架。
-2. 再执行 `S18`，因为后续所有业务页面都依赖登录态、角色和统一 API 客户端。
-3. 按业务闭环执行 `S19-S24`，顺序为卖家发布、管理员审核建拍、买家浏览出价、订单支付、履约评价。
-4. 再执行 `S25-S26`，补管理端统计运维和全站体验、安全状态处理。
-5. 最后执行 `S27-S30`，把真实 HTTP 回归、页面验收、部署演示和最终 handoff 收口。
+1. `S17` 已完成，已补后端 HTTP 接入基线和前端工程骨架。
+2. `S18` 已完成，已补认证、会话和角色路由。
+3. `S19` 已完成，已补卖家拍品发布与管理页面。
+4. 当前继续执行 `S20-S24`，按业务闭环推进管理员审核建拍、买家浏览出价、订单支付、履约评价。
+5. 再执行 `S25-S26`，补管理端统计运维和全站体验、安全状态处理。
+6. 最后执行 `S27-S30`，把真实 HTTP 回归、页面验收、部署演示和最终 handoff 收口。
 
 ### 13.6 S17 启动前检查清单
 
@@ -570,7 +856,7 @@ S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均
 - [ ] 已读取 `docs/接口联调记录.md`
 - [ ] 已读取 `docs/前端演示模块说明.md`
 - [ ] 已确认当前 `/api/demo/dashboard` 只是只读演示接口
-- [ ] 已确认业务 HTTP 控制器尚未批量接入，其他 `/api/...` 404 是当前边界
+- [ ] 已确认业务 HTTP 控制器仍在分步接入，未接入的其他 `/api/...` 404 是当前边界
 - [ ] 已查看 `src/access/http/health_http.*` 和 `src/access/http/demo_http.*`
 - [ ] 已查看目标模块服务层，例如 `src/modules/auth/`、`src/modules/item/`、`src/modules/auction/`、`src/modules/bid/`
 - [ ] 已查看对应测试目录，优先复用现有服务层测试数据和断言
@@ -579,17 +865,20 @@ S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均
 ### 13.7 计划态 Handoff
 
 ```text
-Step ID: S17-S30
+Step ID: S20-S30
 模块名称: 完整前端全量接入真实业务后端
-当前状态: 未开始
-下一步 Step ID: S17
-下一步目标: 建立真实业务 HTTP 接入基线和完整前端工程骨架
+当前状态: S17-S19 已完成；S20-S30 未开始
+下一步 Step ID: S20
+下一步目标: 接入管理员审核与拍卖管理页面
 
 当前已知事实:
-- S00-S16 已完成。
+- S00-S19 已完成。
 - 现有 `/demo` 是只读答辩演示台，不是完整生产前端。
-- 当前已落地后端路由只有 `/healthz`、`/demo`、`/demo/`、`/assets/demo/app.css`、`/assets/demo/app.js`、`/api/demo/dashboard`。
-- 完整前端开发前必须补真实业务 HTTP 控制器，否则认证、拍品、审核、竞价、订单、支付等页面会继续遇到 404。
+- 当前已落地真实业务基线路由：`/app`、`/app/`、`/assets/app/app.css`、`/assets/app/app.js`、`POST /api/auth/login`、`GET /api/system/context`。
+- 当前已落地认证会话路由：`POST /api/auth/register`、`POST /api/auth/logout`、`GET /api/auth/me`、`PATCH /api/admin/users/{id}/status`。
+- 当前已落地卖家拍品路由：`POST /api/items`、`PUT /api/items/{id}`、`POST /api/items/{id}/images`、`DELETE /api/items/{itemId}/images/{imageId}`、`GET /api/items/mine`、`GET /api/items/{id}`、`POST /api/items/{id}/submit-audit`。
+- 未知 `/api/...` 已统一返回 JSON `404`。
+- 审核、拍卖、竞价、订单、支付等完整业务页面仍待继续接入。
 
 建议先读:
 - docs/schedule.md
@@ -604,7 +893,7 @@ Step ID: S17-S30
 - src/modules/
 - tests/
 
-完成 S17 时必须更新:
+完成 S20 时必须更新:
 - docs/schedule.md
 - docs/接口联调记录.md
 - docs/前端演示模块说明.md
