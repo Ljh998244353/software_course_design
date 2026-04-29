@@ -33,6 +33,20 @@ ITEM_DETAIL_BODY="${TMP_DIR}/item_detail.json"
 ITEM_MINE_BODY="${TMP_DIR}/item_mine.json"
 ITEM_SUBMIT_BODY="${TMP_DIR}/item_submit.json"
 ITEM_EDIT_AFTER_SUBMIT_BODY="${TMP_DIR}/item_edit_after_submit.json"
+PENDING_ITEMS_BODY="${TMP_DIR}/pending_items.json"
+ITEM_AUDIT_BODY="${TMP_DIR}/item_audit.json"
+ITEM_DETAIL_AFTER_APPROVE_BODY="${TMP_DIR}/item_detail_after_approve.json"
+AUCTION_CREATE_BODY="${TMP_DIR}/auction_create.json"
+AUCTION_LIST_BODY="${TMP_DIR}/auction_list.json"
+AUCTION_DETAIL_BODY="${TMP_DIR}/auction_detail.json"
+AUCTION_UPDATE_BODY="${TMP_DIR}/auction_update.json"
+AUCTION_CANCEL_BODY="${TMP_DIR}/auction_cancel.json"
+REJECT_ITEM_CREATE_BODY="${TMP_DIR}/reject_item_create.json"
+REJECT_ITEM_IMAGE_BODY="${TMP_DIR}/reject_item_image.json"
+REJECT_ITEM_SUBMIT_BODY="${TMP_DIR}/reject_item_submit.json"
+REJECT_AUDIT_BODY="${TMP_DIR}/reject_audit.json"
+REJECT_ITEM_DETAIL_BODY="${TMP_DIR}/reject_item_detail.json"
+AUDIT_LOGS_BODY="${TMP_DIR}/audit_logs.json"
 REGISTER_LOGOUT_BODY="${TMP_DIR}/register_logout.json"
 REGISTER_LOGOUT_ME_BODY="${TMP_DIR}/register_logout_me.json"
 FROZEN_LOGIN_BODY="${TMP_DIR}/frozen_login.json"
@@ -75,6 +89,8 @@ APP_STATUS="$(
 grep -q "<title>在线拍卖平台业务工作台</title>" "${APP_BODY}"
 grep -q "data-view=\"gate\"" "${APP_BODY}"
 grep -q "id=\"sellerItemList\"" "${APP_BODY}"
+grep -q "id=\"adminPendingItemList\"" "${APP_BODY}"
+grep -q "id=\"auctionForm\"" "${APP_BODY}"
 
 APP_TRAILING_STATUS="$(
     curl -sS -o "${APP_TRAILING_BODY}" -w "%{http_code}" \
@@ -100,6 +116,9 @@ grep -q 'POST /api/auth/register' "${JS_ASSET_BODY}"
 grep -q 'PATCH /api/admin/users/{id}/status' "${JS_ASSET_BODY}"
 grep -q 'POST /api/items' "${JS_ASSET_BODY}"
 grep -q 'GET /api/items/mine' "${JS_ASSET_BODY}"
+grep -q 'POST /api/admin/items/{id}/audit' "${JS_ASSET_BODY}"
+grep -q 'POST /api/admin/auctions' "${JS_ASSET_BODY}"
+grep -q 'GET /api/admin/auctions/{id}' "${JS_ASSET_BODY}"
 grep -q 'data-route' "${APP_BODY}"
 
 LOGIN_STATUS="$(
@@ -300,6 +319,176 @@ ITEM_EDIT_AFTER_SUBMIT_STATUS="$(
 )"
 [[ "${ITEM_EDIT_AFTER_SUBMIT_STATUS}" == "400" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*4203' "${ITEM_EDIT_AFTER_SUBMIT_BODY}"
+
+PENDING_ITEMS_STATUS="$(
+    curl -sS -o "${PENDING_ITEMS_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/pending"
+)"
+[[ "${PENDING_ITEMS_STATUS}" == "200" ]]
+grep -q "\"itemId\"[[:space:]]*:[[:space:]]*${ITEM_ID}" "${PENDING_ITEMS_BODY}"
+grep -q "\"sellerUsername\"[[:space:]]*:[[:space:]]*\"${REGISTER_USERNAME}\"" "${PENDING_ITEMS_BODY}"
+
+ITEM_AUDIT_STATUS="$(
+    curl -sS -o "${ITEM_AUDIT_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data '{"auditStatus":"APPROVED","reason":"http approval"}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${ITEM_ID}/audit"
+)"
+[[ "${ITEM_AUDIT_STATUS}" == "200" ]]
+grep -q '"auditStatus"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_AUDIT_BODY}"
+grep -q '"newStatus"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_AUDIT_BODY}"
+
+ITEM_DETAIL_AFTER_APPROVE_STATUS="$(
+    curl -sS -o "${ITEM_DETAIL_AFTER_APPROVE_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${REGISTER_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}"
+)"
+[[ "${ITEM_DETAIL_AFTER_APPROVE_STATUS}" == "200" ]]
+grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_DETAIL_AFTER_APPROVE_BODY}"
+grep -q '"auditResult"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_DETAIL_AFTER_APPROVE_BODY}"
+
+AUCTION_START_TIME="$(date -d '+10 minutes' '+%Y-%m-%d %H:%M:%S')"
+AUCTION_END_TIME="$(date -d '+25 minutes' '+%Y-%m-%d %H:%M:%S')"
+AUCTION_UPDATE_START_TIME="$(date -d '+15 minutes' '+%Y-%m-%d %H:%M:%S')"
+AUCTION_UPDATE_END_TIME="$(date -d '+35 minutes' '+%Y-%m-%d %H:%M:%S')"
+
+AUCTION_CREATE_STATUS="$(
+    curl -sS -o "${AUCTION_CREATE_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data "{\"itemId\":${ITEM_ID},\"startTime\":\"${AUCTION_START_TIME}\",\"endTime\":\"${AUCTION_END_TIME}\",\"startPrice\":120.00,\"bidStep\":10.00,\"antiSnipingWindowSeconds\":0,\"extendSeconds\":0}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/auctions"
+)"
+[[ "${AUCTION_CREATE_STATUS}" == "200" ]]
+grep -q '"status"[[:space:]]*:[[:space:]]*"PENDING_START"' "${AUCTION_CREATE_BODY}"
+
+AUCTION_ID="$(
+    tr -d '\n' <"${AUCTION_CREATE_BODY}" |
+        sed -n 's/.*"auctionId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+)"
+if [[ -z "${AUCTION_ID}" ]]; then
+    echo "failed to extract auction id" >&2
+    exit 1
+fi
+
+AUCTION_LIST_STATUS="$(
+    curl -sS -o "${AUCTION_LIST_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/auctions?status=PENDING_START"
+)"
+[[ "${AUCTION_LIST_STATUS}" == "200" ]]
+grep -q "\"auctionId\"[[:space:]]*:[[:space:]]*${AUCTION_ID}" "${AUCTION_LIST_BODY}"
+grep -q "\"itemId\"[[:space:]]*:[[:space:]]*${ITEM_ID}" "${AUCTION_LIST_BODY}"
+
+AUCTION_DETAIL_STATUS="$(
+    curl -sS -o "${AUCTION_DETAIL_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/auctions/${AUCTION_ID}"
+)"
+[[ "${AUCTION_DETAIL_STATUS}" == "200" ]]
+grep -q "\"auctionId\"[[:space:]]*:[[:space:]]*${AUCTION_ID}" "${AUCTION_DETAIL_BODY}"
+grep -q "\"sellerUsername\"[[:space:]]*:[[:space:]]*\"${REGISTER_USERNAME}\"" "${AUCTION_DETAIL_BODY}"
+
+AUCTION_UPDATE_STATUS="$(
+    curl -sS -o "${AUCTION_UPDATE_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -X PUT \
+        --data "{\"startTime\":\"${AUCTION_UPDATE_START_TIME}\",\"endTime\":\"${AUCTION_UPDATE_END_TIME}\",\"startPrice\":150.00,\"bidStep\":15.00,\"antiSnipingWindowSeconds\":30,\"extendSeconds\":30}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/auctions/${AUCTION_ID}"
+)"
+[[ "${AUCTION_UPDATE_STATUS}" == "200" ]]
+grep -q '"status"[[:space:]]*:[[:space:]]*"PENDING_START"' "${AUCTION_UPDATE_BODY}"
+
+AUCTION_CANCEL_STATUS="$(
+    curl -sS -o "${AUCTION_CANCEL_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data '{"reason":"http cancel"}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/auctions/${AUCTION_ID}/cancel"
+)"
+[[ "${AUCTION_CANCEL_STATUS}" == "200" ]]
+grep -q '"oldStatus"[[:space:]]*:[[:space:]]*"PENDING_START"' "${AUCTION_CANCEL_BODY}"
+grep -q '"newStatus"[[:space:]]*:[[:space:]]*"CANCELLED"' "${AUCTION_CANCEL_BODY}"
+
+REJECT_ITEM_TITLE="HTTP Reject Item ${REGISTER_USERNAME}"
+REJECT_ITEM_CREATE_STATUS="$(
+    curl -sS -o "${REJECT_ITEM_CREATE_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${REGISTER_TOKEN}" \
+        --data "{\"title\":\"${REJECT_ITEM_TITLE}\",\"description\":\"HTTP reject item\",\"categoryId\":1,\"startPrice\":50.00,\"coverImageUrl\":\"\"}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
+)"
+[[ "${REJECT_ITEM_CREATE_STATUS}" == "200" ]]
+REJECT_ITEM_ID="$(
+    tr -d '\n' <"${REJECT_ITEM_CREATE_BODY}" |
+        sed -n 's/.*"itemId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+)"
+if [[ -z "${REJECT_ITEM_ID}" ]]; then
+    echo "failed to extract reject item id" >&2
+    exit 1
+fi
+
+REJECT_ITEM_IMAGE_STATUS="$(
+    curl -sS -o "${REJECT_ITEM_IMAGE_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${REGISTER_TOKEN}" \
+        --data "{\"imageUrl\":\"/uploads/http/${REGISTER_USERNAME}/reject.jpg\",\"isCover\":true}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}/images"
+)"
+[[ "${REJECT_ITEM_IMAGE_STATUS}" == "200" ]]
+
+REJECT_ITEM_SUBMIT_STATUS="$(
+    curl -sS -o "${REJECT_ITEM_SUBMIT_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${REGISTER_TOKEN}" \
+        -X POST \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}/submit-audit"
+)"
+[[ "${REJECT_ITEM_SUBMIT_STATUS}" == "200" ]]
+
+REJECT_AUDIT_STATUS="$(
+    curl -sS -o "${REJECT_AUDIT_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data '{"auditStatus":"REJECTED","reason":"image is not authentic"}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${REJECT_ITEM_ID}/audit"
+)"
+[[ "${REJECT_AUDIT_STATUS}" == "200" ]]
+grep -q '"auditStatus"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_AUDIT_BODY}"
+grep -q '"newStatus"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_AUDIT_BODY}"
+
+REJECT_ITEM_DETAIL_STATUS="$(
+    curl -sS -o "${REJECT_ITEM_DETAIL_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${REGISTER_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}"
+)"
+[[ "${REJECT_ITEM_DETAIL_STATUS}" == "200" ]]
+grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_ITEM_DETAIL_BODY}"
+grep -q 'image is not authentic' "${REJECT_ITEM_DETAIL_BODY}"
+
+AUDIT_LOGS_STATUS="$(
+    curl -sS -o "${AUDIT_LOGS_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${REJECT_ITEM_ID}/audit-logs"
+)"
+[[ "${AUDIT_LOGS_STATUS}" == "200" ]]
+grep -q '"auditResult"[[:space:]]*:[[:space:]]*"REJECTED"' "${AUDIT_LOGS_BODY}"
 
 REGISTER_LOGOUT_STATUS="$(
     curl -sS -o "${REGISTER_LOGOUT_BODY}" -w "%{http_code}" \

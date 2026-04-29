@@ -346,6 +346,27 @@ textarea:focus {
     align-items: start;
 }
 
+.admin-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.admin-status-panel,
+.auction-form {
+    grid-column: 1;
+}
+
+.admin-status-panel .status-form {
+    grid-template-columns: 1fr;
+}
+
+.audit-panel,
+.auction-list-panel {
+    grid-column: 2;
+}
+
 .work-panel {
     min-width: 0;
     padding: 18px;
@@ -485,6 +506,11 @@ textarea:focus {
     color: var(--green);
 }
 
+.item-status.running {
+    background: rgba(184, 121, 36, 0.16);
+    color: #76501b;
+}
+
 .item-detail-panel {
     display: grid;
     gap: 14px;
@@ -506,6 +532,22 @@ textarea:focus {
     border-radius: 8px;
     color: var(--muted);
     background: rgba(255, 255, 255, 0.48);
+}
+
+.audit-form,
+.audit-log-panel {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(217, 209, 196, 0.82);
+}
+
+.audit-log-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.auction-detail-actions {
+    margin-top: 14px;
 }
 
 .status-badge {
@@ -586,8 +628,16 @@ textarea:focus {
     .dashboard-grid,
     .status-form,
     .seller-layout,
+    .admin-layout,
     .placeholder-grid {
         grid-template-columns: 1fr;
+    }
+
+    .admin-status-panel,
+    .auction-form,
+    .audit-panel,
+    .auction-list-panel {
+        grid-column: auto;
     }
 
     .list-toolbar {

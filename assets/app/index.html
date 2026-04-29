@@ -103,7 +103,7 @@
             <article class="surface-panel role-panel" data-role-entry="ADMIN">
                 <span class="eyebrow">Admin</span>
                 <h2>后台管理入口</h2>
-                <button class="secondary-button" type="button" data-route-jump="admin">用户状态管理</button>
+                <button class="secondary-button" type="button" data-route-jump="admin">后台管理</button>
             </article>
 
             <article class="surface-panel role-panel" data-role-entry="SUPPORT">
@@ -226,27 +226,135 @@
         <section class="route-view surface-panel route-panel" data-view="admin" hidden>
             <div class="panel-head">
                 <span class="eyebrow">Admin</span>
-                <h1>用户状态管理</h1>
+                <h1>后台管理</h1>
             </div>
-            <form id="statusForm" class="status-form">
-                <label>
-                    <span>目标用户 ID</span>
-                    <input id="statusUserIdInput" name="userId" type="number" min="1">
-                </label>
-                <label>
-                    <span>状态</span>
-                    <select id="statusSelect" name="status">
-                        <option value="ACTIVE">ACTIVE</option>
-                        <option value="FROZEN">FROZEN</option>
-                        <option value="DISABLED">DISABLED</option>
-                    </select>
-                </label>
-                <label>
-                    <span>原因</span>
-                    <input id="statusReasonInput" name="reason" type="text" value="admin update from app">
-                </label>
-                <button class="primary-button" type="submit">更新状态</button>
-            </form>
+            <div class="admin-layout">
+                <section class="work-panel admin-status-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Users</span>
+                        <h2>用户状态</h2>
+                    </div>
+                    <form id="statusForm" class="status-form">
+                        <label>
+                            <span>目标用户 ID</span>
+                            <input id="statusUserIdInput" name="userId" type="number" min="1">
+                        </label>
+                        <label>
+                            <span>状态</span>
+                            <select id="statusSelect" name="status">
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="FROZEN">FROZEN</option>
+                                <option value="DISABLED">DISABLED</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>原因</span>
+                            <input id="statusReasonInput" name="reason" type="text" value="admin update from app">
+                        </label>
+                        <button class="primary-button" type="submit">更新状态</button>
+                    </form>
+                </section>
+
+                <section class="work-panel audit-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Audit</span>
+                            <h2>待审核拍品</h2>
+                        </div>
+                        <button id="refreshPendingItemsButton" class="text-button" type="button">刷新</button>
+                    </div>
+                    <div id="adminPendingItemList" class="item-list"></div>
+                    <form id="auditForm" class="audit-form">
+                        <div class="compact-grid">
+                            <label>
+                                <span>拍品 ID</span>
+                                <input id="auditItemIdInput" name="itemId" type="number" min="1">
+                            </label>
+                            <label>
+                                <span>结果</span>
+                                <select id="auditStatusSelect" name="auditStatus">
+                                    <option value="APPROVED">APPROVED</option>
+                                    <option value="REJECTED">REJECTED</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label>
+                            <span>原因</span>
+                            <input id="auditReasonInput" name="reason" type="text" placeholder="REJECTED 时必填">
+                        </label>
+                        <button class="primary-button" type="submit">提交审核</button>
+                    </form>
+                    <div id="adminAuditLogsPanel" class="audit-log-panel"></div>
+                </section>
+
+                <form id="auctionForm" class="work-panel auction-form">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Auction</span>
+                        <h2 id="auctionFormTitle">创建拍卖</h2>
+                    </div>
+                    <input id="auctionEditIdInput" type="hidden">
+                    <label>
+                        <span>拍品 ID</span>
+                        <input id="auctionItemIdInput" name="itemId" type="number" min="1">
+                    </label>
+                    <div class="compact-grid">
+                        <label>
+                            <span>开始时间</span>
+                            <input id="auctionStartTimeInput" name="startTime" type="datetime-local">
+                        </label>
+                        <label>
+                            <span>结束时间</span>
+                            <input id="auctionEndTimeInput" name="endTime" type="datetime-local">
+                        </label>
+                    </div>
+                    <div class="compact-grid">
+                        <label>
+                            <span>起拍价</span>
+                            <input id="auctionStartPriceInput" name="startPrice" type="number" min="0.01" step="0.01">
+                        </label>
+                        <label>
+                            <span>加价幅度</span>
+                            <input id="auctionBidStepInput" name="bidStep" type="number" min="0.01" step="0.01">
+                        </label>
+                    </div>
+                    <div class="compact-grid">
+                        <label>
+                            <span>防狙击窗口秒数</span>
+                            <input id="auctionWindowInput" name="antiSnipingWindowSeconds" type="number" min="0" value="0">
+                        </label>
+                        <label>
+                            <span>延长秒数</span>
+                            <input id="auctionExtendInput" name="extendSeconds" type="number" min="0" value="0">
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary-button" type="submit">保存拍卖</button>
+                        <button id="resetAuctionFormButton" class="text-button" type="button">清空</button>
+                    </div>
+                </form>
+
+                <section class="work-panel auction-list-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Auctions</span>
+                            <h2>拍卖管理</h2>
+                        </div>
+                        <div class="toolbar-actions">
+                            <select id="auctionStatusFilter" aria-label="拍卖状态筛选">
+                                <option value="">全部状态</option>
+                                <option value="PENDING_START">PENDING_START</option>
+                                <option value="RUNNING">RUNNING</option>
+                                <option value="SOLD">SOLD</option>
+                                <option value="UNSOLD">UNSOLD</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                            <button id="refreshAuctionsButton" class="text-button" type="button">刷新</button>
+                        </div>
+                    </div>
+                    <div id="adminAuctionList" class="item-list"></div>
+                    <div id="adminAuctionDetailPanel" class="item-detail-panel" hidden></div>
+                </section>
+            </div>
         </section>
 
         <section class="route-view surface-panel route-panel" data-view="support" hidden>

@@ -5,6 +5,8 @@
 #include "access/http/api_error_http.h"
 #include "access/http/app_http.h"
 #include "access/http/auth_http.h"
+#include "access/http/audit_http.h"
+#include "access/http/auction_admin_http.h"
 #include "access/http/item_http.h"
 #include "access/http/system_http.h"
 #include "common/http/http_service_context.h"
@@ -17,6 +19,8 @@ void RegisterBusinessHttpRoutes(
 ) {
     auto services = std::make_shared<common::http::HttpServiceContext>(config, project_root);
     RegisterAuthHttpRoutes(services);
+    RegisterAuditHttpRoutes(services);
+    RegisterAuctionAdminHttpRoutes(services);
     RegisterItemHttpRoutes(services);
     RegisterSystemHttpRoutes(services);
     RegisterAppHttpRoutes(project_root);

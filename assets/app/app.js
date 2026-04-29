@@ -22,6 +22,14 @@ const endpoints = [
     { name: "图片元数据", path: "POST /api/items/{id}/images" },
     { name: "我的拍品", path: "GET /api/items/mine" },
     { name: "提交审核", path: "POST /api/items/{id}/submit-audit" },
+    { name: "待审核拍品", path: "GET /api/admin/items/pending" },
+    { name: "审核拍品", path: "POST /api/admin/items/{id}/audit" },
+    { name: "审核日志", path: "GET /api/admin/items/{id}/audit-logs" },
+    { name: "创建拍卖", path: "POST /api/admin/auctions" },
+    { name: "编辑拍卖", path: "PUT /api/admin/auctions/{id}" },
+    { name: "取消拍卖", path: "POST /api/admin/auctions/{id}/cancel" },
+    { name: "后台拍卖列表", path: "GET /api/admin/auctions" },
+    { name: "后台拍卖详情", path: "GET /api/admin/auctions/{id}" },
     { name: "上下文", path: "GET /api/system/context" },
 ];
 
@@ -32,11 +40,19 @@ const state = {
     sellerLoaded: false,
     sellerItems: [],
     selectedItem: null,
+    adminLoaded: false,
+    pendingItems: [],
+    adminAuctions: [],
+    selectedAuction: null,
+    auditLogs: [],
 };
 
 const statusClassMap = {
     REJECTED: "rejected",
     READY_FOR_AUCTION: "ready",
+    PENDING_START: "ready",
+    RUNNING: "running",
+    CANCELLED: "rejected",
 };
 
 function $(selector) {
@@ -92,6 +108,11 @@ function clearSession() {
     state.sellerLoaded = false;
     state.sellerItems = [];
     state.selectedItem = null;
+    state.adminLoaded = false;
+    state.pendingItems = [];
+    state.adminAuctions = [];
+    state.selectedAuction = null;
+    state.auditLogs = [];
     window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
@@ -149,6 +170,9 @@ function setRoute(route, options = {}) {
     syncHash(requestedRoute);
     if (requestedRoute === "seller" && !state.sellerLoaded) {
         loadMyItems({ silent: true });
+    }
+    if (requestedRoute === "admin" && !state.adminLoaded) {
+        loadAdminDashboard({ silent: true });
     }
 }
 
@@ -379,6 +403,301 @@ function renderSeller() {
     renderSelectedItem();
 }
 
+function toApiDateTime(value) {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+        return "";
+    }
+    const text = normalized.replace("T", " ");
+    return text.length === 16 ? `${text}:00` : text;
+}
+
+function toDateTimeLocalValue(value) {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+        return "";
+    }
+    return normalized.replace(" ", "T").slice(0, 16);
+}
+
+function renderPendingItems() {
+    const list = $("#adminPendingItemList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+
+    if (!state.pendingItems.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无待审核拍品";
+        list.append(empty);
+        return;
+    }
+
+    state.pendingItems.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "item-card";
+
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = item.title;
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        const seller = document.createElement("span");
+        seller.textContent = `卖家 ${item.sellerUsername || item.sellerId}`;
+        const price = document.createElement("span");
+        price.textContent = `建议起拍 ${toMoney(item.startPrice)}`;
+        const created = document.createElement("span");
+        created.textContent = item.createdAt || "-";
+        meta.append(seller, price, created);
+        titleBox.append(title, meta);
+
+        const status = document.createElement("span");
+        status.className = "item-status";
+        status.textContent = item.itemStatus || "PENDING_AUDIT";
+        head.append(titleBox, status);
+
+        const actions = document.createElement("div");
+        actions.className = "item-card-actions";
+        const auditButton = document.createElement("button");
+        auditButton.className = "secondary-button";
+        auditButton.type = "button";
+        auditButton.textContent = "审核";
+        auditButton.addEventListener("click", () => prepareAudit(item.itemId));
+
+        const logButton = document.createElement("button");
+        logButton.className = "text-button";
+        logButton.type = "button";
+        logButton.textContent = "日志";
+        logButton.addEventListener("click", () => loadAuditLogs(item.itemId));
+
+        actions.append(auditButton, logButton);
+        card.append(head, actions);
+        list.append(card);
+    });
+}
+
+function renderAuditLogs() {
+    const panel = $("#adminAuditLogsPanel");
+    if (!panel) {
+        return;
+    }
+    panel.innerHTML = "";
+
+    if (!state.auditLogs.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无审核日志";
+        panel.append(empty);
+        return;
+    }
+
+    state.auditLogs.forEach(log => {
+        const row = document.createElement("div");
+        row.className = "image-row";
+        const label = document.createElement("span");
+        label.textContent = `#${log.auditLogId} ${log.auditResult} / ${log.adminUsername || log.adminId} / ${log.createdAt}`;
+        const reason = document.createElement("span");
+        reason.textContent = log.auditComment || "-";
+        row.append(label, reason);
+        panel.append(row);
+    });
+}
+
+function prepareAudit(itemId) {
+    $("#auditItemIdInput").value = String(itemId);
+    $("#auditStatusSelect").value = "APPROVED";
+    $("#auditReasonInput").value = "";
+    loadAuditLogs(itemId);
+}
+
+function resetAuctionForm() {
+    $("#auctionEditIdInput").value = "";
+    $("#auctionFormTitle").textContent = "创建拍卖";
+    $("#auctionItemIdInput").value = "";
+    $("#auctionItemIdInput").disabled = false;
+    $("#auctionStartTimeInput").value = "";
+    $("#auctionEndTimeInput").value = "";
+    $("#auctionStartPriceInput").value = "";
+    $("#auctionBidStepInput").value = "";
+    $("#auctionWindowInput").value = "0";
+    $("#auctionExtendInput").value = "0";
+}
+
+function fillAuctionForm(detail) {
+    const auction = detail?.auction || detail;
+    if (!auction) {
+        return;
+    }
+    $("#auctionEditIdInput").value = String(auction.auctionId);
+    $("#auctionFormTitle").textContent = `编辑 #${auction.auctionId}`;
+    $("#auctionItemIdInput").value = String(auction.itemId);
+    $("#auctionItemIdInput").disabled = true;
+    $("#auctionStartTimeInput").value = toDateTimeLocalValue(auction.startTime);
+    $("#auctionEndTimeInput").value = toDateTimeLocalValue(auction.endTime);
+    $("#auctionStartPriceInput").value = String(auction.startPrice || "");
+    $("#auctionBidStepInput").value = String(auction.bidStep || "");
+    $("#auctionWindowInput").value = String(auction.antiSnipingWindowSeconds || 0);
+    $("#auctionExtendInput").value = String(auction.extendSeconds || 0);
+}
+
+function readAuctionFormPayload() {
+    return {
+        itemId: Number($("#auctionItemIdInput").value),
+        startTime: toApiDateTime($("#auctionStartTimeInput").value),
+        endTime: toApiDateTime($("#auctionEndTimeInput").value),
+        startPrice: Number($("#auctionStartPriceInput").value),
+        bidStep: Number($("#auctionBidStepInput").value),
+        antiSnipingWindowSeconds: Number($("#auctionWindowInput").value || 0),
+        extendSeconds: Number($("#auctionExtendInput").value || 0),
+    };
+}
+
+function renderAdminAuctions() {
+    const list = $("#adminAuctionList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+
+    if (!state.adminAuctions.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无拍卖";
+        list.append(empty);
+        return;
+    }
+
+    state.adminAuctions.forEach(auction => {
+        const card = document.createElement("article");
+        card.className = "item-card";
+        if (state.selectedAuction?.auction?.auctionId === auction.auctionId) {
+            card.classList.add("selected");
+        }
+
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = auction.title || `拍卖 #${auction.auctionId}`;
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        const itemId = document.createElement("span");
+        itemId.textContent = `拍品 #${auction.itemId}`;
+        const price = document.createElement("span");
+        price.textContent = `当前 ${toMoney(auction.currentPrice)}`;
+        const time = document.createElement("span");
+        time.textContent = `${auction.startTime} - ${auction.endTime}`;
+        meta.append(itemId, price, time);
+        titleBox.append(title, meta);
+
+        const status = document.createElement("span");
+        status.className = `item-status ${statusClassMap[auction.status] || ""}`.trim();
+        status.textContent = auction.status;
+        head.append(titleBox, status);
+
+        const actions = document.createElement("div");
+        actions.className = "item-card-actions";
+        const detailButton = document.createElement("button");
+        detailButton.className = "text-button";
+        detailButton.type = "button";
+        detailButton.textContent = "详情";
+        detailButton.addEventListener("click", () => selectAuction(auction.auctionId));
+
+        const editButton = document.createElement("button");
+        editButton.className = "text-button";
+        editButton.type = "button";
+        editButton.textContent = "编辑";
+        editButton.disabled = auction.status !== "PENDING_START";
+        editButton.addEventListener("click", async () => {
+            await selectAuction(auction.auctionId);
+            fillAuctionForm(state.selectedAuction);
+        });
+
+        const cancelButton = document.createElement("button");
+        cancelButton.className = "secondary-button";
+        cancelButton.type = "button";
+        cancelButton.textContent = "取消";
+        cancelButton.disabled = auction.status !== "PENDING_START";
+        cancelButton.addEventListener("click", () => cancelAuction(auction.auctionId));
+
+        actions.append(detailButton, editButton, cancelButton);
+        card.append(head, actions);
+        list.append(card);
+    });
+}
+
+function appendDetailRow(list, label, value) {
+    const row = document.createElement("div");
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = value;
+    row.append(dt, dd);
+    list.append(row);
+}
+
+function renderSelectedAuction() {
+    const panel = $("#adminAuctionDetailPanel");
+    if (!panel) {
+        return;
+    }
+
+    panel.innerHTML = "";
+    const detail = state.selectedAuction;
+    if (!detail?.auction) {
+        panel.hidden = true;
+        return;
+    }
+    panel.hidden = false;
+
+    const list = document.createElement("dl");
+    list.className = "profile-list";
+    appendDetailRow(list, "拍卖 ID", String(detail.auction.auctionId));
+    appendDetailRow(list, "状态", detail.auction.status);
+    appendDetailRow(list, "拍品", `${detail.item?.title || "-"} / #${detail.auction.itemId}`);
+    appendDetailRow(list, "卖家", detail.sellerUsername || String(detail.auction.sellerId));
+    appendDetailRow(list, "当前价", toMoney(detail.auction.currentPrice));
+    appendDetailRow(list, "加价幅度", toMoney(detail.auction.bidStep));
+    appendDetailRow(list, "时间", `${detail.auction.startTime} - ${detail.auction.endTime}`);
+    appendDetailRow(
+        list,
+        "防狙击",
+        `${detail.auction.antiSnipingWindowSeconds}s / ${detail.auction.extendSeconds}s`
+    );
+
+    const actions = document.createElement("div");
+    actions.className = "item-card-actions auction-detail-actions";
+    const editButton = document.createElement("button");
+    editButton.className = "text-button";
+    editButton.type = "button";
+    editButton.textContent = "编辑";
+    editButton.disabled = detail.auction.status !== "PENDING_START";
+    editButton.addEventListener("click", () => fillAuctionForm(detail));
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "secondary-button";
+    cancelButton.type = "button";
+    cancelButton.textContent = "取消";
+    cancelButton.disabled = detail.auction.status !== "PENDING_START";
+    cancelButton.addEventListener("click", () => cancelAuction(detail.auction.auctionId));
+
+    actions.append(editButton, cancelButton);
+    panel.append(list, actions);
+}
+
+function renderAdmin() {
+    renderPendingItems();
+    renderAuditLogs();
+    renderAdminAuctions();
+    renderSelectedAuction();
+}
+
 function render() {
     const activeRoute = state.user ? state.route : "gate";
     $all("[data-view]").forEach(view => {
@@ -391,6 +710,9 @@ function render() {
     }
     if (activeRoute === "seller") {
         renderSeller();
+    }
+    if (activeRoute === "admin") {
+        renderAdmin();
     }
 }
 
@@ -703,6 +1025,168 @@ async function submitSelectedItem() {
     }
 }
 
+async function loadPendingItems(options = {}) {
+    setStatus("加载待审核");
+    try {
+        const payload = await request("/admin/items/pending");
+        state.pendingItems = payload.data.list || [];
+        renderAdmin();
+        setStatus("待审核已加载", "success");
+        if (!options.silent) {
+            toast("待审核拍品已刷新");
+        }
+    } catch (error) {
+        setStatus("加载失败", "error");
+        toast(error.message);
+    }
+}
+
+async function loadAuditLogs(itemId) {
+    if (!itemId) {
+        return;
+    }
+    setStatus("读取审核日志");
+    try {
+        const payload = await request(`/admin/items/${encodeURIComponent(itemId)}/audit-logs`);
+        state.auditLogs = payload.data.list || [];
+        renderAdmin();
+        setStatus("审核日志已加载", "success");
+    } catch (error) {
+        setStatus("读取失败", "error");
+        toast(error.message);
+    }
+}
+
+async function submitAudit(event) {
+    event.preventDefault();
+    const itemId = $("#auditItemIdInput").value.trim();
+    if (!itemId) {
+        toast("请输入拍品 ID");
+        return;
+    }
+
+    const auditStatus = $("#auditStatusSelect").value;
+    setStatus("提交审核");
+    try {
+        await request(`/admin/items/${encodeURIComponent(itemId)}/audit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                auditStatus,
+                reason: $("#auditReasonInput").value.trim(),
+            }),
+        });
+        if (auditStatus === "APPROVED") {
+            $("#auctionItemIdInput").value = itemId;
+        }
+        await loadPendingItems({ silent: true });
+        await loadAuditLogs(itemId);
+        setStatus("审核已提交", "success");
+        toast("审核已提交");
+    } catch (error) {
+        setStatus("审核失败", "error");
+        toast(error.message);
+    }
+}
+
+async function loadAdminAuctions(options = {}) {
+    setStatus("加载拍卖");
+    const filter = $("#auctionStatusFilter")?.value || "";
+    const query = filter ? `?status=${encodeURIComponent(filter)}` : "";
+
+    try {
+        const payload = await request(`/admin/auctions${query}`);
+        state.adminAuctions = payload.data.list || [];
+        renderAdmin();
+        setStatus("拍卖已加载", "success");
+        if (!options.silent) {
+            toast("拍卖已刷新");
+        }
+    } catch (error) {
+        setStatus("加载失败", "error");
+        toast(error.message);
+    }
+}
+
+async function loadAdminDashboard(options = {}) {
+    await Promise.all([
+        loadPendingItems({ silent: true }),
+        loadAdminAuctions({ silent: true }),
+    ]);
+    state.adminLoaded = true;
+    if (!options.silent) {
+        toast("后台数据已刷新");
+    }
+}
+
+async function selectAuction(auctionId) {
+    setStatus("读取拍卖");
+    try {
+        const payload = await request(`/admin/auctions/${encodeURIComponent(auctionId)}`);
+        state.selectedAuction = payload.data;
+        renderAdmin();
+        setStatus("拍卖已选择", "success");
+    } catch (error) {
+        setStatus("读取失败", "error");
+        toast(error.message);
+    }
+}
+
+async function saveAuction(event) {
+    event.preventDefault();
+    const editId = $("#auctionEditIdInput").value.trim();
+    const payload = readAuctionFormPayload();
+    if (editId) {
+        delete payload.itemId;
+    }
+
+    setStatus(editId ? "更新拍卖" : "创建拍卖");
+    try {
+        const response = await request(
+            editId ? `/admin/auctions/${encodeURIComponent(editId)}` : "/admin/auctions",
+            {
+                method: editId ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            }
+        );
+        const auctionId = response.data.auctionId;
+        await loadAdminAuctions({ silent: true });
+        await selectAuction(auctionId);
+        if (!editId) {
+            resetAuctionForm();
+        }
+        setStatus(editId ? "拍卖已更新" : "拍卖已创建", "success");
+        toast(editId ? "拍卖已更新" : "拍卖已创建");
+    } catch (error) {
+        setStatus("保存失败", "error");
+        toast(error.message);
+    }
+}
+
+async function cancelAuction(auctionId) {
+    const reason = window.prompt("取消原因", "admin cancel from app");
+    if (reason === null) {
+        return;
+    }
+
+    setStatus("取消拍卖");
+    try {
+        await request(`/admin/auctions/${encodeURIComponent(auctionId)}/cancel`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason }),
+        });
+        await loadAdminAuctions({ silent: true });
+        await selectAuction(auctionId);
+        setStatus("拍卖已取消", "success");
+        toast("拍卖已取消");
+    } catch (error) {
+        setStatus("取消失败", "error");
+        toast(error.message);
+    }
+}
+
 async function verifyNotFound() {
     setStatus("验证 404");
     try {
@@ -728,6 +1212,15 @@ function bindEvents() {
         loadMyItems();
     });
     $("#submitAuditButton").addEventListener("click", submitSelectedItem);
+    $("#refreshPendingItemsButton").addEventListener("click", () => loadPendingItems());
+    $("#auditForm").addEventListener("submit", submitAudit);
+    $("#auctionForm").addEventListener("submit", saveAuction);
+    $("#resetAuctionFormButton").addEventListener("click", resetAuctionForm);
+    $("#refreshAuctionsButton").addEventListener("click", () => loadAdminAuctions());
+    $("#auctionStatusFilter").addEventListener("change", () => {
+        state.adminLoaded = false;
+        loadAdminAuctions();
+    });
     $("#contextButton").addEventListener("click", () => loadCurrentUser({ route: "api" }));
     $("#notFoundButton").addEventListener("click", verifyNotFound);
 

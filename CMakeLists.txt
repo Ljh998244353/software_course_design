@@ -79,6 +79,8 @@ set(AUCTION_CORE_SOURCES
     src/access/http/api_error_http.cpp
     src/access/http/app_http.cpp
     src/access/http/auth_http.cpp
+    src/access/http/audit_http.cpp
+    src/access/http/auction_admin_http.cpp
     src/access/http/business_http.cpp
     src/access/http/demo_http.cpp
     src/access/http/health_http.cpp
