@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "access/http/demo_http.h"
 #include "access/http/health_http.h"
 #include "application/database_health_service.h"
 #include "application/health_service.h"
@@ -63,6 +64,7 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
 
 #if AUCTION_HAS_DROGON
     access::http::RegisterHealthHttpRoutes(app_config, kProjectRoot, config_path);
+    access::http::RegisterDemoHttpRoutes(app_config, kProjectRoot);
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);
     logging::Logger::Instance().Info(

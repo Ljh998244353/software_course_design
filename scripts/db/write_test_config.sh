@@ -10,19 +10,22 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOCKET_FILE="$1"
 TEST_CONFIG_DIR="${ROOT_DIR}/build/test_config"
 TEST_CONFIG_PATH="${TEST_CONFIG_DIR}/app.mysql.test.json"
+TEST_DB_NAME="${AUCTION_TEST_DB_NAME:-auction_system}"
+TEST_SERVER_HOST="${AUCTION_TEST_SERVER_HOST:-0.0.0.0}"
+TEST_SERVER_PORT="${AUCTION_TEST_SERVER_PORT:-8080}"
 
 mkdir -p "${TEST_CONFIG_DIR}"
 
 cat > "${TEST_CONFIG_PATH}" <<JSON
 {
   "server": {
-    "host": "0.0.0.0",
-    "port": 8080
+    "host": "${TEST_SERVER_HOST}",
+    "port": ${TEST_SERVER_PORT}
   },
   "mysql": {
     "host": "localhost",
     "port": 3306,
-    "database": "auction_system",
+    "database": "${TEST_DB_NAME}",
     "username": "auction_user",
     "password": "change_me",
     "socket": "${SOCKET_FILE}",

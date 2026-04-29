@@ -76,8 +76,10 @@ else()
 endif()
 
 set(AUCTION_CORE_SOURCES
+    src/access/http/demo_http.cpp
     src/access/http/health_http.cpp
     src/application/database_health_service.cpp
+    src/application/demo_dashboard_service.cpp
     src/application/health_service.cpp
     src/common/config/config_loader.cpp
     src/common/db/mysql_connection.cpp
@@ -184,6 +186,9 @@ target_link_libraries(auction_high_risk_tests PRIVATE auction_core)
 add_executable(auction_security_negative_tests tests/security/security_negative_tests.cpp)
 target_link_libraries(auction_security_negative_tests PRIVATE auction_core)
 
+add_executable(auction_demo_dashboard_tests tests/demo/demo_dashboard_tests.cpp)
+target_link_libraries(auction_demo_dashboard_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
@@ -200,6 +205,7 @@ if(BUILD_TESTING)
     add_test(NAME auction_ops_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_ops.sh)
     add_test(NAME auction_high_risk_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_high_risk.sh)
     add_test(NAME auction_security_negative COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_security.sh)
+    add_test(NAME auction_demo_dashboard COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_demo_frontend.sh)
 
     set_tests_properties(
         auction_smoke_tests auction_check_config
@@ -220,6 +226,7 @@ if(BUILD_TESTING)
         auction_ops_flow
         auction_high_risk_flow
         auction_security_negative
+        auction_demo_dashboard
         PROPERTIES
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             RESOURCE_LOCK auction_mysql_test_runtime
@@ -278,5 +285,9 @@ if(BUILD_TESTING)
     set_tests_properties(
         auction_security_negative
         PROPERTIES LABELS "suite_security;suite_risk;module_auth;module_bid;module_auction;module_payment;requires_mysql"
+    )
+    set_tests_properties(
+        auction_demo_dashboard
+        PROPERTIES LABELS "suite_demo;module_frontend;requires_mysql"
     )
 endif()

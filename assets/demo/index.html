@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>在线拍卖平台演示台</title>
+    <link rel="stylesheet" href="/assets/demo/app.css">
+</head>
+<body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <header class="hero" id="top">
+        <nav class="topbar" aria-label="演示导航">
+            <a class="brand" href="#top" aria-label="返回顶部">
+                <span class="brand-mark">A</span>
+                <span>在线拍卖平台</span>
+            </a>
+            <div class="nav-links">
+                <a href="#workflow">主流程</a>
+                <a href="#auctions">拍卖现场</a>
+                <a href="#evidence">数据证据</a>
+                <a href="#defense">答辩要点</a>
+            </div>
+        </nav>
+
+        <section class="hero-grid">
+            <div class="hero-copy">
+                <p class="eyebrow">C++20 + Drogon + MySQL</p>
+                <h1>面向答辩演示的在线拍卖功能台</h1>
+                <p class="hero-lead">
+                    这个页面从演示库读取拍品、拍卖、出价、订单、支付、评价、通知和运维日志，
+                    用一条可讲清楚的业务线展示系统闭环。
+                </p>
+                <div class="hero-actions">
+                    <button class="primary-action" id="playDemoButton" type="button">播放演示顺序</button>
+                    <button class="secondary-action" id="refreshButton" type="button">刷新演示数据</button>
+                </div>
+                <div class="system-strip" id="systemStrip">
+                    <span>接口: /api/demo/dashboard</span>
+                    <span id="generatedAt">等待加载</span>
+                </div>
+            </div>
+
+            <aside class="hero-panel" aria-label="演示摘要">
+                <div class="price-orbit">
+                    <span>Current Highest Price</span>
+                    <strong id="heroPrice">--</strong>
+                    <small id="heroBidder">等待竞价数据</small>
+                </div>
+                <div class="hero-metrics" id="summaryCards"></div>
+            </aside>
+        </section>
+    </header>
+
+    <main>
+        <section class="section" id="workflow" data-demo-step>
+            <div class="section-heading">
+                <p class="eyebrow">Workflow</p>
+                <h2>答辩主流程</h2>
+                <p>按这个顺序讲，能覆盖需求、状态机、交易一致性和可验证性。</p>
+            </div>
+            <div class="workflow">
+                <article>
+                    <span>01</span>
+                    <h3>卖家发布拍品</h3>
+                    <p>演示卖家提交拍品信息和图片，拍品进入审核流。</p>
+                </article>
+                <article>
+                    <span>02</span>
+                    <h3>管理员审核</h3>
+                    <p>管理员审核通过后，拍品可被配置为拍卖活动。</p>
+                </article>
+                <article>
+                    <span>03</span>
+                    <h3>买家竞价</h3>
+                    <p>系统记录出价历史，维护 current highest price 和 highest bidder。</p>
+                </article>
+                <article>
+                    <span>04</span>
+                    <h3>成交结算</h3>
+                    <p>拍卖结束后生成唯一订单，支付回调按幂等规则推进状态。</p>
+                </article>
+                <article>
+                    <span>05</span>
+                    <h3>评价与统计</h3>
+                    <p>买卖双方互评，后台可查看统计日报、通知和任务日志。</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section role-section" id="roles" data-demo-step>
+            <div class="section-heading">
+                <p class="eyebrow">Accounts</p>
+                <h2>演示账号与角色</h2>
+                <p>切换角色时，按对应职责解释前台用户、管理员和运维/客服的能力边界。</p>
+            </div>
+            <div class="role-tabs" id="roleTabs"></div>
+            <div class="role-card" id="roleCard"></div>
+        </section>
+
+        <section class="section" id="auctions" data-demo-step>
+            <div class="section-heading">
+                <p class="eyebrow">Auction Floor</p>
+                <h2>拍卖现场</h2>
+                <p>四类状态同时展示：已成交、竞拍中、已流拍、待开始。</p>
+            </div>
+            <div class="auction-grid" id="auctionGrid"></div>
+        </section>
+
+        <section class="section split-section" id="transaction" data-demo-step>
+            <div class="section-heading">
+                <p class="eyebrow">Transaction</p>
+                <h2>订单、支付与评价闭环</h2>
+                <p>用一笔 `DEMO-ORDER-PAID` 说明成交、支付、履约和互评状态。</p>
+            </div>
+            <div class="split-grid">
+                <div class="stack-card">
+                    <h3>成交订单</h3>
+                    <div id="orderList"></div>
+                </div>
+                <div class="stack-card">
+                    <h3>支付记录</h3>
+                    <div id="paymentList"></div>
+                </div>
+                <div class="stack-card">
+                    <h3>双方评价</h3>
+                    <div id="reviewList"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="risk" data-demo-step>
+            <div class="section-heading">
+                <p class="eyebrow">Risk Control</p>
+                <h2>高风险链路</h2>
+                <p>这一段用于回答老师对并发、幂等、安全和缓存降级的追问。</p>
+            </div>
+            <div class="risk-grid" id="riskGrid"></div>
+        </section>
+
+        <section class="section evidence-section" id="evidence" data-demo-step>
+            <div class="section-heading">
+                <p class="eyebrow">Evidence</p>
+                <h2>数据库事实与运维可观测</h2>
+                <p>页面下方的数据来自 MySQL，方便现场证明不是静态 PPT。</p>
+            </div>
+            <div class="evidence-grid">
+                <article>
+                    <h3>最近出价</h3>
+                    <div class="table-shell" id="bidTable"></div>
+                </article>
+                <article>
+                    <h3>站内通知</h3>
+                    <div class="table-shell" id="notificationTable"></div>
+                </article>
+                <article>
+                    <h3>任务日志</h3>
+                    <div class="table-shell" id="taskTable"></div>
+                </article>
+                <article>
+                    <h3>操作日志</h3>
+                    <div class="table-shell" id="operationTable"></div>
+                </article>
+                <article>
+                    <h3>统计日报</h3>
+                    <div class="table-shell" id="statisticsTable"></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section defense-card" id="defense" data-demo-step>
+            <div>
+                <p class="eyebrow">Defense Script</p>
+                <h2>现场讲解口径</h2>
+            </div>
+            <ol>
+                <li>先说明系统边界：校园或小型社区拍卖，覆盖拍品、审核、竞价、支付、评价、统计、运维。</li>
+                <li>再说明架构：C++20 模块化单体，MySQL 是交易事实源，缓存和通知只做旁路能力。</li>
+                <li>打开拍卖现场，讲 current highest price、highest bidder、anti-sniping 和 bid history。</li>
+                <li>打开订单支付闭环，讲一场拍卖最多一个订单，支付回调幂等。</li>
+                <li>最后打开测试证据，执行 `scripts/test.sh risk` 和全量 `ctest`。</li>
+            </ol>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/assets/demo/app.js"></script>
+</body>
+</html>

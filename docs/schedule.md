@@ -25,7 +25,8 @@
 
 因此，真实进度应认定为：
 
-- `S00-S15`：已完成
+- `S00-S16`：已完成
+- `S17-S30`：已规划，未开始，用于完整前端全量接入真实业务后端
 
 ## 3. 步骤完成判定
 
@@ -45,15 +46,19 @@
 
 ## 4. 当前推荐执行顺序
 
-`S15` 已完成部署、演示与答辩交付；当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块、订单支付模块、评价模块、统计模块、运维异常模块、统一测试基线、高风险专项测试和最终演示脚本均已具备可复用实现。
+`S15` 已完成部署、演示与答辩交付；`S16` 已补充浏览器前端演示台和只读演示数据接口。当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块、订单支付模块、评价模块、统计模块、运维异常模块、统一测试基线、高风险专项测试、最终演示脚本和前端演示入口均已具备可复用实现。
 
-当前课程设计计划内步骤均已完成：
+当前课程设计原计划内步骤均已完成：
 
-1. `S00-S15`
+1. `S00-S16`
+
+当前已追加完整前端全量接入后端的扩展计划：
+
+1. `S17-S30`
 
 当前最优先的实际下一步是：
 
-- 无新的计划内开发步骤；若继续扩展，优先从真实 HTTP 控制器批量接入或前端页面联调开始。
+- `S17`：先补齐真实业务 HTTP 接入基线和前端工程骨架，避免后续页面继续遇到业务接口 `404 Not Found`。
 
 ## 5. Step-by-Step Schedule
 
@@ -75,12 +80,13 @@
 | S13 | 落地自动化测试基线 | 需要已有可运行工程 | 统一 CTest、断言式测试二进制、单元测试、模块测试、集成/契约测试入口、基础测试脚本和执行方式 | 测试框架可运行，核心模块都有最小自动化覆盖，且可按分层/模块统一执行 | `tests/`、`CMakeLists.txt`、`scripts/` | `docs/测试计划与用例说明.md` | 已完成 | 已统一 `CTest + test_*.sh + 断言式测试二进制` 基线，新增 suite/module 标签、MySQL 资源锁和 `scripts/test.sh` 分组入口；当前接口契约测试继续复用 `tests/integration/`，不额外创建空骨架 |
 | S14 | 完成高风险专项测试 | 需要主链路代码和测试基线 | 执行并发出价、拍卖结束竞争、支付回调幂等、Redis 降级、通知失败、安全负向测试 | 高风险链路均有验证结果和问题闭环 | `tests/stress/`、`tests/integration/`、`tests/security/` | `docs/测试报告.md` | 已完成 | 已落地 `auction_high_risk_flow` 与 `auction_security_negative`，覆盖并发、结束竞争、支付幂等、缓存降级、通知失败重试和安全负向；同时修复出价金额三位小数校验缺陷 |
 | S15 | 完成部署、演示与答辩交付 | 需要联调与专项测试完成 | 补齐部署脚本、初始化流程、演示数据、演示账号、答辩脚本与最终交付说明 | 系统可在目标环境复现并完成完整演示 | `scripts/deploy/`、`config/`、`sql/demo_data.sql` | `docs/部署与答辩说明.md` | 已完成 | 已落地演示初始化、服务启动、答辩提纲和最终发布验证脚本；最终回归 15/15 通过 |
+| S16 | 补充浏览器前端演示台 | S15 演示数据、Drogon 健康检查入口和 MySQL 演示库已具备 | 新增静态前端、只读演示数据接口、前端数据验证测试、答辩操作文档 | 浏览器可打开 `/demo`，页面数据来自 `auction_demo`，前端专项测试通过，并同步文档 | `assets/demo/`、`src/access/http/`、`src/application/`、`tests/demo/`、`scripts/` | [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)、[答辩演示操作手册.md](/home/ljh/project/soft_course_design/docs/答辩演示操作手册.md) | 已完成 | 已落地只读演示台、`/api/demo/dashboard`、`scripts/test.sh frontend` 和答辩操作手册；完整业务 HTTP 控制器批量接入仍作为后续扩展 |
 
 ## 6. 当前分配原则
 
 为了方便直接分配给 agent 执行，后续每一步建议拆成“一个模块、一个明确目标、一个明确代码目录”的粒度。
 
-按当前已确认进度，`S00-S15` 均已完成。
+按当前已确认进度，`S00-S16` 均已完成，`S17-S30` 为新增扩展计划且均未开始。完整前端接入步骤见本文第 13 节。
 
 例如：
 
@@ -124,6 +130,9 @@
 | 2026-04-29 | S14-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test.sh risk`、`ctest --test-dir build --output-on-failure`；`auction_high_risk_flow` 和 `auction_security_negative` 均通过，专项回归为 2/2 通过，全量 `ctest` 为 15/15 通过 | [test_high_risk.sh](/home/ljh/project/soft_course_design/scripts/test_high_risk.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
 | 2026-04-29 | S15 | 已完成 | 已新增 `scripts/deploy/` 部署演示脚本、`sql/demo_data.sql` 演示数据和 `docs/部署与答辩说明.md`；已调整 `config/nginx.conf` 为非特权演示端口 `18081` 并代理应用端口 `18080`；已同步环境配置说明和最终交付口径 | [init_demo_env.sh](/home/ljh/project/soft_course_design/scripts/deploy/init_demo_env.sh) | [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md) |
 | 2026-04-29 | S15-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/deploy/init_demo_env.sh`、`scripts/deploy/verify_release.sh`，并启动 `scripts/deploy/run_demo_server.sh` 后访问 `curl http://127.0.0.1:18080/healthz`；演示库 `auction_demo` schema/seed 检查通过，高风险专项 2/2 通过，全量 `ctest` 15/15 通过，健康检查返回 `status=ok` | [verify_release.sh](/home/ljh/project/soft_course_design/scripts/deploy/verify_release.sh) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-04-29 | S16 | 已完成 | 已新增 `assets/demo/` 浏览器前端演示台、`/api/demo/dashboard` 只读演示数据接口、`scripts/test.sh frontend` 前端专项验证和答辩操作手册；页面从 `auction_demo` 聚合展示拍品、拍卖、出价、订单、支付、评价、通知、任务日志、操作日志和统计日报 | [demo_http.cpp](/home/ljh/project/soft_course_design/src/access/http/demo_http.cpp) | [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md) |
+| 2026-04-29 | S16-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test.sh frontend`、`ctest --test-dir build --output-on-failure` 和 `scripts/deploy/verify_release.sh`；启动演示服务后验证 `/healthz`、`/demo`、`/assets/demo/app.css`、`/api/demo/dashboard` 均返回 200；前端演示数据测试通过，全量 `ctest` 更新为 16/16 通过 | [test_demo_frontend.sh](/home/ljh/project/soft_course_design/scripts/test_demo_frontend.sh) | [答辩演示操作手册.md](/home/ljh/project/soft_course_design/docs/答辩演示操作手册.md) |
+| 2026-04-29 | S17-S30-PLAN | 未开始 | 追加完整前端全量接入真实业务后端的开发 schedule，明确先接业务 HTTP 控制器，再分角色落地前台、卖家、管理端、竞价、订单支付、评价、统计运维和最终验收 | 待创建 `assets/app/`，待扩展 `src/access/http/`、`tests/http/`、`scripts/` | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
@@ -227,8 +236,8 @@
   - `scripts/deploy/run_demo_server.sh` 会长驻占用 `127.0.0.1:18080`，验证后需停止进程
 
 ### 6. 下一步
-- 下一步 Step ID: 无计划内步骤
-- 下一步目标: 若继续扩展，建议优先补真实 HTTP 控制器批量接入或前端页面联调
+- 下一步 Step ID: S17
+- 下一步目标: S16 已完成浏览器只读演示台；若继续开发完整前端，从真实业务 HTTP 接入基线开始
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
   - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
@@ -239,6 +248,96 @@
   - [scripts/deploy](/home/ljh/project/soft_course_design/scripts/deploy)
   - [demo_data.sql](/home/ljh/project/soft_course_design/sql/demo_data.sql)
   - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
+
+## 模块 Handoff
+
+### 1. 基本信息
+- Step ID: S16
+- 模块名称: 前端演示台与答辩操作手册
+- 当前状态: 已完成
+- 对应文档: `docs/前端演示模块说明.md`、`docs/答辩演示操作手册.md`
+- 对应代码目录: `assets/demo/`、`src/access/http/`、`src/application/`、`tests/demo/`
+
+### 2. 本次实际完成
+- 已完成功能:
+  - 新增浏览器入口 `/demo` 和首页 `/`
+  - 新增静态资源 `/assets/demo/app.css`、`/assets/demo/app.js`
+  - 新增只读演示数据接口 `/api/demo/dashboard`
+  - 新增前端演示数据聚合服务 `BuildDemoDashboardResponse`
+  - 新增 `scripts/test.sh frontend` 和 `auction_demo_dashboard` 测试
+  - 更新部署演示脚本、最终验证脚本、测试文档、环境文档和 schedule
+- 实际修改文件:
+  - [index.html](/home/ljh/project/soft_course_design/assets/demo/index.html)
+  - [app.css](/home/ljh/project/soft_course_design/assets/demo/app.css)
+  - [app.js](/home/ljh/project/soft_course_design/assets/demo/app.js)
+  - [demo_http.cpp](/home/ljh/project/soft_course_design/src/access/http/demo_http.cpp)
+  - [demo_dashboard_service.cpp](/home/ljh/project/soft_course_design/src/application/demo_dashboard_service.cpp)
+  - [demo_dashboard_tests.cpp](/home/ljh/project/soft_course_design/tests/demo/demo_dashboard_tests.cpp)
+  - [test_demo_frontend.sh](/home/ljh/project/soft_course_design/scripts/test_demo_frontend.sh)
+  - [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)
+  - [答辩演示操作手册.md](/home/ljh/project/soft_course_design/docs/答辩演示操作手册.md)
+- 未完成功能:
+  - 真实业务写接口的 HTTP 控制器批量接入
+  - 完整生产级前端登录、发布、审核、出价、支付页面
+- 明确不在本步处理的内容:
+  - 真实支付平台接入
+  - Redis 客户端接入
+  - 200 并发在线性能压测
+
+### 3. 关键设计决定
+- 决定 1: 前端演示台只读取 `auction_demo` 数据，不提供写交易状态的按钮
+- 原因: 避免演示误改拍卖、订单、支付事实，保持 MySQL 事实源和自动化测试结果一致
+- 影响范围:
+  - 页面展示来自 `/api/demo/dashboard`
+  - 核心业务写路径继续由服务层和测试验证
+
+- 决定 2: `/api/demo/dashboard` 使用只读 SQL 聚合演示数据
+- 原因: 答辩需要快速说明完整闭环，单接口能降低现场操作复杂度
+- 影响范围:
+  - 页面可一次性展示账号、拍卖、出价、订单、支付、评价、通知、任务日志、操作日志和统计日报
+  - 不改变既有模块服务和交易状态机
+
+### 4. 验证结果
+- 执行命令:
+  - `cmake -S . -B build`
+  - `cmake --build build`
+  - `scripts/test.sh frontend`
+  - `ctest --test-dir build --output-on-failure`
+  - `scripts/deploy/verify_release.sh`
+  - `scripts/deploy/run_demo_server.sh`
+  - `curl --max-time 5 -I http://127.0.0.1:18080/demo`
+  - `curl --max-time 5 -i http://127.0.0.1:18080/api/demo/dashboard`
+- 结果:
+  - 前端演示数据测试通过
+  - 全量 `ctest` 更新为 16/16 通过
+  - `/demo`、`/assets/demo/app.css`、`/api/demo/dashboard` 均返回 200
+  - `scripts/deploy/verify_release.sh` 通过
+- 未执行的测试:
+  - 浏览器自动化 UI 测试
+- 原因:
+  - 当前演示台为静态资源加只读接口，课程设计阶段以构建、接口数据和人工浏览器演示验收
+
+### 5. 当前风险/阻塞
+- 风险 1: 业务 HTTP 写接口仍未批量接入，除 `/demo`、`/healthz` 和 `/api/demo/dashboard` 外的业务 API 仍可能返回 404
+- 风险 2: `/demo` 依赖 Drogon；无 Drogon 环境只能完成构建和服务层验证，不能长驻 HTTP 服务
+- 阻塞项:
+  - 无
+- 需要注意的坑:
+  - 演示前必须先执行 `scripts/deploy/init_demo_env.sh`
+  - `scripts/deploy/run_demo_server.sh` 会占用 `127.0.0.1:18080`
+
+### 6. 下一步
+- 下一步 Step ID: S17
+- 下一步目标: 建立真实业务 HTTP 接入基线和完整前端工程骨架
+- 建议先读文件:
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [schedule.md 第 13 节](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [前端演示模块说明.md](/home/ljh/project/soft_course_design/docs/前端演示模块说明.md)
+  - [答辩演示操作手册.md](/home/ljh/project/soft_course_design/docs/答辩演示操作手册.md)
+  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
+  - [demo_http.cpp](/home/ljh/project/soft_course_design/src/access/http/demo_http.cpp)
+  - [demo_dashboard_service.cpp](/home/ljh/project/soft_course_design/src/application/demo_dashboard_service.cpp)
+  - [assets/demo](/home/ljh/project/soft_course_design/assets/demo)
 
 ## 10. 模块 Handoff 模板
 
@@ -322,15 +421,20 @@
 5. docs/测试计划与用例说明.md
 6. docs/接口联调记录.md
 7. docs/系统概要设计报告.md
-8. 对应代码目录 scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
+8. docs/前端演示模块说明.md
+9. docs/答辩演示操作手册.md
+10. docs/schedule.md 第 13 节“全量接入后端的完整前端开发 Schedule”
+11. 对应代码目录 assets/demo/、src/access/http/、src/application/、src/modules/、scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
+12. 若开始完整前端开发，还要检查计划目录 assets/app/、tests/http/ 是否已存在；不存在则按 S17 创建
 
-当前正在做：无计划内步骤
-当前状态：S00-S15 已完成
+当前正在做：完整前端全量接入真实业务后端的扩展计划，下一步从 S17 开始
+当前状态：S00-S16 已完成；S17-S30 已规划但均未开始
 
 本次若需要继续：
 - 先确认用户指定的新目标，不要默认新增功能
-- 若只是交付或答辩复现，优先使用 `scripts/deploy/init_demo_env.sh`、`scripts/deploy/run_demo_server.sh`、`scripts/deploy/show_demo_walkthrough.sh` 和 `scripts/deploy/verify_release.sh`
-- 若继续开发，建议优先补真实 HTTP 控制器批量接入或前端页面联调，并同步更新对应文档和 `docs/schedule.md`
+- 若只是交付或答辩复现，优先使用 `scripts/deploy/init_demo_env.sh`、`scripts/deploy/run_demo_server.sh`、`http://127.0.0.1:18080/demo`、`scripts/deploy/show_demo_walkthrough.sh` 和 `scripts/deploy/verify_release.sh`
+- 若继续开发完整前端，先执行 `S17`，补真实业务 HTTP 控制器接入基线和前端工程骨架，再进入认证、拍品、拍卖、竞价、订单支付、评价、统计运维等页面开发
+- 任一 S17-S30 步骤完成后，同步更新 `docs/schedule.md`、相关模块文档、测试计划和 handoff
 
 注意约束：
 - 以实际代码落地为准，不以仅写文档算完成
@@ -356,7 +460,153 @@ S15 已完成。已落地 `scripts/deploy/`、`sql/demo_data.sql`、`docs/部署
 注意：若用户态 MySQL 初始化失败并提示 `Unable to lock ./ibdata1`，优先检查是否有残留 `mysqld` 占用 `build/test_mysql/data`。
 ```
 
+历史 S16 恢复重点：
+
+```text
+S16 已完成。已落地 `assets/demo/` 浏览器前端演示台、`src/access/http/demo_http.*`、`src/application/demo_dashboard_service.*`、`tests/demo/demo_dashboard_tests.cpp`、`scripts/test_demo_frontend.sh`、`docs/前端演示模块说明.md` 和 `docs/答辩演示操作手册.md`。
+
+演示入口：
+- `http://127.0.0.1:18080/demo`
+- `curl http://127.0.0.1:18080/api/demo/dashboard`
+
+验证入口：
+- `scripts/test.sh frontend`
+- `ctest --test-dir build --output-on-failure`
+
+结果：前端演示数据测试通过，全量 CTest 更新为 16/16 通过。
+HTTP 验证：`/healthz`、`/demo`、`/assets/demo/app.css`、`/api/demo/dashboard` 均返回 200。
+最终脚本：`scripts/deploy/verify_release.sh` 通过。
+
+注意：除 `/demo`、`/healthz` 和 `/api/demo/dashboard` 外，真实业务 HTTP 写接口仍未批量接入；若访问其他 `/api/...` 返回 404，属于当前边界。
+```
+
+历史 S17-S30 恢复重点：
+
+```text
+S17-S30 是新增的完整前端全量接入真实业务后端计划，当前均未开始。
+
+执行顺序要求：
+- 先做 S17，补齐业务 HTTP 控制器接入基线、统一鉴权上下文、请求解析、错误映射、静态前端入口和最小 HTTP 测试。
+- 再按角色和业务流开发完整前端：认证、卖家拍品、管理员审核与拍卖、买家浏览与出价、订单支付、评价通知、统计运维。
+- 当前 `/demo` 仍保留为只读答辩演示台，不要用它替代真实业务页面。
+
+关键边界：
+- MySQL 仍是交易事实唯一来源。
+- Redis 只能作为缓存或旁路，不能决定出价合法性。
+- 出价、结算、支付回调等写路径必须保持服务层事务和幂等约束。
+- 在 S17 完成前，其他业务 `/api/...` 返回 404 仍属于已知边界。
+```
+
 说明如下：
 
 - 当当前步骤变化时，要把这里的模块文档和代码目录替换成新的真实目标
 - 若当前步骤尚未创建代码目录，也必须先读取 `docs/schedule.md` 和对应模块文档，再决定下一步
+
+## 13. 全量接入后端的完整前端开发 Schedule
+
+本节用于规划 `S17-S30`，目标是把当前只读答辩演示台扩展为完整浏览器前端，并接入真实业务后端接口。当前所有步骤均为 `未开始`。
+
+### 13.1 目标与边界
+
+- 目标：提供面向买家、卖家、管理员、运维/客服的完整浏览器前端，覆盖注册登录、拍品发布、审核、拍卖配置、浏览出价、订单支付、履约、评价、通知、统计和异常处理。
+- 前提：当前后端服务层已具备主流程能力，但 Drogon 接入层只落地 `/healthz`、`/demo` 和 `/api/demo/dashboard`，因此必须先补真实业务 HTTP 控制器。
+- 边界：`/demo` 保留为只读答辩演示台；完整前端应使用真实业务 `/api/...` 接口，不应复用 `/api/demo/dashboard` 作为业务数据源。
+- 技术取向：除非用户明确要求引入 Node/Vite/React，否则优先沿用静态 HTML/CSS/JS 加 C++ 后端静态资源托管，降低课程答辩环境复杂度。
+- 数据约束：MySQL 仍是交易事实唯一来源；Redis 只能作为缓存或旁路能力，不能决定出价、结算和支付状态。
+
+### 13.2 完成判定
+
+任一 `S17-S30` 步骤只有同时满足以下条件，才允许改为 `已完成`：
+
+1. 后端真实接口、前端页面、脚本或配置已有实际代码落地。
+2. 页面访问不再依赖手工改 URL 或直接查库，功能通过真实 `/api/...` 接口完成。
+3. 至少有一个可重复执行的验证入口，优先接入 `CTest`、`scripts/test.sh` 或专用脚本。
+4. 相关接口、页面、错误处理和演示方式已同步到模块文档或 `docs/前端演示模块说明.md`。
+5. `docs/schedule.md` 已追加进度记录和 handoff，说明实际代码路径、验证命令和未覆盖风险。
+
+### 13.3 扩展步骤总表
+
+| 步骤 ID | 可分配给 agent 的实际目标 | 前置条件 | 需要实际完成的代码/脚本 | 完成判定 | 预计代码位置 | 完成后文档位置 | 当前状态 |
+|---|---|---|---|---|---|---|---|
+| S17 | 建立真实业务 HTTP 接入基线和完整前端工程骨架 | S16 已完成，服务层模块可复用 | 注册业务路由分组、统一请求解析、统一错误映射、认证上下文、静态完整前端入口、最小 API 客户端、HTTP 冒烟测试脚本 | `/api/auth/login` 之外至少有一个受保护测试接口可返回统一响应；未知接口 404 有明确 JSON 错误；完整前端首页可打开 | `src/access/http/`、`src/common/http/`、`assets/app/`、`tests/http/`、`scripts/test_http.sh` | `docs/接口联调记录.md`、`docs/前端演示模块说明.md`、`docs/schedule.md` | 未开始 |
+| S18 | 接入认证、会话和角色路由 | S17 | 实现注册、登录、登出、当前用户、管理员用户状态接口；前端登录页、注册页、会话保持、角色导航、路由守卫 | 用户可注册登录；不同角色看到不同入口；未登录访问受保护页面会跳转登录 | `src/access/http/auth_http.*`、`assets/app/`、`tests/http/` | `docs/认证与权限模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
+| S19 | 接入卖家拍品发布与管理页面 | S18 | 实现拍品创建、编辑、图片元数据、我的拍品、提交审核接口；前端卖家拍品列表、表单、状态提示和驳回原因展示 | 卖家可从页面创建拍品并提交审核；非法字段显示业务错误；数据落库可查 | `src/access/http/item_http.*`、`assets/app/`、`tests/http/` | `docs/物品与审核模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
+| S20 | 接入管理员审核与拍卖管理页面 | S19 | 实现待审拍品、审核通过/驳回、创建/修改/取消拍卖、管理端拍卖查询接口；前端管理台表格、审核弹窗、拍卖规则表单 | 管理员可审核拍品并创建拍卖；卖家可看到审核结果；活动状态与拍品状态一致 | `src/access/http/audit_http.*`、`src/access/http/auction_admin_http.*`、`assets/app/`、`tests/http/` | `docs/拍卖管理模块说明.md`、`docs/物品与审核模块说明.md` | 未开始 |
+| S21 | 接入买家拍卖大厅与详情页 | S20 | 实现公开拍卖列表、详情、出价历史、当前最高价查询接口；前端首页、筛选、详情页、倒计时和状态标签 | 买家可浏览拍卖、进入详情、看到当前最高价和历史出价；结束或未开始活动按钮状态正确 | `src/access/http/auction_public_http.*`、`assets/app/`、`tests/http/` | `docs/拍卖管理模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
+| S22 | 接入真实出价和实时通知 | S21 | 实现出价接口、幂等键传递、出价错误映射、WebSocket 或轮询通知入口；前端出价面板、价格刷新、被超越提示和失败重试提示 | 并发出价后页面最高价与数据库一致；低价、过期、冻结用户和重复幂等键均有明确提示 | `src/access/http/bid_http.*`、`src/access/http/notification_http.*`、`src/ws/`、`assets/app/`、`tests/http/` | `docs/竞价与实时通知模块说明.md`、`docs/测试计划与用例说明.md` | 未开始 |
+| S23 | 接入订单、支付和履约页面 | S22 | 实现我的订单、支付发起、mock 支付结果展示、卖家发货、买家确认收货接口；前端订单列表、订单详情、支付状态页和履约操作 | 获胜买家可完成支付流程；卖家可发货；买家可确认收货；重复支付或非法状态操作被拒绝 | `src/access/http/order_http.*`、`src/access/http/payment_http.*`、`assets/app/`、`tests/http/` | `docs/订单与支付模块说明.md`、`docs/前端演示模块说明.md` | 未开始 |
+| S24 | 接入评价、通知中心和用户信用展示 | S23 | 实现评价提交、订单评价查询、用户信用汇总、通知列表、通知已读接口；前端评价表单、通知中心和个人信用卡片 | 订单完成后买卖双方可互评；重复评价被拒绝；通知能按用户展示并标记已读 | `src/access/http/review_http.*`、`src/access/http/notification_http.*`、`assets/app/`、`tests/http/` | `docs/评价与反馈模块说明.md`、`docs/竞价与实时通知模块说明.md` | 未开始 |
+| S25 | 接入统计报表和运维异常页面 | S24 | 实现统计日报、CSV 导出、操作日志、任务日志、异常看板、通知重试、补偿入口接口；前端管理员统计页和运维工作台 | 管理员可查看统计；运维可查看日志并执行允许的补偿动作；越权访问被拒绝 | `src/access/http/statistics_http.*`、`src/access/http/ops_http.*`、`assets/app/`、`tests/http/` | `docs/统计分析与报表模块说明.md`、`docs/系统监控与异常处理模块说明.md` | 未开始 |
+| S26 | 完成全站 UX、状态处理和安全前端约束 | S18-S25 | 统一 loading、empty、error、toast、表单校验、金额格式、时间显示、鉴权过期处理、XSS 安全渲染和 404 页面 | 主要页面在无数据、接口失败、权限不足、会话过期时都有可解释反馈；金额和时间展示一致 | `assets/app/`、`tests/http/`、`scripts/` | `docs/前端演示模块说明.md`、`docs/测试计划与用例说明.md` | 未开始 |
+| S27 | 建立真实 HTTP 接口自动化回归 | S18-S25 | 为认证、拍品、审核、拍卖、出价、订单支付、评价、统计运维补 curl 或 CTest 级接口测试；接入 `scripts/test.sh http` | 真实 HTTP 主流程可自动跑通；不再只依赖服务层契约映射；全量 `ctest` 包含 HTTP 回归 | `tests/http/`、`scripts/test_http.sh`、`scripts/test.sh`、`CMakeLists.txt` | `docs/测试计划与用例说明.md`、`docs/接口联调记录.md` | 未开始 |
+| S28 | 建立前端页面级验收脚本 | S26-S27 | 增加静态资源完整性检查、关键页面可达性检查、必要时增加轻量浏览器自动化；接入 `scripts/test.sh ui` 或 `scripts/test.sh frontend-full` | 启动服务后首页、登录页、拍卖大厅、详情页、订单页、管理台均可访问且核心接口返回 200/业务错误 | `scripts/test_ui.sh`、`tests/ui/`、`assets/app/` | `docs/测试计划与用例说明.md`、`docs/前端演示模块说明.md` | 未开始 |
+| S29 | 接入部署、演示数据和答辩脚本 | S27-S28 | 扩展演示初始化、服务启动、Nginx 模板、答辩 walkthrough、发布验证脚本，让完整前端成为默认演示入口，保留 `/demo` 只读入口 | `scripts/deploy/verify_release.sh` 能验证完整前端；答辩脚本能演示真实写操作和只读总览两条路径 | `scripts/deploy/`、`config/`、`sql/demo_data.sql`、`assets/app/` | `docs/部署与答辩说明.md`、`docs/答辩演示操作手册.md` | 未开始 |
+| S30 | 完成完整前端最终回归和 handoff | S29 | 执行全量构建、HTTP 回归、UI 验收、高风险专项、全量 CTest 和发布验证；补齐最终 handoff | 完整前端可在本机从初始化到浏览器演示复现；`docs/schedule.md` 记录全部验证命令和剩余风险 | 全仓库 | `docs/schedule.md`、`docs/部署与答辩说明.md`、`docs/答辩演示操作手册.md` | 未开始 |
+
+### 13.4 必须覆盖的业务接口矩阵
+
+| 模块 | 前端必须接入的接口范围 | 关键风险点 |
+|---|---|---|
+| 认证与权限 | `POST /api/auth/register`、`POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`、管理员用户状态管理 | Token 过期、冻结账号、RBAC 越权 |
+| 拍品与审核 | 拍品创建、编辑、图片元数据、提交审核、审核通过、审核驳回、我的拍品、待审列表 | 卖家只能操作自己的拍品；审核状态不可跳转 |
+| 拍卖管理 | 管理端创建/修改/取消拍卖，公开列表，公开详情，调度后状态查询 | 拍品与拍卖状态一致；已开始活动不可非法修改 |
+| 竞价与通知 | 提交出价、出价历史、当前最高价、WebSocket 或轮询价格更新、通知列表 | 最高价一致性、幂等键、延时保护、通知失败不回滚 |
+| 订单与支付 | 我的订单、支付发起、支付状态、支付回调、卖家发货、买家确认收货、超时关闭 | 一场拍卖最多一单；回调幂等；非法状态操作拒绝 |
+| 评价与信用 | 提交评价、订单评价查询、用户信用汇总 | 只能交易双方评价；一方一次；订单终态约束 |
+| 统计与运维 | 统计日报、CSV 导出、操作日志、任务日志、异常看板、通知重试、补偿入口 | 管理和运维权限隔离；补偿动作可审计 |
+
+### 13.5 推荐执行顺序
+
+1. 先执行 `S17`，补后端 HTTP 接入基线和前端工程骨架。
+2. 再执行 `S18`，因为后续所有业务页面都依赖登录态、角色和统一 API 客户端。
+3. 按业务闭环执行 `S19-S24`，顺序为卖家发布、管理员审核建拍、买家浏览出价、订单支付、履约评价。
+4. 再执行 `S25-S26`，补管理端统计运维和全站体验、安全状态处理。
+5. 最后执行 `S27-S30`，把真实 HTTP 回归、页面验收、部署演示和最终 handoff 收口。
+
+### 13.6 S17 启动前检查清单
+
+```md
+- [ ] 已读取 `docs/schedule.md` 第 13 节
+- [ ] 已读取 `docs/接口联调记录.md`
+- [ ] 已读取 `docs/前端演示模块说明.md`
+- [ ] 已确认当前 `/api/demo/dashboard` 只是只读演示接口
+- [ ] 已确认业务 HTTP 控制器尚未批量接入，其他 `/api/...` 404 是当前边界
+- [ ] 已查看 `src/access/http/health_http.*` 和 `src/access/http/demo_http.*`
+- [ ] 已查看目标模块服务层，例如 `src/modules/auth/`、`src/modules/item/`、`src/modules/auction/`、`src/modules/bid/`
+- [ ] 已查看对应测试目录，优先复用现有服务层测试数据和断言
+```
+
+### 13.7 计划态 Handoff
+
+```text
+Step ID: S17-S30
+模块名称: 完整前端全量接入真实业务后端
+当前状态: 未开始
+下一步 Step ID: S17
+下一步目标: 建立真实业务 HTTP 接入基线和完整前端工程骨架
+
+当前已知事实:
+- S00-S16 已完成。
+- 现有 `/demo` 是只读答辩演示台，不是完整生产前端。
+- 当前已落地后端路由只有 `/healthz`、`/demo`、`/demo/`、`/assets/demo/app.css`、`/assets/demo/app.js`、`/api/demo/dashboard`。
+- 完整前端开发前必须补真实业务 HTTP 控制器，否则认证、拍品、审核、竞价、订单、支付等页面会继续遇到 404。
+
+建议先读:
+- docs/schedule.md
+- docs/接口联调记录.md
+- docs/前端演示模块说明.md
+- docs/认证与权限模块说明.md
+- docs/物品与审核模块说明.md
+- docs/拍卖管理模块说明.md
+- docs/竞价与实时通知模块说明.md
+- docs/订单与支付模块说明.md
+- src/access/http/
+- src/modules/
+- tests/
+
+完成 S17 时必须更新:
+- docs/schedule.md
+- docs/接口联调记录.md
+- docs/前端演示模块说明.md
+- docs/测试计划与用例说明.md
+```
