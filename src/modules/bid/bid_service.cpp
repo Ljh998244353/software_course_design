@@ -39,6 +39,10 @@ bool AmountEquals(const double left, const double right) {
     return std::fabs(NormalizeAmount(left) - NormalizeAmount(right)) < kAmountEpsilon;
 }
 
+bool HasAtMostTwoDecimalPlaces(const double value) {
+    return std::fabs(value * 100.0 - std::round(value * 100.0)) < kAmountEpsilon;
+}
+
 std::string FormatAmount(const double value) {
     std::ostringstream output;
     output << std::fixed << std::setprecision(2) << NormalizeAmount(value);
@@ -78,7 +82,7 @@ void ValidateBidRequest(const PlaceBidRequest& request) {
     if (!std::isfinite(request.bid_amount) || request.bid_amount <= 0.0) {
         ThrowBidError(common::errors::ErrorCode::kBidAmountInvalid, "bid amount must be positive");
     }
-    if (!AmountEquals(request.bid_amount, NormalizeAmount(request.bid_amount))) {
+    if (!HasAtMostTwoDecimalPlaces(request.bid_amount)) {
         ThrowBidError(
             common::errors::ErrorCode::kBidAmountInvalid,
             "bid amount supports at most two decimal places"

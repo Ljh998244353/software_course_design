@@ -178,6 +178,12 @@ target_link_libraries(auction_statistics_tests PRIVATE auction_core)
 add_executable(auction_ops_tests tests/ops/ops_flow_tests.cpp)
 target_link_libraries(auction_ops_tests PRIVATE auction_core)
 
+add_executable(auction_high_risk_tests tests/stress/high_risk_flow_tests.cpp)
+target_link_libraries(auction_high_risk_tests PRIVATE auction_core)
+
+add_executable(auction_security_negative_tests tests/security/security_negative_tests.cpp)
+target_link_libraries(auction_security_negative_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
@@ -192,6 +198,8 @@ if(BUILD_TESTING)
     add_test(NAME auction_review_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_review.sh)
     add_test(NAME auction_statistics_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_statistics.sh)
     add_test(NAME auction_ops_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_ops.sh)
+    add_test(NAME auction_high_risk_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_high_risk.sh)
+    add_test(NAME auction_security_negative COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_security.sh)
 
     set_tests_properties(
         auction_smoke_tests auction_check_config
@@ -210,6 +218,8 @@ if(BUILD_TESTING)
         auction_review_flow
         auction_statistics_flow
         auction_ops_flow
+        auction_high_risk_flow
+        auction_security_negative
         PROPERTIES
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             RESOURCE_LOCK auction_mysql_test_runtime
@@ -260,5 +270,13 @@ if(BUILD_TESTING)
     set_tests_properties(
         auction_ops_flow
         PROPERTIES LABELS "suite_module;module_ops;requires_mysql"
+    )
+    set_tests_properties(
+        auction_high_risk_flow
+        PROPERTIES LABELS "suite_stress;suite_risk;module_bid;module_auction;module_order;module_payment;module_notification;requires_mysql"
+    )
+    set_tests_properties(
+        auction_security_negative
+        PROPERTIES LABELS "suite_security;suite_risk;module_auth;module_bid;module_auction;module_payment;requires_mysql"
     )
 endif()

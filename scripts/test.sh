@@ -7,12 +7,13 @@ BUILD_DIR="${ROOT_DIR}/build"
 usage() {
     cat <<'EOF'
 用法:
-  scripts/test.sh [all|smoke|db|module|integration|contract|auth|item|auction|bid|order|payment|review|statistics|ops|list] [额外 ctest 参数]
+  scripts/test.sh [all|smoke|db|module|integration|contract|risk|stress|security|auth|item|auction|bid|order|payment|review|statistics|ops|list] [额外 ctest 参数]
 
 示例:
   scripts/test.sh
   scripts/test.sh smoke
   scripts/test.sh module -V
+  scripts/test.sh risk
   scripts/test.sh bid
 EOF
 }
@@ -64,6 +65,15 @@ main() {
             ;;
         contract)
             run_ctest "suite_contract" "$@"
+            ;;
+        risk)
+            run_ctest "suite_risk" "$@"
+            ;;
+        stress)
+            run_ctest "suite_stress" "$@"
+            ;;
+        security)
+            run_ctest "suite_security" "$@"
             ;;
         auth)
             run_ctest "module_auth" "$@"
