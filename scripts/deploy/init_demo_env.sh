@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEMO_DB_NAME="${AUCTION_DEMO_DB_NAME:-auction_demo}"
 DEMO_DB_USER="${AUCTION_DEMO_DB_USER:-auction_user}"
 DEMO_DB_PASSWORD="${AUCTION_DEMO_DB_PASSWORD:-change_me}"
+DEMO_SERVER_HOST="${AUCTION_DEMO_SERVER_HOST:-127.0.0.1}"
+DEMO_SERVER_PORT="${AUCTION_DEMO_SERVER_PORT:-18080}"
 DEMO_CONFIG_DIR="${ROOT_DIR}/build/demo_config"
 DEMO_CONFIG_PATH="${DEMO_CONFIG_DIR}/app.demo.json"
 DEMO_UPLOAD_DIR="${ROOT_DIR}/data/uploads/demo"
@@ -24,8 +26,8 @@ write_demo_config() {
     cat >"${DEMO_CONFIG_PATH}" <<JSON
 {
   "server": {
-    "host": "127.0.0.1",
-    "port": 18080
+    "host": "${DEMO_SERVER_HOST}",
+    "port": ${DEMO_SERVER_PORT}
   },
   "mysql": {
     "host": "localhost",
@@ -95,6 +97,12 @@ demo environment is ready
 config: ${DEMO_CONFIG_PATH}
 database: ${DEMO_DB_NAME}
 server command: AUCTION_APP_CONFIG="${DEMO_CONFIG_PATH}" ${ROOT_DIR}/build/bin/auction_app
+browser:
+  http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/demo
+  http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/app
+api checks:
+  http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/healthz
+  http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/api/demo/dashboard
 
 demo accounts:
   admin / Admin@123

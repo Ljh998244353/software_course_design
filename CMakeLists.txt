@@ -207,6 +207,9 @@ target_link_libraries(auction_security_negative_tests PRIVATE auction_core)
 add_executable(auction_demo_dashboard_tests tests/demo/demo_dashboard_tests.cpp)
 target_link_libraries(auction_demo_dashboard_tests PRIVATE auction_core)
 
+add_executable(auction_app_ui_acceptance_tests tests/ui/app_page_acceptance_tests.cpp)
+target_link_libraries(auction_app_ui_acceptance_tests PRIVATE auction_core)
+
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
@@ -225,9 +228,10 @@ if(BUILD_TESTING)
     add_test(NAME auction_security_negative COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_security.sh)
     add_test(NAME auction_demo_dashboard COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_demo_frontend.sh)
     add_test(NAME auction_http_baseline COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_http.sh)
+    add_test(NAME auction_app_ui_acceptance COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_ui.sh)
 
     set_tests_properties(
-        auction_smoke_tests auction_check_config
+        auction_smoke_tests auction_check_config auction_app_ui_acceptance
         PROPERTIES
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -315,5 +319,9 @@ if(BUILD_TESTING)
         PROPERTIES
             LABELS "suite_http;suite_contract;requires_mysql"
             TIMEOUT 600
+    )
+    set_tests_properties(
+        auction_app_ui_acceptance
+        PROPERTIES LABELS "suite_ui;module_frontend"
     )
 endif()
