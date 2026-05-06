@@ -81,10 +81,16 @@ set(AUCTION_CORE_SOURCES
     src/access/http/auth_http.cpp
     src/access/http/audit_http.cpp
     src/access/http/auction_admin_http.cpp
+    src/access/http/auction_public_http.cpp
+    src/access/http/bid_http.cpp
     src/access/http/business_http.cpp
     src/access/http/demo_http.cpp
     src/access/http/health_http.cpp
     src/access/http/item_http.cpp
+    src/access/http/notification_http.cpp
+    src/access/http/order_http.cpp
+    src/access/http/payment_http.cpp
+    src/access/http/review_http.cpp
     src/access/http/system_http.cpp
     src/application/database_health_service.cpp
     src/application/demo_dashboard_service.cpp

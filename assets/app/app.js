@@ -5,6 +5,8 @@ const routeRoles = {
     gate: [],
     home: ["USER", "ADMIN", "SUPPORT"],
     buyer: ["USER"],
+    orders: ["USER"],
+    notifications: ["USER", "ADMIN", "SUPPORT"],
     seller: ["USER"],
     admin: ["ADMIN"],
     support: ["SUPPORT"],
@@ -30,6 +32,24 @@ const endpoints = [
     { name: "取消拍卖", path: "POST /api/admin/auctions/{id}/cancel" },
     { name: "后台拍卖列表", path: "GET /api/admin/auctions" },
     { name: "后台拍卖详情", path: "GET /api/admin/auctions/{id}" },
+    { name: "公开拍卖列表", path: "GET /api/auctions" },
+    { name: "公开拍卖详情", path: "GET /api/auctions/{id}" },
+    { name: "当前最高价", path: "GET /api/auctions/{id}/price" },
+    { name: "出价历史", path: "GET /api/auctions/{id}/bids" },
+    { name: "提交出价", path: "POST /api/auctions/{id}/bids" },
+    { name: "我的出价状态", path: "GET /api/auctions/{id}/my-bid" },
+    { name: "通知轮询", path: "GET /api/notifications" },
+    { name: "通知已读", path: "PATCH /api/notifications/{id}/read" },
+    { name: "我的订单", path: "GET /api/orders/mine" },
+    { name: "订单详情", path: "GET /api/orders/{id}" },
+    { name: "发起支付", path: "POST /api/orders/{id}/pay" },
+    { name: "支付状态", path: "GET /api/orders/{id}/payment" },
+    { name: "支付回调", path: "POST /api/payments/callback" },
+    { name: "卖家发货", path: "POST /api/orders/{id}/ship" },
+    { name: "确认收货", path: "POST /api/orders/{id}/confirm-receipt" },
+    { name: "提交评价", path: "POST /api/reviews" },
+    { name: "订单评价", path: "GET /api/orders/{id}/reviews" },
+    { name: "信用摘要", path: "GET /api/users/{id}/reviews/summary" },
     { name: "上下文", path: "GET /api/system/context" },
 ];
 
@@ -37,6 +57,21 @@ const state = {
     token: window.sessionStorage.getItem(TOKEN_KEY) || "",
     user: null,
     route: "gate",
+    buyerLoaded: false,
+    publicAuctions: [],
+    selectedPublicAuction: null,
+    selectedPublicPrice: null,
+    selectedBidHistory: [],
+    selectedMyBidStatus: null,
+    selectedNotifications: [],
+    notificationsLoaded: false,
+    notifications: [],
+    ordersLoaded: false,
+    orders: [],
+    selectedOrder: null,
+    selectedPaymentStatus: null,
+    selectedOrderReviews: null,
+    selectedOrderCredit: null,
     sellerLoaded: false,
     sellerItems: [],
     selectedItem: null,
@@ -52,7 +87,16 @@ const statusClassMap = {
     READY_FOR_AUCTION: "ready",
     PENDING_START: "ready",
     RUNNING: "running",
+    SETTLING: "running",
+    SOLD: "ready",
+    UNSOLD: "rejected",
     CANCELLED: "rejected",
+    PENDING_PAYMENT: "running",
+    PAID: "ready",
+    SHIPPED: "running",
+    COMPLETED: "ready",
+    REVIEWED: "ready",
+    CLOSED: "rejected",
 };
 
 function $(selector) {
@@ -105,6 +149,21 @@ function setText(selector, value) {
 function clearSession() {
     state.token = "";
     state.user = null;
+    state.buyerLoaded = false;
+    state.publicAuctions = [];
+    state.selectedPublicAuction = null;
+    state.selectedPublicPrice = null;
+    state.selectedBidHistory = [];
+    state.selectedMyBidStatus = null;
+    state.selectedNotifications = [];
+    state.notificationsLoaded = false;
+    state.notifications = [];
+    state.ordersLoaded = false;
+    state.orders = [];
+    state.selectedOrder = null;
+    state.selectedPaymentStatus = null;
+    state.selectedOrderReviews = null;
+    state.selectedOrderCredit = null;
     state.sellerLoaded = false;
     state.sellerItems = [];
     state.selectedItem = null;
@@ -170,6 +229,15 @@ function setRoute(route, options = {}) {
     syncHash(requestedRoute);
     if (requestedRoute === "seller" && !state.sellerLoaded) {
         loadMyItems({ silent: true });
+    }
+    if (requestedRoute === "buyer" && !state.buyerLoaded) {
+        loadPublicAuctions({ silent: true });
+    }
+    if (requestedRoute === "orders" && !state.ordersLoaded) {
+        loadMyOrders({ silent: true });
+    }
+    if (requestedRoute === "notifications" && !state.notificationsLoaded) {
+        loadNotifications({ silent: true });
     }
     if (requestedRoute === "admin" && !state.adminLoaded) {
         loadAdminDashboard({ silent: true });
@@ -698,6 +766,618 @@ function renderAdmin() {
     renderSelectedAuction();
 }
 
+function parseDateTime(value) {
+    const normalized = String(value || "").replace(" ", "T");
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDuration(milliseconds) {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+        return `${hours}小时${String(minutes).padStart(2, "0")}分`;
+    }
+    return `${minutes}分${String(seconds).padStart(2, "0")}秒`;
+}
+
+function auctionCountdownText(auction) {
+    const now = Date.now();
+    if (auction.status === "PENDING_START") {
+        const start = parseDateTime(auction.startTime);
+        return start ? `距开始 ${formatDuration(start.getTime() - now)}` : "待开始";
+    }
+    if (auction.status === "RUNNING") {
+        const end = parseDateTime(auction.endTime);
+        return end ? `距结束 ${formatDuration(end.getTime() - now)}` : "竞拍中";
+    }
+    if (["SOLD", "UNSOLD", "CANCELLED"].includes(auction.status)) {
+        return "已结束";
+    }
+    return auction.status || "-";
+}
+
+function auctionActionLabel(status) {
+    if (status === "RUNNING") {
+        return "出价";
+    }
+    if (status === "PENDING_START") {
+        return "未开始";
+    }
+    if (status === "SETTLING") {
+        return "结算中";
+    }
+    return "不可出价";
+}
+
+function renderPublicAuctions() {
+    const list = $("#buyerAuctionList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+
+    if (!state.publicAuctions.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无拍卖";
+        list.append(empty);
+        return;
+    }
+
+    state.publicAuctions.forEach(auction => {
+        const card = document.createElement("article");
+        card.className = "item-card";
+        if (state.selectedPublicAuction?.auctionId === auction.auctionId) {
+            card.classList.add("selected");
+        }
+
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = auction.title || `拍卖 #${auction.auctionId}`;
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        const price = document.createElement("span");
+        price.textContent = `当前 ${toMoney(auction.currentPrice)}`;
+        const countdown = document.createElement("span");
+        countdown.textContent = auctionCountdownText(auction);
+        const time = document.createElement("span");
+        time.textContent = `${auction.startTime} - ${auction.endTime}`;
+        meta.append(price, countdown, time);
+        titleBox.append(title, meta);
+
+        const status = document.createElement("span");
+        status.className = `item-status ${statusClassMap[auction.status] || ""}`.trim();
+        status.textContent = auction.status;
+        head.append(titleBox, status);
+
+        const actions = document.createElement("div");
+        actions.className = "item-card-actions";
+        const detailButton = document.createElement("button");
+        detailButton.className = "secondary-button";
+        detailButton.type = "button";
+        detailButton.textContent = "详情";
+        detailButton.addEventListener("click", () => selectPublicAuction(auction.auctionId));
+
+        const bidButton = document.createElement("button");
+        bidButton.className = "text-button";
+        bidButton.type = "button";
+        bidButton.textContent = auctionActionLabel(auction.status);
+        bidButton.disabled = auction.status !== "RUNNING";
+        bidButton.addEventListener("click", () => selectPublicAuction(auction.auctionId));
+
+        actions.append(detailButton, bidButton);
+        card.append(head, actions);
+        list.append(card);
+    });
+}
+
+function isAuctionAcceptingBids(detail) {
+    return detail?.status === "RUNNING";
+}
+
+function buildOutbidNotice() {
+    const myStatus = state.selectedMyBidStatus;
+    if (!myStatus || !myStatus.myHighestBid || myStatus.isCurrentHighest) {
+        return "";
+    }
+    return `已被超越，当前最高价 ${toMoney(myStatus.currentPrice)}`;
+}
+
+function renderPublicAuctionDetail() {
+    const panel = $("#buyerAuctionDetailPanel");
+    if (!panel) {
+        return;
+    }
+
+    panel.innerHTML = "";
+    const detail = state.selectedPublicAuction;
+    if (!detail) {
+        panel.hidden = true;
+        return;
+    }
+    panel.hidden = false;
+
+    const list = document.createElement("dl");
+    list.className = "profile-list";
+    appendDetailRow(list, "拍卖 ID", String(detail.auctionId));
+    appendDetailRow(list, "拍品", `${detail.title || "-"} / #${detail.itemId}`);
+    appendDetailRow(list, "状态", detail.status);
+    appendDetailRow(list, "当前价", toMoney(state.selectedPublicPrice?.currentPrice || detail.currentPrice));
+    appendDetailRow(
+        list,
+        "下一口",
+        toMoney(state.selectedPublicPrice?.minimumNextBid || detail.currentPrice)
+    );
+    appendDetailRow(
+        list,
+        "最高出价者",
+        state.selectedPublicPrice?.highestBidderMasked || detail.highestBidderMasked || "-"
+    );
+    appendDetailRow(list, "倒计时", auctionCountdownText(detail));
+    appendDetailRow(list, "时间", `${detail.startTime} - ${state.selectedPublicPrice?.endTime || detail.endTime}`);
+    appendDetailRow(
+        list,
+        "防狙击",
+        `${detail.antiSnipingWindowSeconds}s / ${detail.extendSeconds}s`
+    );
+
+    const bidPanel = document.createElement("section");
+    bidPanel.className = "bid-action-panel";
+
+    const bidForm = document.createElement("form");
+    bidForm.className = "bid-form";
+    const label = document.createElement("label");
+    const labelText = document.createElement("span");
+    labelText.textContent = "出价金额";
+    const input = document.createElement("input");
+    input.id = "buyerBidAmountInput";
+    input.name = "bidAmount";
+    input.type = "number";
+    input.min = "0.01";
+    input.step = "0.01";
+    input.value = String(state.selectedPublicPrice?.minimumNextBid || detail.currentPrice || "");
+    label.append(labelText, input);
+
+    const bidButton = document.createElement("button");
+    bidButton.className = "primary-button";
+    bidButton.type = "submit";
+    bidButton.disabled = !isAuctionAcceptingBids(detail);
+    bidButton.textContent = auctionActionLabel(detail.status);
+    bidForm.append(label, bidButton);
+    bidForm.addEventListener("submit", submitPublicBid);
+    bidPanel.append(bidForm);
+
+    const outbidNotice = buildOutbidNotice();
+    if (
+        outbidNotice ||
+        (state.selectedMyBidStatus?.myHighestBid > 0 && state.selectedMyBidStatus.isCurrentHighest)
+    ) {
+        const status = document.createElement("div");
+        status.className = `bid-alert${outbidNotice ? " warning" : " success"}`;
+        status.textContent = outbidNotice ||
+            `当前领先，最高出价 ${toMoney(state.selectedMyBidStatus.myHighestBid)}`;
+        bidPanel.append(status);
+    }
+
+    if (state.selectedNotifications.length) {
+        const notificationList = document.createElement("div");
+        notificationList.className = "notification-list";
+        state.selectedNotifications.slice(0, 3).forEach(notification => {
+            const row = document.createElement("div");
+            row.className = "notification-row";
+            const title = document.createElement("strong");
+            title.textContent = notification.title || notification.noticeType;
+            const content = document.createElement("span");
+            content.textContent = `${notification.content || ""} / ${notification.createdAt || "-"}`;
+            row.append(title, content);
+            notificationList.append(row);
+        });
+        bidPanel.append(notificationList);
+    }
+
+    const historySection = document.createElement("section");
+    historySection.className = "bid-history-panel";
+    const historyTitle = document.createElement("h2");
+    historyTitle.textContent = "出价历史";
+    historySection.append(historyTitle);
+
+    if (!state.selectedBidHistory.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无出价记录";
+        historySection.append(empty);
+    } else {
+        const rows = document.createElement("div");
+        rows.className = "image-list";
+        state.selectedBidHistory.forEach(entry => {
+            const row = document.createElement("div");
+            row.className = "image-row";
+            const label = document.createElement("span");
+            label.textContent = `${entry.bidderMasked || "-"} / ${entry.bidStatus}`;
+            const value = document.createElement("span");
+            value.textContent = `${toMoney(entry.bidAmount)} / ${entry.bidTime}`;
+            row.append(label, value);
+            rows.append(row);
+        });
+        historySection.append(rows);
+    }
+
+    panel.append(list, bidPanel, historySection);
+}
+
+function renderBuyer() {
+    renderPublicAuctions();
+    renderPublicAuctionDetail();
+}
+
+function getOrderRecord(entry) {
+    return entry?.order || entry || {};
+}
+
+function currentUserId() {
+    return Number(state.user?.userId || 0);
+}
+
+function isCurrentBuyer(entry) {
+    const order = getOrderRecord(entry);
+    return Number(order.buyerId || entry?.buyerId || 0) === currentUserId();
+}
+
+function isCurrentSeller(entry) {
+    const order = getOrderRecord(entry);
+    return Number(order.sellerId || entry?.sellerId || 0) === currentUserId();
+}
+
+function orderStatus(entry) {
+    const order = getOrderRecord(entry);
+    return order.orderStatus || entry?.orderStatus || "";
+}
+
+function latestPaymentForSelectedOrder() {
+    return state.selectedPaymentStatus?.latestPayment || state.selectedOrder?.latestPayment || null;
+}
+
+function selectedOrderId() {
+    return state.selectedOrder?.orderId || state.selectedOrder?.order?.orderId || 0;
+}
+
+function reviewTargetId(entry) {
+    const order = getOrderRecord(entry);
+    return isCurrentBuyer(entry)
+        ? Number(order.sellerId || entry?.sellerId || 0)
+        : Number(order.buyerId || entry?.buyerId || 0);
+}
+
+function reviewTargetLabel(entry) {
+    if (isCurrentBuyer(entry)) {
+        return entry?.sellerUsername || `卖家 #${reviewTargetId(entry)}`;
+    }
+    return entry?.buyerUsername || `买家 #${reviewTargetId(entry)}`;
+}
+
+function currentUserReviewForSelectedOrder() {
+    const reviews = state.selectedOrderReviews?.reviews || [];
+    return reviews.find(review => Number(review.reviewerId || 0) === currentUserId()) || null;
+}
+
+function renderReviewStars(rating) {
+    const value = Math.max(0, Math.min(5, Number(rating || 0)));
+    return "★★★★★".slice(0, value) + "☆☆☆☆☆".slice(0, 5 - value);
+}
+
+function renderOrders() {
+    const list = $("#orderList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+
+    if (!state.orders.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无订单";
+        list.append(empty);
+        return;
+    }
+
+    state.orders.forEach(entry => {
+        const order = getOrderRecord(entry);
+        const card = document.createElement("article");
+        card.className = "item-card";
+        if (state.selectedOrder?.orderId === entry.orderId) {
+            card.classList.add("selected");
+        }
+
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = entry.itemTitle || `订单 #${entry.orderId}`;
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        const amount = document.createElement("span");
+        amount.textContent = `成交 ${toMoney(order.finalAmount || entry.finalAmount)}`;
+        const role = document.createElement("span");
+        role.textContent = isCurrentBuyer(entry) ? "买家" : "卖家";
+        const updated = document.createElement("span");
+        updated.textContent = order.updatedAt || "-";
+        meta.append(amount, role, updated);
+        titleBox.append(title, meta);
+
+        const status = document.createElement("span");
+        status.className = `item-status ${statusClassMap[orderStatus(entry)] || ""}`.trim();
+        status.textContent = orderStatus(entry);
+        head.append(titleBox, status);
+
+        const actions = document.createElement("div");
+        actions.className = "item-card-actions";
+        const detailButton = document.createElement("button");
+        detailButton.className = "secondary-button";
+        detailButton.type = "button";
+        detailButton.textContent = "详情";
+        detailButton.addEventListener("click", () => selectOrder(entry.orderId));
+        actions.append(detailButton);
+
+        card.append(head, actions);
+        list.append(card);
+    });
+}
+
+function renderSelectedOrder() {
+    const panel = $("#orderDetailPanel");
+    if (!panel) {
+        return;
+    }
+    panel.innerHTML = "";
+
+    const entry = state.selectedOrder;
+    if (!entry) {
+        panel.hidden = true;
+        return;
+    }
+    panel.hidden = false;
+
+    const order = getOrderRecord(entry);
+    const list = document.createElement("dl");
+    list.className = "profile-list";
+    appendDetailRow(list, "订单 ID", String(entry.orderId || order.orderId));
+    appendDetailRow(list, "订单号", order.orderNo || entry.orderNo || "-");
+    appendDetailRow(list, "拍品", `${entry.itemTitle || "-"} / #${entry.itemId || "-"}`);
+    appendDetailRow(list, "订单状态", orderStatus(entry));
+    appendDetailRow(list, "拍卖状态", entry.auctionStatus || "-");
+    appendDetailRow(list, "成交金额", toMoney(order.finalAmount || entry.finalAmount));
+    appendDetailRow(list, "买家", entry.buyerUsername || String(order.buyerId || "-"));
+    appendDetailRow(list, "卖家", entry.sellerUsername || String(order.sellerId || "-"));
+    appendDetailRow(list, "支付截止", order.payDeadlineAt || entry.payDeadlineAt || "-");
+    appendDetailRow(list, "支付时间", order.paidAt || "-");
+    appendDetailRow(list, "发货时间", order.shippedAt || "-");
+    appendDetailRow(list, "完成时间", order.completedAt || "-");
+    panel.append(list);
+
+    const paymentPanel = document.createElement("section");
+    paymentPanel.className = "payment-status-panel";
+    const payment = latestPaymentForSelectedOrder();
+    const paymentTitle = document.createElement("strong");
+    paymentTitle.textContent = "最新支付";
+    paymentPanel.append(paymentTitle);
+    if (payment) {
+        const paymentText = document.createElement("code");
+        paymentText.textContent = `${payment.paymentNo} / ${payment.payChannel} / ${payment.payStatus} / ${toMoney(payment.payAmount)}`;
+        paymentPanel.append(paymentText);
+    } else {
+        const empty = document.createElement("span");
+        empty.textContent = "暂无支付单";
+        paymentPanel.append(empty);
+    }
+    panel.append(paymentPanel);
+
+    const actions = document.createElement("div");
+    actions.className = "item-card-actions auction-detail-actions";
+
+    if (isCurrentBuyer(entry) && orderStatus(entry) === "PENDING_PAYMENT") {
+        const channel = document.createElement("select");
+        channel.id = "orderPayChannelSelect";
+        ["MOCK_ALIPAY", "MOCK_WECHAT"].forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value;
+            channel.append(option);
+        });
+        const payButton = document.createElement("button");
+        payButton.id = "payOrderButton";
+        payButton.className = "primary-button";
+        payButton.type = "button";
+        payButton.textContent = "发起支付";
+        payButton.addEventListener("click", () => initiateOrderPayment(channel.value));
+        actions.append(channel, payButton);
+    }
+
+    const refreshPaymentButton = document.createElement("button");
+    refreshPaymentButton.className = "text-button";
+    refreshPaymentButton.type = "button";
+    refreshPaymentButton.textContent = "刷新支付状态";
+    refreshPaymentButton.addEventListener("click", () => refreshSelectedOrder());
+    actions.append(refreshPaymentButton);
+
+    const shipButton = document.createElement("button");
+    shipButton.id = "shipOrderButton";
+    shipButton.className = "secondary-button";
+    shipButton.type = "button";
+    shipButton.textContent = "确认发货";
+    shipButton.disabled = !isCurrentSeller(entry) || orderStatus(entry) !== "PAID";
+    shipButton.addEventListener("click", shipSelectedOrder);
+
+    const receiptButton = document.createElement("button");
+    receiptButton.id = "confirmReceiptButton";
+    receiptButton.className = "secondary-button";
+    receiptButton.type = "button";
+    receiptButton.textContent = "确认收货";
+    receiptButton.disabled = !isCurrentBuyer(entry) || orderStatus(entry) !== "SHIPPED";
+    receiptButton.addEventListener("click", confirmSelectedReceipt);
+
+    actions.append(shipButton, receiptButton);
+    panel.append(actions);
+
+    renderSelectedOrderReviews(panel, entry);
+}
+
+function renderOrderPage() {
+    renderOrders();
+    renderSelectedOrder();
+}
+
+function renderSelectedOrderReviews(panel, entry) {
+    const reviewSection = document.createElement("section");
+    reviewSection.className = "review-panel";
+
+    const title = document.createElement("h2");
+    title.textContent = "评价与信用";
+    reviewSection.append(title);
+
+    const credit = state.selectedOrderCredit;
+    if (credit) {
+        const creditBox = document.createElement("div");
+        creditBox.className = "credit-summary";
+        const target = document.createElement("strong");
+        target.textContent = reviewTargetLabel(entry);
+        const score = document.createElement("span");
+        score.textContent = `${Number(credit.averageRating || 0).toFixed(1)} 分 / ${credit.totalReviews || 0} 条`;
+        const counts = document.createElement("span");
+        counts.textContent =
+            `好评 ${credit.positiveReviews || 0} / 中评 ${credit.neutralReviews || 0} / 差评 ${credit.negativeReviews || 0}`;
+        creditBox.append(target, score, counts);
+        reviewSection.append(creditBox);
+    }
+
+    const reviews = state.selectedOrderReviews?.reviews || [];
+    if (!reviews.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无评价";
+        reviewSection.append(empty);
+    } else {
+        const list = document.createElement("div");
+        list.className = "review-list";
+        reviews.forEach(review => {
+            const row = document.createElement("div");
+            row.className = "review-row";
+            const head = document.createElement("strong");
+            head.textContent = `${review.reviewType} / ${renderReviewStars(review.rating)}`;
+            const content = document.createElement("span");
+            content.textContent = `${review.content || "无评价内容"} / ${review.createdAt || "-"}`;
+            row.append(head, content);
+            list.append(row);
+        });
+        reviewSection.append(list);
+    }
+
+    const status = orderStatus(entry);
+    const ownReview = currentUserReviewForSelectedOrder();
+    if (["COMPLETED", "REVIEWED"].includes(status) && !ownReview) {
+        const form = document.createElement("form");
+        form.className = "review-form";
+        const ratingLabel = document.createElement("label");
+        const ratingText = document.createElement("span");
+        ratingText.textContent = "评分";
+        const ratingSelect = document.createElement("select");
+        ratingSelect.id = "reviewRatingSelect";
+        [5, 4, 3, 2, 1].forEach(value => {
+            const option = document.createElement("option");
+            option.value = String(value);
+            option.textContent = `${value} 分`;
+            ratingSelect.append(option);
+        });
+        ratingLabel.append(ratingText, ratingSelect);
+
+        const contentLabel = document.createElement("label");
+        const contentText = document.createElement("span");
+        contentText.textContent = "评价内容";
+        const textarea = document.createElement("textarea");
+        textarea.id = "reviewContentInput";
+        textarea.name = "content";
+        textarea.rows = 3;
+        textarea.maxLength = 500;
+        contentLabel.append(contentText, textarea);
+
+        const submit = document.createElement("button");
+        submit.className = "primary-button";
+        submit.type = "submit";
+        submit.textContent = `评价 ${reviewTargetLabel(entry)}`;
+        form.append(ratingLabel, contentLabel, submit);
+        form.addEventListener("submit", submitSelectedOrderReview);
+        reviewSection.append(form);
+    } else if (ownReview) {
+        const submitted = document.createElement("div");
+        submitted.className = "bid-alert success";
+        submitted.textContent = "当前账号已完成本订单评价";
+        reviewSection.append(submitted);
+    }
+
+    panel.append(reviewSection);
+}
+
+function renderNotifications() {
+    const list = $("#notificationCenterList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+
+    if (!state.notifications.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无通知";
+        list.append(empty);
+        return;
+    }
+
+    state.notifications.forEach(notification => {
+        const row = document.createElement("article");
+        row.className = "notification-card";
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = notification.title || notification.noticeType;
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        const type = document.createElement("span");
+        type.textContent = notification.noticeType || "-";
+        const biz = document.createElement("span");
+        biz.textContent = `${notification.bizType || "-"} / ${notification.bizId || "-"}`;
+        const created = document.createElement("span");
+        created.textContent = notification.createdAt || "-";
+        meta.append(type, biz, created);
+        titleBox.append(title, meta);
+        const status = document.createElement("span");
+        status.className = `item-status ${notification.readStatus === "UNREAD" ? "running" : "ready"}`;
+        status.textContent = notification.readStatus;
+        head.append(titleBox, status);
+
+        const content = document.createElement("p");
+        content.className = "notification-content";
+        content.textContent = notification.content || "";
+
+        const actions = document.createElement("div");
+        actions.className = "item-card-actions";
+        const readButton = document.createElement("button");
+        readButton.className = "secondary-button";
+        readButton.type = "button";
+        readButton.textContent = "标记已读";
+        readButton.disabled = notification.readStatus === "READ";
+        readButton.addEventListener("click", () => markNotificationRead(notification.notificationId));
+        actions.append(readButton);
+        row.append(head, content, actions);
+        list.append(row);
+    });
+}
+
 function render() {
     const activeRoute = state.user ? state.route : "gate";
     $all("[data-view]").forEach(view => {
@@ -710,6 +1390,15 @@ function render() {
     }
     if (activeRoute === "seller") {
         renderSeller();
+    }
+    if (activeRoute === "buyer") {
+        renderBuyer();
+    }
+    if (activeRoute === "orders") {
+        renderOrderPage();
+    }
+    if (activeRoute === "notifications") {
+        renderNotifications();
     }
     if (activeRoute === "admin") {
         renderAdmin();
@@ -1187,6 +1876,345 @@ async function cancelAuction(auctionId) {
     }
 }
 
+async function loadPublicAuctions(options = {}) {
+    setStatus("加载拍卖大厅");
+    const params = new URLSearchParams();
+    const keyword = $("#buyerKeywordInput")?.value.trim() || "";
+    const status = $("#buyerStatusFilter")?.value || "";
+    if (keyword) {
+        params.set("keyword", keyword);
+    }
+    if (status) {
+        params.set("status", status);
+    }
+    const query = params.toString() ? `?${params.toString()}` : "";
+
+    try {
+        const payload = await request(`/auctions${query}`);
+        state.publicAuctions = payload.data.list || [];
+        state.buyerLoaded = true;
+        renderBuyer();
+        setStatus("拍卖大厅已加载", "success");
+        if (!options.silent) {
+            toast("拍卖大厅已刷新");
+        }
+    } catch (error) {
+        setStatus("加载失败", "error");
+        toast(error.message);
+    }
+}
+
+function mergeSelectedAuctionPrice(price) {
+    if (!state.selectedPublicAuction || !price) {
+        return;
+    }
+    state.selectedPublicAuction = {
+        ...state.selectedPublicAuction,
+        currentPrice: price.currentPrice,
+        highestBidderMasked: price.highestBidderMasked,
+        endTime: price.endTime,
+        acceptingBids: price.acceptingBids,
+    };
+}
+
+async function selectPublicAuction(auctionId) {
+    setStatus("读取拍卖详情");
+    try {
+        const [detailPayload, pricePayload, bidsPayload, myBidPayload, notificationPayload] =
+            await Promise.all([
+                request(`/auctions/${encodeURIComponent(auctionId)}`),
+                request(`/auctions/${encodeURIComponent(auctionId)}/price`),
+                request(`/auctions/${encodeURIComponent(auctionId)}/bids?pageSize=10`),
+                request(`/auctions/${encodeURIComponent(auctionId)}/my-bid`),
+                request(
+                    `/notifications?limit=10&bizType=AUCTION&bizId=${encodeURIComponent(auctionId)}`
+                ),
+            ]);
+        state.selectedPublicAuction = detailPayload.data;
+        state.selectedPublicPrice = pricePayload.data;
+        state.selectedBidHistory = bidsPayload.data.list || [];
+        state.selectedMyBidStatus = myBidPayload.data;
+        state.selectedNotifications = notificationPayload.data.list || [];
+        mergeSelectedAuctionPrice(state.selectedPublicPrice);
+        renderBuyer();
+        setStatus("拍卖详情已加载", "success");
+    } catch (error) {
+        setStatus("读取失败", "error");
+        toast(error.message);
+    }
+}
+
+async function refreshSelectedPublicAuction(options = {}) {
+    const auctionId = state.selectedPublicAuction?.auctionId;
+    if (!auctionId || refreshSelectedPublicAuction.inFlight) {
+        return;
+    }
+    refreshSelectedPublicAuction.inFlight = true;
+    try {
+        const [pricePayload, bidsPayload, myBidPayload, notificationPayload] = await Promise.all([
+            request(`/auctions/${encodeURIComponent(auctionId)}/price`),
+            request(`/auctions/${encodeURIComponent(auctionId)}/bids?pageSize=10`),
+            request(`/auctions/${encodeURIComponent(auctionId)}/my-bid`),
+            request(
+                `/notifications?limit=10&bizType=AUCTION&bizId=${encodeURIComponent(auctionId)}`
+            ),
+        ]);
+        state.selectedPublicPrice = pricePayload.data;
+        state.selectedBidHistory = bidsPayload.data.list || [];
+        state.selectedMyBidStatus = myBidPayload.data;
+        state.selectedNotifications = notificationPayload.data.list || [];
+        mergeSelectedAuctionPrice(state.selectedPublicPrice);
+        renderBuyer();
+        if (!options.silent) {
+            setStatus("价格已刷新", "success");
+            toast("价格已刷新");
+        }
+    } catch (error) {
+        if (!options.silent) {
+            setStatus("刷新失败", "error");
+            toast(error.message);
+        }
+    } finally {
+        refreshSelectedPublicAuction.inFlight = false;
+    }
+}
+
+function buildRequestId(prefix) {
+    const random = Math.random().toString(36).slice(2, 10);
+    return `${prefix}-${Date.now()}-${random}`;
+}
+
+async function submitPublicBid(event) {
+    event.preventDefault();
+    const auctionId = state.selectedPublicAuction?.auctionId;
+    const input = $("#buyerBidAmountInput");
+    if (!auctionId || !input) {
+        return;
+    }
+
+    setStatus("提交出价");
+    try {
+        await request(`/auctions/${encodeURIComponent(auctionId)}/bids`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                requestId: buildRequestId(`web-bid-${auctionId}`),
+                bidAmount: Number(input.value),
+            }),
+        });
+        await refreshSelectedPublicAuction({ silent: true });
+        await loadPublicAuctions({ silent: true });
+        setStatus("出价成功", "success");
+        toast("出价成功");
+    } catch (error) {
+        setStatus("出价失败", "error");
+        toast(error.message);
+    }
+}
+
+async function loadMyOrders(options = {}) {
+    setStatus("加载订单");
+    const params = new URLSearchParams();
+    const role = $("#orderRoleFilter")?.value || "";
+    const status = $("#orderStatusFilter")?.value || "";
+    if (role) {
+        params.set("role", role);
+    }
+    if (status) {
+        params.set("status", status);
+    }
+    const query = params.toString() ? `?${params.toString()}` : "";
+
+    try {
+        const payload = await request(`/orders/mine${query}`);
+        state.orders = payload.data.list || [];
+        state.ordersLoaded = true;
+        renderOrderPage();
+        setStatus("订单已加载", "success");
+        if (!options.silent) {
+            toast("订单已刷新");
+        }
+    } catch (error) {
+        setStatus("加载失败", "error");
+        toast(error.message);
+    }
+}
+
+async function selectOrder(orderId) {
+    setStatus("读取订单");
+    try {
+        const [detailPayload, paymentPayload, reviewPayload] = await Promise.all([
+            request(`/orders/${encodeURIComponent(orderId)}`),
+            request(`/orders/${encodeURIComponent(orderId)}/payment`),
+            request(`/orders/${encodeURIComponent(orderId)}/reviews`),
+        ]);
+        state.selectedOrder = detailPayload.data;
+        state.selectedPaymentStatus = paymentPayload.data;
+        state.selectedOrderReviews = reviewPayload.data;
+        const targetUserId = reviewTargetId(state.selectedOrder);
+        if (targetUserId) {
+            const creditPayload = await request(`/users/${encodeURIComponent(targetUserId)}/reviews/summary`);
+            state.selectedOrderCredit = creditPayload.data;
+        } else {
+            state.selectedOrderCredit = null;
+        }
+        renderOrderPage();
+        setStatus("订单已选择", "success");
+    } catch (error) {
+        setStatus("读取失败", "error");
+        toast(error.message);
+    }
+}
+
+async function refreshSelectedOrder() {
+    const orderId = selectedOrderId();
+    if (!orderId) {
+        return;
+    }
+    await selectOrder(orderId);
+}
+
+async function initiateOrderPayment(payChannel) {
+    const orderId = selectedOrderId();
+    if (!orderId) {
+        return;
+    }
+
+    setStatus("发起支付");
+    try {
+        await request(`/orders/${encodeURIComponent(orderId)}/pay`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payChannel }),
+        });
+        await refreshSelectedOrder();
+        await loadMyOrders({ silent: true });
+        setStatus("支付单已生成", "success");
+        toast("支付单已生成");
+    } catch (error) {
+        setStatus("支付失败", "error");
+        toast(error.message);
+    }
+}
+
+async function shipSelectedOrder() {
+    const orderId = selectedOrderId();
+    if (!orderId) {
+        return;
+    }
+
+    setStatus("确认发货");
+    try {
+        await request(`/orders/${encodeURIComponent(orderId)}/ship`, {
+            method: "POST",
+        });
+        await refreshSelectedOrder();
+        await loadMyOrders({ silent: true });
+        setStatus("已发货", "success");
+        toast("已发货");
+    } catch (error) {
+        setStatus("发货失败", "error");
+        toast(error.message);
+    }
+}
+
+async function confirmSelectedReceipt() {
+    const orderId = selectedOrderId();
+    if (!orderId) {
+        return;
+    }
+
+    setStatus("确认收货");
+    try {
+        await request(`/orders/${encodeURIComponent(orderId)}/confirm-receipt`, {
+            method: "POST",
+        });
+        await refreshSelectedOrder();
+        await loadMyOrders({ silent: true });
+        setStatus("已确认收货", "success");
+        toast("已确认收货");
+    } catch (error) {
+        setStatus("收货失败", "error");
+        toast(error.message);
+    }
+}
+
+async function submitSelectedOrderReview(event) {
+    event.preventDefault();
+    const orderId = selectedOrderId();
+    if (!orderId) {
+        return;
+    }
+
+    setStatus("提交评价");
+    try {
+        await request("/reviews", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                orderId,
+                rating: Number($("#reviewRatingSelect").value),
+                content: $("#reviewContentInput").value.trim(),
+            }),
+        });
+        await refreshSelectedOrder();
+        await loadMyOrders({ silent: true });
+        setStatus("评价已提交", "success");
+        toast("评价已提交");
+    } catch (error) {
+        setStatus("评价失败", "error");
+        toast(error.message);
+    }
+}
+
+async function loadNotifications(options = {}) {
+    setStatus("加载通知");
+    const params = new URLSearchParams();
+    const unreadOnly = $("#notificationUnreadOnlyInput")?.checked || false;
+    const bizType = $("#notificationBizTypeFilter")?.value || "";
+    if (unreadOnly) {
+        params.set("unreadOnly", "true");
+    }
+    if (bizType) {
+        params.set("bizType", bizType);
+    }
+    params.set("limit", "50");
+    const query = `?${params.toString()}`;
+
+    try {
+        const payload = await request(`/notifications${query}`);
+        state.notifications = payload.data.list || [];
+        state.notificationsLoaded = true;
+        renderNotifications();
+        setStatus("通知已加载", "success");
+        if (!options.silent) {
+            toast("通知已刷新");
+        }
+    } catch (error) {
+        setStatus("加载失败", "error");
+        toast(error.message);
+    }
+}
+
+async function markNotificationRead(notificationId) {
+    if (!notificationId) {
+        return;
+    }
+
+    setStatus("标记通知");
+    try {
+        await request(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+            method: "PATCH",
+        });
+        await loadNotifications({ silent: true });
+        setStatus("通知已读", "success");
+        toast("通知已标记已读");
+    } catch (error) {
+        setStatus("标记失败", "error");
+        toast(error.message);
+    }
+}
+
 async function verifyNotFound() {
     setStatus("验证 404");
     try {
@@ -1203,6 +2231,37 @@ function bindEvents() {
     $("#registerForm").addEventListener("submit", register);
     $("#logoutButton").addEventListener("click", logout);
     $("#statusForm").addEventListener("submit", changeUserStatus);
+    $("#buyerFilterForm").addEventListener("submit", event => {
+        event.preventDefault();
+        loadPublicAuctions();
+    });
+    $("#refreshBuyerAuctionsButton").addEventListener("click", () => loadPublicAuctions());
+    $("#orderFilterForm").addEventListener("submit", event => {
+        event.preventDefault();
+        loadMyOrders();
+    });
+    $("#refreshOrdersButton").addEventListener("click", () => loadMyOrders());
+    $("#orderRoleFilter").addEventListener("change", () => {
+        state.ordersLoaded = false;
+        loadMyOrders();
+    });
+    $("#orderStatusFilter").addEventListener("change", () => {
+        state.ordersLoaded = false;
+        loadMyOrders();
+    });
+    $("#notificationFilterForm").addEventListener("submit", event => {
+        event.preventDefault();
+        loadNotifications();
+    });
+    $("#refreshNotificationsButton").addEventListener("click", () => loadNotifications());
+    $("#notificationUnreadOnlyInput").addEventListener("change", () => {
+        state.notificationsLoaded = false;
+        loadNotifications();
+    });
+    $("#notificationBizTypeFilter").addEventListener("change", () => {
+        state.notificationsLoaded = false;
+        loadNotifications();
+    });
     $("#itemForm").addEventListener("submit", saveItem);
     $("#imageForm").addEventListener("submit", addItemImage);
     $("#resetItemFormButton").addEventListener("click", resetItemForm);
@@ -1236,6 +2295,15 @@ function bindEvents() {
 async function boot() {
     renderEndpoints();
     bindEvents();
+    window.setInterval(() => {
+        if (state.route === "buyer" && state.user) {
+            if (state.selectedPublicAuction) {
+                refreshSelectedPublicAuction({ silent: true });
+                return;
+            }
+            renderBuyer();
+        }
+    }, 10000);
     showResponse({ message: "等待首次真实接口调用" });
     render();
 

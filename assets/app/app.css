@@ -346,6 +346,27 @@ textarea:focus {
     align-items: start;
 }
 
+.buyer-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.62fr) minmax(300px, 1fr) minmax(300px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.order-layout {
+    display: grid;
+    grid-template-columns: minmax(230px, 0.58fr) minmax(300px, 1fr) minmax(320px, 1.05fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.notification-center-layout {
+    display: grid;
+    grid-template-columns: minmax(230px, 0.58fr) minmax(0, 1.42fr);
+    gap: 16px;
+    align-items: start;
+}
+
 .admin-layout {
     display: grid;
     grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
@@ -550,6 +571,173 @@ textarea:focus {
     margin-top: 14px;
 }
 
+.buyer-bid-state {
+    width: min(220px, 100%);
+    margin-top: 14px;
+}
+
+.bid-action-panel {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.bid-form {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.bid-form label {
+    margin-bottom: 0;
+}
+
+.bid-alert {
+    padding: 12px 14px;
+    border: 1px solid rgba(33, 107, 87, 0.2);
+    border-radius: 8px;
+    background: rgba(33, 107, 87, 0.1);
+    color: var(--green);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.bid-alert.warning {
+    border-color: rgba(184, 121, 36, 0.24);
+    background: rgba(184, 121, 36, 0.14);
+    color: #76501b;
+}
+
+.notification-list {
+    display: grid;
+    gap: 8px;
+}
+
+.notification-row {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid rgba(217, 209, 196, 0.82);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.notification-row strong,
+.notification-row span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.notification-row strong {
+    font-size: 13px;
+}
+
+.notification-row span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.notification-card,
+.review-row {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid rgba(217, 209, 196, 0.82);
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.notification-card h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.notification-content {
+    margin: 0;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.review-panel {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(217, 209, 196, 0.82);
+}
+
+.review-panel h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.review-list {
+    display: grid;
+    gap: 10px;
+}
+
+.review-row strong,
+.review-row span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.review-row span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.review-form {
+    display: grid;
+    gap: 12px;
+}
+
+.credit-summary {
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid rgba(33, 107, 87, 0.2);
+    border-radius: 8px;
+    background: rgba(33, 107, 87, 0.1);
+}
+
+.credit-summary span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.bid-history-panel {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(217, 209, 196, 0.82);
+}
+
+.bid-history-panel h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.payment-status-panel {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid rgba(36, 90, 122, 0.16);
+    border-radius: 8px;
+    background: rgba(36, 90, 122, 0.08);
+}
+
+.payment-status-panel code {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
 .status-badge {
     min-height: 34px;
     padding: 7px 12px;
@@ -626,6 +814,9 @@ textarea:focus {
 
     .auth-grid,
     .dashboard-grid,
+    .buyer-layout,
+    .notification-center-layout,
+    .order-layout,
     .status-form,
     .seller-layout,
     .admin-layout,
@@ -660,6 +851,10 @@ textarea:focus {
     }
 
     .compact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bid-form {
         grid-template-columns: 1fr;
     }
 

@@ -74,6 +74,33 @@ std::string BuildAuctionEventBizKey(
     return "auction:" + std::to_string(auction_id) + ":" + event_name;
 }
 
+UserNotificationEntry ToUserNotificationEntry(
+    const repository::NotificationRecord& record
+) {
+    return UserNotificationEntry{
+        .notification_id = record.notification_id,
+        .user_id = record.user_id,
+        .notice_type = record.notice_type,
+        .title = record.title,
+        .content = record.content,
+        .biz_type = record.biz_type,
+        .biz_id = record.biz_id,
+        .read_status = record.read_status,
+        .push_status = record.push_status,
+        .created_at = record.created_at,
+        .read_at = record.read_at,
+    };
+}
+
+void ValidateNotificationQuery(const NotificationQuery& query) {
+    if (query.limit <= 0 || query.limit > 100) {
+        throw std::invalid_argument("notification query limit must be between 1 and 100");
+    }
+    if (query.biz_type.size() > 32) {
+        throw std::invalid_argument("biz_type must be at most 32 characters");
+    }
+}
+
 }  // namespace
 
 NotificationService::NotificationService(
@@ -191,6 +218,57 @@ void NotificationService::CreateStationNotice(const StationNoticeRequest& reques
         .push_status = std::string(kPushStatusPending),
     });
     (void)notification;
+}
+
+UserNotificationListResult NotificationService::ListUserNotifications(
+    const std::uint64_t user_id,
+    const NotificationQuery& query
+) {
+    if (user_id == 0) {
+        throw std::invalid_argument("user_id must be positive");
+    }
+    ValidateNotificationQuery(query);
+
+    auto connection = CreateConnection();
+    repository::NotificationRepository repository(connection);
+    const auto records = repository.ListUserNotifications(
+        user_id,
+        query.limit,
+        query.unread_only,
+        query.biz_type,
+        query.biz_id
+    );
+
+    UserNotificationListResult result;
+    result.limit = query.limit;
+    result.records.reserve(records.size());
+    for (const auto& record : records) {
+        result.records.push_back(ToUserNotificationEntry(record));
+    }
+    return result;
+}
+
+MarkNotificationReadResult NotificationService::MarkUserNotificationRead(
+    const std::uint64_t user_id,
+    const std::uint64_t notification_id
+) {
+    if (user_id == 0 || notification_id == 0) {
+        throw std::invalid_argument("notification id and user id must be positive");
+    }
+
+    auto connection = CreateConnection();
+    repository::NotificationRepository repository(connection);
+    repository.MarkNotificationRead(notification_id, user_id);
+    const auto updated = repository.FindNotificationByIdAndUser(notification_id, user_id);
+    if (!updated.has_value()) {
+        throw std::invalid_argument("notification not found for current user");
+    }
+
+    return MarkNotificationReadResult{
+        .notification_id = updated->notification_id,
+        .read_status = updated->read_status,
+        .read_at = updated->read_at,
+    };
 }
 
 NotificationRetryResult NotificationService::RetryFailedNotifications(

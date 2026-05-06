@@ -54,6 +54,14 @@ class OrderRepository : public BaseRepository {
 public:
     using BaseRepository::BaseRepository;
 
+    [[nodiscard]] std::vector<modules::order::UserOrderEntry> ListUserOrders(
+        std::uint64_t user_id,
+        const modules::order::UserOrderQuery& query
+    ) const;
+    [[nodiscard]] std::optional<modules::order::UserOrderEntry> FindUserOrderDetailById(
+        std::uint64_t order_id
+    ) const;
+
     [[nodiscard]] std::vector<std::uint64_t> ListSettlingAuctionIds() const;
     [[nodiscard]] std::optional<SettlementAuctionAggregate> FindSettlementAuctionById(
         std::uint64_t auction_id

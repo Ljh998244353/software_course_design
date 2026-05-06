@@ -15,6 +15,7 @@ namespace auction::modules::notification {
 
 inline constexpr std::string_view kNoticeTypeOutbid = "OUTBID";
 inline constexpr std::string_view kReadStatusUnread = "UNREAD";
+inline constexpr std::string_view kReadStatusRead = "READ";
 inline constexpr std::string_view kPushStatusPending = "PENDING";
 inline constexpr std::string_view kPushStatusSent = "SENT";
 inline constexpr std::string_view kPushStatusFailed = "FAILED";
@@ -57,6 +58,38 @@ struct NotificationRetryResult {
     std::vector<std::uint64_t> affected_notification_ids;
 };
 
+struct NotificationQuery {
+    int limit{20};
+    bool unread_only{false};
+    std::string biz_type;
+    std::optional<std::uint64_t> biz_id;
+};
+
+struct UserNotificationEntry {
+    std::uint64_t notification_id{0};
+    std::uint64_t user_id{0};
+    std::string notice_type;
+    std::string title;
+    std::string content;
+    std::string biz_type;
+    std::optional<std::uint64_t> biz_id;
+    std::string read_status;
+    std::string push_status;
+    std::string created_at;
+    std::string read_at;
+};
+
+struct UserNotificationListResult {
+    std::vector<UserNotificationEntry> records;
+    int limit{20};
+};
+
+struct MarkNotificationReadResult {
+    std::uint64_t notification_id{0};
+    std::string read_status;
+    std::string read_at;
+};
+
 class NotificationService {
 public:
     NotificationService(
@@ -67,6 +100,14 @@ public:
 
     void PublishBidEvents(const AuctionBidNotificationContext& context);
     void CreateStationNotice(const StationNoticeRequest& request);
+    [[nodiscard]] UserNotificationListResult ListUserNotifications(
+        std::uint64_t user_id,
+        const NotificationQuery& query
+    );
+    [[nodiscard]] MarkNotificationReadResult MarkUserNotificationRead(
+        std::uint64_t user_id,
+        std::uint64_t notification_id
+    );
     [[nodiscard]] NotificationRetryResult RetryFailedNotifications(
         const NotificationRetryRequest& request
     );

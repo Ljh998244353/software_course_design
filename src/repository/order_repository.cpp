@@ -112,6 +112,76 @@ modules::order::OrderRecord BuildOrderRecord(MYSQL_ROW row, const unsigned int o
     };
 }
 
+std::optional<modules::order::OrderPaymentSummary> BuildOrderPaymentSummary(
+    MYSQL_ROW row,
+    const unsigned int offset
+) {
+    if (row[offset] == nullptr) {
+        return std::nullopt;
+    }
+
+    return modules::order::OrderPaymentSummary{
+        .payment_id = ReadRowUint64(row, offset + 0),
+        .payment_no = ReadRowString(row, offset + 1),
+        .order_id = ReadRowUint64(row, offset + 2),
+        .pay_channel = ReadRowString(row, offset + 3),
+        .transaction_no = ReadRowString(row, offset + 4),
+        .pay_amount = ReadRowDouble(row, offset + 5),
+        .pay_status = ReadRowString(row, offset + 6),
+        .paid_at = ReadRowString(row, offset + 7),
+        .created_at = ReadRowString(row, offset + 8),
+        .updated_at = ReadRowString(row, offset + 9),
+    };
+}
+
+modules::order::UserOrderEntry BuildUserOrderEntry(MYSQL_ROW row) {
+    return modules::order::UserOrderEntry{
+        .order = BuildOrderRecord(row, 0),
+        .item_id = ReadRowUint64(row, 14),
+        .item_title = ReadRowString(row, 15),
+        .cover_image_url = ReadRowString(row, 16),
+        .auction_status = ReadRowString(row, 17),
+        .buyer_username = ReadRowString(row, 18),
+        .seller_username = ReadRowString(row, 19),
+        .latest_payment = BuildOrderPaymentSummary(row, 20),
+    };
+}
+
+std::string BuildUserOrderSelectSql() {
+    return
+        "SELECT o.order_id, o.order_no, o.auction_id, o.buyer_id, o.seller_id, "
+        "CAST(o.final_amount AS CHAR), o.order_status, "
+        "COALESCE(CAST(o.pay_deadline_at AS CHAR), ''), "
+        "COALESCE(CAST(o.paid_at AS CHAR), ''), COALESCE(CAST(o.shipped_at AS CHAR), ''), "
+        "COALESCE(CAST(o.completed_at AS CHAR), ''), COALESCE(CAST(o.closed_at AS CHAR), ''), "
+        "CAST(o.created_at AS CHAR), CAST(o.updated_at AS CHAR), "
+        "i.item_id, i.title, COALESCE(i.cover_image_url, ''), a.status, "
+        "buyer.username, seller.username, "
+        "p.payment_id, p.payment_no, p.order_id, p.pay_channel, COALESCE(p.transaction_no, ''), "
+        "CAST(p.pay_amount AS CHAR), p.pay_status, COALESCE(CAST(p.paid_at AS CHAR), ''), "
+        "CAST(p.created_at AS CHAR), CAST(p.updated_at AS CHAR) "
+        "FROM order_info o "
+        "INNER JOIN auction a ON a.auction_id = o.auction_id "
+        "INNER JOIN item i ON i.item_id = a.item_id "
+        "INNER JOIN user_account buyer ON buyer.user_id = o.buyer_id "
+        "INNER JOIN user_account seller ON seller.user_id = o.seller_id "
+        "LEFT JOIN payment_record p ON p.payment_id = ("
+        "SELECT p2.payment_id FROM payment_record p2 "
+        "WHERE p2.order_id = o.order_id ORDER BY p2.payment_id DESC LIMIT 1"
+        ") ";
+}
+
+std::string BuildUserOrderScopeClause(const std::uint64_t user_id, const std::string& role) {
+    if (role == "buyer") {
+        return "o.buyer_id = " + std::to_string(user_id);
+    }
+    if (role == "seller") {
+        return "o.seller_id = " + std::to_string(user_id);
+    }
+    return "(o.buyer_id = " + std::to_string(user_id) + " OR o.seller_id = " +
+           std::to_string(user_id) + ")";
+}
+
 void BindStringParam(
     MYSQL_BIND& bind,
     const std::string& value,
@@ -219,6 +289,45 @@ std::optional<modules::order::OrderRecord> LoadOrderByAuctionId(
 }
 
 }  // namespace
+
+std::vector<modules::order::UserOrderEntry> OrderRepository::ListUserOrders(
+    const std::uint64_t user_id,
+    const modules::order::UserOrderQuery& query
+) const {
+    const int page_no = query.page_no <= 0 ? 1 : query.page_no;
+    const int page_size = query.page_size <= 0 ? 20 : query.page_size;
+    const int offset = (page_no - 1) * page_size;
+
+    std::string sql = BuildUserOrderSelectSql() + "WHERE " +
+                      BuildUserOrderScopeClause(user_id, query.role);
+    if (!query.order_status.empty()) {
+        sql += " AND o.order_status = '" + EscapeString(query.order_status) + "'";
+    }
+    sql += " ORDER BY o.updated_at DESC, o.order_id DESC LIMIT " + std::to_string(page_size) +
+           " OFFSET " + std::to_string(offset);
+
+    const auto result = ExecuteQuery(connection(), sql);
+    std::vector<modules::order::UserOrderEntry> orders;
+    MYSQL_ROW row = nullptr;
+    while ((row = mysql_fetch_row(result.get())) != nullptr) {
+        orders.push_back(BuildUserOrderEntry(row));
+    }
+    return orders;
+}
+
+std::optional<modules::order::UserOrderEntry> OrderRepository::FindUserOrderDetailById(
+    const std::uint64_t order_id
+) const {
+    const auto result = ExecuteQuery(
+        connection(),
+        BuildUserOrderSelectSql() + "WHERE o.order_id = " + std::to_string(order_id) + " LIMIT 1"
+    );
+
+    if (MYSQL_ROW row = mysql_fetch_row(result.get()); row != nullptr) {
+        return BuildUserOrderEntry(row);
+    }
+    return std::nullopt;
+}
 
 std::vector<std::uint64_t> OrderRepository::ListSettlingAuctionIds() const {
     const auto result = ExecuteQuery(

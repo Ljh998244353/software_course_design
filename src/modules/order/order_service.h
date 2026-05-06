@@ -22,6 +22,14 @@ public:
 
     [[nodiscard]] OrderScheduleResult GenerateSettlementOrders();
     [[nodiscard]] OrderScheduleResult CloseExpiredOrders();
+    [[nodiscard]] UserOrderListResult ListMyOrders(
+        std::string_view authorization_header,
+        const UserOrderQuery& query
+    );
+    [[nodiscard]] UserOrderEntry GetMyOrder(
+        std::string_view authorization_header,
+        std::uint64_t order_id
+    );
     [[nodiscard]] OrderTransitionResult ShipOrder(
         std::string_view authorization_header,
         std::uint64_t order_id

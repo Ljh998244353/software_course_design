@@ -64,6 +64,26 @@ repository::OrderRepository MakeRepository(common::db::MysqlConnection& connecti
     return repository::OrderRepository(connection);
 }
 
+UserOrderQuery NormalizeUserOrderQuery(const UserOrderQuery& query) {
+    auto normalized = query;
+    if (normalized.role == "all") {
+        normalized.role.clear();
+    }
+    if (!normalized.role.empty() && normalized.role != "buyer" && normalized.role != "seller") {
+        throw std::invalid_argument("role must be buyer, seller or all");
+    }
+    if (!normalized.order_status.empty() && !IsKnownOrderStatus(normalized.order_status)) {
+        throw std::invalid_argument("order status is invalid");
+    }
+    if (normalized.page_no <= 0) {
+        throw std::invalid_argument("pageNo must be a positive integer");
+    }
+    if (normalized.page_size <= 0 || normalized.page_size > 100) {
+        throw std::invalid_argument("pageSize must be between 1 and 100");
+    }
+    return normalized;
+}
+
 void InsertTaskLogSafely(
     repository::OrderRepository& repository,
     const repository::OrderTaskLogParams& params
@@ -124,6 +144,50 @@ OrderService::OrderService(
     project_root_(std::move(project_root)),
     auth_middleware_(&auth_middleware),
     notification_service_(&notification_service) {}
+
+UserOrderListResult OrderService::ListMyOrders(
+    const std::string_view authorization_header,
+    const UserOrderQuery& query
+) {
+    const auto auth_context = auth_middleware_->RequireAnyRole(
+        authorization_header,
+        {modules::auth::kRoleUser}
+    );
+    const auto normalized_query = NormalizeUserOrderQuery(query);
+
+    auto connection = CreateConnection();
+    auto repository = MakeRepository(connection);
+    return UserOrderListResult{
+        .records = repository.ListUserOrders(auth_context.user_id, normalized_query),
+        .page_no = normalized_query.page_no,
+        .page_size = normalized_query.page_size,
+    };
+}
+
+UserOrderEntry OrderService::GetMyOrder(
+    const std::string_view authorization_header,
+    const std::uint64_t order_id
+) {
+    const auto auth_context = auth_middleware_->RequireAnyRole(
+        authorization_header,
+        {modules::auth::kRoleUser}
+    );
+
+    auto connection = CreateConnection();
+    auto repository = MakeRepository(connection);
+    const auto order = repository.FindUserOrderDetailById(order_id);
+    if (!order.has_value()) {
+        ThrowOrderError(common::errors::ErrorCode::kOrderNotFound, "order not found");
+    }
+    if (order->order.buyer_id != auth_context.user_id &&
+        order->order.seller_id != auth_context.user_id) {
+        ThrowOrderError(
+            common::errors::ErrorCode::kOrderOwnerMismatch,
+            "user does not own this order"
+        );
+    }
+    return *order;
+}
 
 OrderScheduleResult OrderService::GenerateSettlementOrders() {
     auto connection = CreateConnection();

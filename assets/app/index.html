@@ -15,6 +15,8 @@
         <nav class="role-nav" aria-label="角色导航">
             <button class="nav-button" type="button" data-route="home" data-roles="USER,ADMIN,SUPPORT">首页</button>
             <button class="nav-button" type="button" data-route="buyer" data-roles="USER">买家</button>
+            <button class="nav-button" type="button" data-route="orders" data-roles="USER">订单</button>
+            <button class="nav-button" type="button" data-route="notifications" data-roles="USER,ADMIN,SUPPORT">通知</button>
             <button class="nav-button" type="button" data-route="seller" data-roles="USER">卖家</button>
             <button class="nav-button" type="button" data-route="admin" data-roles="ADMIN">管理</button>
             <button class="nav-button" type="button" data-route="support" data-roles="SUPPORT">运维</button>
@@ -96,6 +98,8 @@
                 <h2>买家与卖家入口</h2>
                 <div class="entry-actions">
                     <button class="secondary-button" type="button" data-route-jump="buyer">买家视图</button>
+                    <button class="secondary-button" type="button" data-route-jump="orders">订单视图</button>
+                    <button class="secondary-button" type="button" data-route-jump="notifications">通知中心</button>
                     <button class="secondary-button" type="button" data-route-jump="seller">卖家视图</button>
                 </div>
             </article>
@@ -116,12 +120,156 @@
         <section class="route-view surface-panel route-panel" data-view="buyer" hidden>
             <div class="panel-head">
                 <span class="eyebrow">Buyer</span>
-                <h1>买家视图</h1>
+                <h1>拍卖大厅</h1>
             </div>
-            <div class="placeholder-grid">
-                <div><strong>拍卖大厅</strong><span>待 S21 接入</span></div>
-                <div><strong>我的出价</strong><span>待 S22 接入</span></div>
-                <div><strong>我的订单</strong><span>待 S23 接入</span></div>
+            <div class="buyer-layout">
+                <section class="work-panel buyer-filter-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Filter</span>
+                        <h2>筛选</h2>
+                    </div>
+                    <form id="buyerFilterForm">
+                        <label>
+                            <span>关键词</span>
+                            <input id="buyerKeywordInput" name="keyword" type="search" maxlength="100">
+                        </label>
+                        <label>
+                            <span>状态</span>
+                            <select id="buyerStatusFilter" name="status">
+                                <option value="">全部状态</option>
+                                <option value="PENDING_START">PENDING_START</option>
+                                <option value="RUNNING">RUNNING</option>
+                                <option value="SETTLING">SETTLING</option>
+                                <option value="SOLD">SOLD</option>
+                                <option value="UNSOLD">UNSOLD</option>
+                            </select>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">查询</button>
+                            <button id="refreshBuyerAuctionsButton" class="text-button" type="button">刷新</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="work-panel buyer-list-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Auctions</span>
+                            <h2>公开拍卖</h2>
+                        </div>
+                    </div>
+                    <div id="buyerAuctionList" class="item-list"></div>
+                </section>
+
+                <section class="work-panel buyer-detail-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Detail</span>
+                        <h2>拍卖详情</h2>
+                    </div>
+                    <div id="buyerAuctionDetailPanel" class="item-detail-panel" hidden></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="orders" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">Orders</span>
+                <h1>订单履约</h1>
+            </div>
+            <div class="order-layout">
+                <section class="work-panel order-filter-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Filter</span>
+                        <h2>筛选</h2>
+                    </div>
+                    <form id="orderFilterForm">
+                        <label>
+                            <span>身份</span>
+                            <select id="orderRoleFilter" name="role">
+                                <option value="">全部身份</option>
+                                <option value="buyer">我是买家</option>
+                                <option value="seller">我是卖家</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>状态</span>
+                            <select id="orderStatusFilter" name="status">
+                                <option value="">全部状态</option>
+                                <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
+                                <option value="PAID">PAID</option>
+                                <option value="SHIPPED">SHIPPED</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="REVIEWED">REVIEWED</option>
+                                <option value="CLOSED">CLOSED</option>
+                            </select>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">查询</button>
+                            <button id="refreshOrdersButton" class="text-button" type="button">刷新</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="work-panel order-list-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Mine</span>
+                            <h2>我的订单</h2>
+                        </div>
+                    </div>
+                    <div id="orderList" class="item-list"></div>
+                </section>
+
+                <section class="work-panel order-detail-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Detail</span>
+                        <h2>订单详情</h2>
+                    </div>
+                    <div id="orderDetailPanel" class="item-detail-panel" hidden></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="route-view surface-panel route-panel" data-view="notifications" hidden>
+            <div class="panel-head">
+                <span class="eyebrow">Notifications</span>
+                <h1>通知中心</h1>
+            </div>
+            <div class="notification-center-layout">
+                <section class="work-panel notification-filter-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Filter</span>
+                        <h2>筛选</h2>
+                    </div>
+                    <form id="notificationFilterForm">
+                        <label>
+                            <span>业务类型</span>
+                            <select id="notificationBizTypeFilter" name="bizType">
+                                <option value="">全部类型</option>
+                                <option value="AUCTION">AUCTION</option>
+                                <option value="ORDER">ORDER</option>
+                            </select>
+                        </label>
+                        <label class="checkbox-label">
+                            <input id="notificationUnreadOnlyInput" name="unreadOnly" type="checkbox">
+                            <span>仅未读</span>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">查询</button>
+                            <button id="refreshNotificationsButton" class="text-button" type="button">刷新</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="work-panel notification-list-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Inbox</span>
+                            <h2>站内通知</h2>
+                        </div>
+                    </div>
+                    <div id="notificationCenterList" class="item-list"></div>
+                </section>
             </div>
         </section>
 

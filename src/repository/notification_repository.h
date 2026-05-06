@@ -31,6 +31,7 @@ struct NotificationRecord {
     std::string read_status;
     std::string push_status;
     std::string created_at;
+    std::string read_at;
 };
 
 struct NotificationTaskLogParams {
@@ -57,6 +58,17 @@ public:
     [[nodiscard]] std::optional<NotificationRecord> FindNotificationById(
         std::uint64_t notification_id
     ) const;
+    [[nodiscard]] std::optional<NotificationRecord> FindNotificationByIdAndUser(
+        std::uint64_t notification_id,
+        std::uint64_t user_id
+    ) const;
+    [[nodiscard]] std::vector<NotificationRecord> ListUserNotifications(
+        std::uint64_t user_id,
+        int limit,
+        bool unread_only,
+        const std::string& biz_type,
+        std::optional<std::uint64_t> biz_id
+    ) const;
     [[nodiscard]] std::vector<std::uint64_t> ListFailedNotificationIds(int limit) const;
     [[nodiscard]] int QueryMaxTaskRetryCount(
         const std::string& task_type,
@@ -68,6 +80,7 @@ public:
     [[nodiscard]] NotificationRecord CreateNotification(
         const CreateNotificationParams& params
     ) const;
+    void MarkNotificationRead(std::uint64_t notification_id, std::uint64_t user_id) const;
     void UpdatePushStatus(std::uint64_t notification_id, const std::string& push_status) const;
     void InsertTaskLog(const NotificationTaskLogParams& params) const;
 };

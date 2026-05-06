@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -59,6 +60,43 @@ struct OrderTransitionResult {
     std::uint64_t order_id{0};
     std::string old_status;
     std::string new_status;
+};
+
+struct OrderPaymentSummary {
+    std::uint64_t payment_id{0};
+    std::string payment_no;
+    std::uint64_t order_id{0};
+    std::string pay_channel;
+    std::string transaction_no;
+    double pay_amount{0.0};
+    std::string pay_status;
+    std::string paid_at;
+    std::string created_at;
+    std::string updated_at;
+};
+
+struct UserOrderEntry {
+    OrderRecord order;
+    std::uint64_t item_id{0};
+    std::string item_title;
+    std::string cover_image_url;
+    std::string auction_status;
+    std::string buyer_username;
+    std::string seller_username;
+    std::optional<OrderPaymentSummary> latest_payment;
+};
+
+struct UserOrderQuery {
+    std::string role;
+    std::string order_status;
+    int page_no{1};
+    int page_size{20};
+};
+
+struct UserOrderListResult {
+    std::vector<UserOrderEntry> records;
+    int page_no{1};
+    int page_size{20};
 };
 
 }  // namespace auction::modules::order
