@@ -88,9 +88,11 @@ set(AUCTION_CORE_SOURCES
     src/access/http/health_http.cpp
     src/access/http/item_http.cpp
     src/access/http/notification_http.cpp
+    src/access/http/ops_http.cpp
     src/access/http/order_http.cpp
     src/access/http/payment_http.cpp
     src/access/http/review_http.cpp
+    src/access/http/statistics_http.cpp
     src/access/http/system_http.cpp
     src/application/database_health_service.cpp
     src/application/demo_dashboard_service.cpp
@@ -310,6 +312,8 @@ if(BUILD_TESTING)
     )
     set_tests_properties(
         auction_http_baseline
-        PROPERTIES LABELS "suite_http;suite_contract;requires_mysql"
+        PROPERTIES
+            LABELS "suite_http;suite_contract;requires_mysql"
+            TIMEOUT 600
     )
 endif()

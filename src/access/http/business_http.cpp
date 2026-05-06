@@ -11,9 +11,11 @@
 #include "access/http/bid_http.h"
 #include "access/http/item_http.h"
 #include "access/http/notification_http.h"
+#include "access/http/ops_http.h"
 #include "access/http/order_http.h"
 #include "access/http/payment_http.h"
 #include "access/http/review_http.h"
+#include "access/http/statistics_http.h"
 #include "access/http/system_http.h"
 #include "common/http/http_service_context.h"
 
@@ -31,9 +33,11 @@ void RegisterBusinessHttpRoutes(
     RegisterBidHttpRoutes(services);
     RegisterItemHttpRoutes(services);
     RegisterNotificationHttpRoutes(services);
+    RegisterOpsHttpRoutes(services);
     RegisterOrderHttpRoutes(services);
     RegisterPaymentHttpRoutes(services);
     RegisterReviewHttpRoutes(services);
+    RegisterStatisticsHttpRoutes(services);
     RegisterSystemHttpRoutes(services);
     RegisterAppHttpRoutes(project_root);
     RegisterApiErrorHttpHandlers();

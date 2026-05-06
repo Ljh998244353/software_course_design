@@ -41,6 +41,14 @@ button {
     cursor: pointer;
 }
 
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
 button[hidden],
 [hidden] {
     display: none !important;
@@ -107,6 +115,11 @@ button[hidden],
     color: var(--muted);
     font-size: 13px;
     font-weight: 700;
+}
+
+.session-box .status-badge {
+    background: rgba(184, 121, 36, 0.16);
+    color: #76501b;
 }
 
 .nav-button,
@@ -223,6 +236,12 @@ textarea:focus {
     outline: none;
     border-color: var(--blue);
     box-shadow: 0 0 0 3px rgba(36, 90, 122, 0.16);
+}
+
+input:invalid,
+select:invalid,
+textarea:invalid {
+    border-color: rgba(166, 60, 50, 0.7);
 }
 
 .compact-grid,
@@ -384,7 +403,30 @@ textarea:focus {
 }
 
 .audit-panel,
-.auction-list-panel {
+.auction-list-panel,
+.statistics-panel {
+    grid-column: 2;
+}
+
+.statistics-panel,
+.ops-action-panel {
+    grid-column: 1 / -1;
+}
+
+.ops-layout {
+    display: grid;
+    grid-template-columns: minmax(270px, 0.72fr) minmax(0, 1.28fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.ops-filter-panel,
+.ops-log-panel {
+    grid-column: 1;
+}
+
+.ops-exception-panel,
+.ops-task-panel {
     grid-column: 2;
 }
 
@@ -461,9 +503,37 @@ textarea:focus {
 }
 
 .item-list,
-.image-list {
+.image-list,
+.summary-grid {
     display: grid;
     gap: 12px;
+}
+
+.summary-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 14px;
+}
+
+.metric-box {
+    display: grid;
+    gap: 6px;
+    min-height: 82px;
+    padding: 14px;
+    border: 1px solid rgba(217, 209, 196, 0.82);
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.metric-box span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.metric-box strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 22px;
 }
 
 .item-card,
@@ -553,6 +623,23 @@ textarea:focus {
     border-radius: 8px;
     color: var(--muted);
     background: rgba(255, 255, 255, 0.48);
+}
+
+.is-locked {
+    position: relative;
+}
+
+.is-locked::after {
+    content: "仅管理员";
+    justify-self: start;
+    width: max-content;
+    margin-top: 8px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: rgba(166, 60, 50, 0.12);
+    color: var(--red);
+    font-size: 12px;
+    font-weight: 900;
 }
 
 .audit-form,
@@ -758,6 +845,11 @@ textarea:focus {
     color: var(--red);
 }
 
+body.is-busy .status-badge:not(.success):not(.error) {
+    background: rgba(36, 90, 122, 0.14);
+    color: var(--blue);
+}
+
 .response-viewer {
     min-height: 280px;
     max-height: 520px;
@@ -770,6 +862,12 @@ textarea:focus {
     font-family: var(--font-mono);
     font-size: 13px;
     line-height: 1.6;
+}
+
+.compact-viewer {
+    min-height: 120px;
+    max-height: 240px;
+    margin-top: 14px;
 }
 
 .toast {
@@ -820,6 +918,8 @@ textarea:focus {
     .status-form,
     .seller-layout,
     .admin-layout,
+    .ops-layout,
+    .summary-grid,
     .placeholder-grid {
         grid-template-columns: 1fr;
     }
@@ -827,7 +927,13 @@ textarea:focus {
     .admin-status-panel,
     .auction-form,
     .audit-panel,
-    .auction-list-panel {
+    .auction-list-panel,
+    .statistics-panel,
+    .ops-filter-panel,
+    .ops-log-panel,
+    .ops-exception-panel,
+    .ops-task-panel,
+    .ops-action-panel {
         grid-column: auto;
     }
 
@@ -864,5 +970,15 @@ textarea:focus {
     .text-button,
     .icon-text-button {
         width: 100%;
+    }
+
+    .item-card-head,
+    .image-row {
+        grid-template-columns: 1fr;
+    }
+
+    .item-status {
+        width: max-content;
+        max-width: 100%;
     }
 }

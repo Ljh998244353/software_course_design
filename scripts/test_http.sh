@@ -7,11 +7,75 @@ TMP_DIR="${ROOT_DIR}/build/test_http"
 SERVER_HOST="127.0.0.1"
 SERVER_PORT="${AUCTION_HTTP_TEST_PORT:-18082}"
 TEST_DB_NAME="${AUCTION_TEST_DB_NAME:-${AUCTION_DB_NAME:-auction_system}}"
+CURRENT_STEP="bootstrap"
+SERVER_LOG="${TMP_DIR}/server.log"
 
 mkdir -p "${TMP_DIR}"
+find "${TMP_DIR}" -maxdepth 1 -type f \
+    \( -name '*.json' -o -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.log' \) \
+    -delete
 
+mark_step() {
+    CURRENT_STEP="$1"
+    printf '[auction_http_baseline] %s\n' "${CURRENT_STEP}"
+}
+
+dump_failure_context() {
+    local exit_code="$1"
+    local line_no="$2"
+    local failed_command="$3"
+
+    set +e
+    {
+        echo "auction_http_baseline failed"
+        echo "  exit code: ${exit_code}"
+        echo "  step: ${CURRENT_STEP}"
+        echo "  line: ${line_no}"
+        echo "  command: ${failed_command}"
+        echo "  temp dir: ${TMP_DIR}"
+        echo
+
+        if [[ -d "${TMP_DIR}" ]]; then
+            echo "recent response files:"
+            find "${TMP_DIR}" -maxdepth 1 -type f \
+                \( -name '*.json' -o -name '*.html' -o -name '*.css' -o -name '*.js' \) \
+                -printf '%T@ %p\n' |
+                sort -nr |
+                head -n 8 |
+                cut -d' ' -f2-
+            echo
+        fi
+
+        if [[ -n "${SERVER_LOG:-}" && -f "${SERVER_LOG}" ]]; then
+            echo "server log tail:"
+            tail -n 120 "${SERVER_LOG}"
+            echo
+        fi
+    } >&2
+}
+
+cleanup() {
+    if [[ -n "${SERVER_PID:-}" ]]; then
+        kill "${SERVER_PID}" >/dev/null 2>&1 || true
+        wait "${SERVER_PID}" >/dev/null 2>&1 || true
+    fi
+}
+
+on_error() {
+    local exit_code="$1"
+    local line_no="$2"
+    local failed_command="$3"
+    dump_failure_context "${exit_code}" "${line_no}" "${failed_command}"
+    exit "${exit_code}"
+}
+
+trap 'on_error "$?" "$LINENO" "$BASH_COMMAND"' ERR
+trap cleanup EXIT
+
+mark_step "构建并初始化测试配置"
 "${ROOT_DIR}/scripts/bootstrap.sh"
 
+mark_step "初始化本地测试 MySQL"
 SOCKET_FILE="$("${ROOT_DIR}/scripts/db/setup_local_mysql.sh")"
 TEST_CONFIG_PATH="$(
     AUCTION_TEST_SERVER_HOST="${SERVER_HOST}" \
@@ -19,7 +83,6 @@ TEST_CONFIG_PATH="$(
     "${ROOT_DIR}/scripts/db/write_test_config.sh" "${SOCKET_FILE}"
 )"
 
-SERVER_LOG="${TMP_DIR}/server.log"
 LOGIN_BODY="${TMP_DIR}/login.json"
 REGISTER_BODY="${TMP_DIR}/register.json"
 REGISTER_LOGIN_BODY="${TMP_DIR}/register_login.json"
@@ -70,6 +133,8 @@ ORDER_PAY_BODY="${TMP_DIR}/order_pay.json"
 ORDER_PAY_RETRY_BODY="${TMP_DIR}/order_pay_retry.json"
 ORDER_UNAUTHORIZED_BODY="${TMP_DIR}/order_unauthorized.json"
 ORDER_SHIP_BEFORE_PAY_BODY="${TMP_DIR}/order_ship_before_pay.json"
+ORDER_CALLBACK_BAD_SIGNATURE_BODY="${TMP_DIR}/order_callback_bad_signature.json"
+ORDER_PAYMENT_AFTER_BAD_CALLBACK_BODY="${TMP_DIR}/order_payment_after_bad_callback.json"
 ORDER_CALLBACK_BODY="${TMP_DIR}/order_callback.json"
 ORDER_CALLBACK_RETRY_BODY="${TMP_DIR}/order_callback_retry.json"
 ORDER_PAYMENT_AFTER_BODY="${TMP_DIR}/order_payment_after.json"
@@ -90,6 +155,18 @@ ORDER_BUYER_CREDIT_BODY="${TMP_DIR}/order_buyer_credit.json"
 ORDER_REVIEW_NOTIFICATION_BODY="${TMP_DIR}/order_review_notification.json"
 ORDER_REVIEW_NOTIFICATION_READ_BODY="${TMP_DIR}/order_review_notification_read.json"
 ORDER_REVIEW_NOT_OWNER_BODY="${TMP_DIR}/order_review_not_owner.json"
+STATISTICS_REBUILD_BODY="${TMP_DIR}/statistics_rebuild.json"
+STATISTICS_DAILY_BODY="${TMP_DIR}/statistics_daily.json"
+STATISTICS_EXPORT_BODY="${TMP_DIR}/statistics_export.json"
+STATISTICS_SUPPORT_DENIED_BODY="${TMP_DIR}/statistics_support_denied.json"
+OPS_OPERATION_LOGS_BODY="${TMP_DIR}/ops_operation_logs.json"
+OPS_TASK_LOGS_BODY="${TMP_DIR}/ops_task_logs.json"
+OPS_EXCEPTIONS_BEFORE_BODY="${TMP_DIR}/ops_exceptions_before.json"
+OPS_MARK_EXCEPTION_BODY="${TMP_DIR}/ops_mark_exception.json"
+OPS_EXCEPTIONS_AFTER_BODY="${TMP_DIR}/ops_exceptions_after.json"
+OPS_COMPENSATION_BODY="${TMP_DIR}/ops_compensation.json"
+OPS_RETRY_SUPPORT_DENIED_BODY="${TMP_DIR}/ops_retry_support_denied.json"
+OPS_RETRY_NOTIFICATION_BODY="${TMP_DIR}/ops_retry_notification.json"
 BIDDER_FREEZE_BODY="${TMP_DIR}/bidder_freeze.json"
 REJECT_ITEM_CREATE_BODY="${TMP_DIR}/reject_item_create.json"
 REJECT_ITEM_IMAGE_BODY="${TMP_DIR}/reject_item_image.json"
@@ -111,14 +188,7 @@ APP_TRAILING_BODY="${TMP_DIR}/app_trailing.html"
 CSS_ASSET_BODY="${TMP_DIR}/app.css"
 JS_ASSET_BODY="${TMP_DIR}/app.js"
 
-cleanup() {
-    if [[ -n "${SERVER_PID:-}" ]]; then
-        kill "${SERVER_PID}" >/dev/null 2>&1 || true
-        wait "${SERVER_PID}" >/dev/null 2>&1 || true
-    fi
-}
-trap cleanup EXIT
-
+mark_step "启动测试 HTTP 服务"
 AUCTION_APP_CONFIG="${TEST_CONFIG_PATH}" "${ROOT_DIR}/build/bin/auction_app" >"${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
 
@@ -131,6 +201,7 @@ done
 
 curl -fsS "http://${SERVER_HOST}:${SERVER_PORT}/healthz" >/dev/null
 
+mark_step "校验 /app 静态入口和前端约束"
 APP_STATUS="$(
     curl -sS -o "${APP_BODY}" -w "%{http_code}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/app"
@@ -143,6 +214,16 @@ grep -q "id=\"orderList\"" "${APP_BODY}"
 grep -q "id=\"sellerItemList\"" "${APP_BODY}"
 grep -q "id=\"adminPendingItemList\"" "${APP_BODY}"
 grep -q "id=\"auctionForm\"" "${APP_BODY}"
+grep -q "id=\"statisticsList\"" "${APP_BODY}"
+grep -q "id=\"opsExceptionList\"" "${APP_BODY}"
+grep -q "id=\"globalStatusBadge\"" "${APP_BODY}"
+grep -q "data-status-badge" "${APP_BODY}"
+grep -q "data-admin-only" "${APP_BODY}"
+grep -q "id=\"registerPasswordInput\"[^>]*minlength=\"8\"" "${APP_BODY}"
+grep -q "id=\"registerPhoneInput\"[^>]*pattern=\"\\[0-9\\]{11}\"" "${APP_BODY}"
+grep -q "id=\"statisticsStartDateInput\"[^>]*required" "${APP_BODY}"
+grep -q "id=\"statisticsEndDateInput\"[^>]*required" "${APP_BODY}"
+grep -q "id=\"opsLimitInput\"[^>]*max=\"100\"[^>]*required" "${APP_BODY}"
 
 APP_TRAILING_STATUS="$(
     curl -sS -o "${APP_TRAILING_BODY}" -w "%{http_code}" \
@@ -183,12 +264,33 @@ grep -q 'POST /api/orders/{id}/confirm-receipt' "${JS_ASSET_BODY}"
 grep -q 'POST /api/reviews' "${JS_ASSET_BODY}"
 grep -q 'GET /api/orders/{id}/reviews' "${JS_ASSET_BODY}"
 grep -q 'GET /api/users/{id}/reviews/summary' "${JS_ASSET_BODY}"
+grep -q 'GET /api/admin/statistics/daily' "${JS_ASSET_BODY}"
+grep -q 'POST /api/admin/statistics/daily/rebuild' "${JS_ASSET_BODY}"
+grep -q 'GET /api/admin/statistics/daily/export' "${JS_ASSET_BODY}"
+grep -q 'GET /api/admin/ops/operation-logs' "${JS_ASSET_BODY}"
+grep -q 'GET /api/admin/ops/task-logs' "${JS_ASSET_BODY}"
+grep -q 'GET /api/admin/ops/exceptions' "${JS_ASSET_BODY}"
+grep -q 'POST /api/admin/ops/exceptions/mark' "${JS_ASSET_BODY}"
+grep -q 'POST /api/admin/ops/notifications/retry' "${JS_ASSET_BODY}"
+grep -q 'POST /api/admin/ops/compensations' "${JS_ASSET_BODY}"
+grep -q 'function validateForm' "${JS_ASSET_BODY}"
+grep -q 'function setRequestBusy' "${JS_ASSET_BODY}"
+grep -q '当前角色无权访问' "${JS_ASSET_BODY}"
+grep -q '仅管理员可执行补偿' "${JS_ASSET_BODY}"
+grep -q '仅管理员可重试通知' "${JS_ASSET_BODY}"
+grep -q '结束时间必须晚于开始时间' "${JS_ASSET_BODY}"
 grep -q 'buyerBidAmountInput' "${JS_ASSET_BODY}"
 grep -q 'payOrderButton' "${JS_ASSET_BODY}"
+grep -q 'body.is-busy' "${CSS_ASSET_BODY}"
+grep -q '.is-locked::after' "${CSS_ASSET_BODY}"
+grep -q 'input:invalid' "${CSS_ASSET_BODY}"
+grep -q 'button:disabled' "${CSS_ASSET_BODY}"
 grep -q 'notificationCenterList' "${APP_BODY}"
 grep -q 'data-route="notifications"' "${APP_BODY}"
+grep -q 'data-route="support"' "${APP_BODY}"
 grep -q 'data-route' "${APP_BODY}"
 
+mark_step "认证、注册和会话接口"
 LOGIN_STATUS="$(
     curl -sS -o "${LOGIN_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \
@@ -303,6 +405,7 @@ if [[ -z "${BIDDER_TOKEN}" ]]; then
     exit 1
 fi
 
+mark_step "卖家拍品、图片和提交审核接口"
 ITEM_TITLE="HTTP Seller Item ${REGISTER_USERNAME}"
 ITEM_CREATE_STATUS="$(
     curl -sS -o "${ITEM_CREATE_BODY}" -w "%{http_code}" \
@@ -451,6 +554,7 @@ ITEM_AUDIT_STATUS="$(
 grep -q '"auditStatus"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_AUDIT_BODY}"
 grep -q '"newStatus"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_AUDIT_BODY}"
 
+mark_step "管理员审核和拍卖管理接口"
 ITEM_DETAIL_AFTER_APPROVE_STATUS="$(
     curl -sS -o "${ITEM_DETAIL_AFTER_APPROVE_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
@@ -592,6 +696,7 @@ INSERT INTO bid_record (
 );
 SQL
 
+mark_step "公开拍卖、出价和通知接口"
 PUBLIC_AUCTION_LIST_STATUS="$(
     curl -sS -o "${PUBLIC_AUCTION_LIST_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
@@ -814,6 +919,7 @@ if [[ -z "${ORDER_ID}" ]]; then
     exit 1
 fi
 
+mark_step "订单、支付和履约接口"
 ORDER_BUYER_LIST_STATUS="$(
     curl -sS -o "${ORDER_BUYER_LIST_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
@@ -910,6 +1016,27 @@ CALLBACK_SIGNATURE="$(
         openssl dgst -sha256 -hmac "change_me_auth_secret" |
         awk '{print $NF}'
 )"
+
+BAD_CALLBACK_TRANSACTION_NO="HTTP-TXN-BAD-SIG-${PUBLIC_AUCTION_ID}-$(date +%s%N)"
+ORDER_CALLBACK_BAD_SIGNATURE_STATUS="$(
+    curl -sS -o "${ORDER_CALLBACK_BAD_SIGNATURE_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        --data "{\"paymentNo\":\"${PAYMENT_NO}\",\"orderNo\":\"${ORDER_NO}\",\"merchantNo\":\"COURSE_AUCTION\",\"transactionNo\":\"${BAD_CALLBACK_TRANSACTION_NO}\",\"payStatus\":\"SUCCESS\",\"payAmount\":220.00,\"signature\":\"invalid_signature\"}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/payments/callback"
+)"
+[[ "${ORDER_CALLBACK_BAD_SIGNATURE_STATUS}" == "400" ]]
+grep -q '"code"[[:space:]]*:[[:space:]]*4604' "${ORDER_CALLBACK_BAD_SIGNATURE_BODY}"
+
+ORDER_PAYMENT_AFTER_BAD_CALLBACK_STATUS="$(
+    curl -sS -o "${ORDER_PAYMENT_AFTER_BAD_CALLBACK_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${BIDDER_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/orders/${ORDER_ID}/payment"
+)"
+[[ "${ORDER_PAYMENT_AFTER_BAD_CALLBACK_STATUS}" == "200" ]]
+grep -q '"orderStatus"[[:space:]]*:[[:space:]]*"PENDING_PAYMENT"' "${ORDER_PAYMENT_AFTER_BAD_CALLBACK_BODY}"
+grep -q '"payStatus"[[:space:]]*:[[:space:]]*"WAITING_CALLBACK"' "${ORDER_PAYMENT_AFTER_BAD_CALLBACK_BODY}"
 
 ORDER_CALLBACK_STATUS="$(
     curl -sS -o "${ORDER_CALLBACK_BODY}" -w "%{http_code}" \
@@ -1015,6 +1142,7 @@ ORDER_DETAIL_COMPLETED_STATUS="$(
 grep -q '"orderStatus"[[:space:]]*:[[:space:]]*"COMPLETED"' "${ORDER_DETAIL_COMPLETED_BODY}"
 grep -q '"payStatus"[[:space:]]*:[[:space:]]*"SUCCESS"' "${ORDER_DETAIL_COMPLETED_BODY}"
 
+mark_step "评价、信用和通知中心接口"
 ORDER_REVIEWS_EMPTY_STATUS="$(
     curl -sS -o "${ORDER_REVIEWS_EMPTY_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
@@ -1131,6 +1259,44 @@ ORDER_BUYER_CREDIT_STATUS="$(
 grep -q '"totalReviews"[[:space:]]*:[[:space:]]*1' "${ORDER_BUYER_CREDIT_BODY}"
 grep -q '"averageRating"[[:space:]]*:[[:space:]]*4' "${ORDER_BUYER_CREDIT_BODY}"
 
+mark_step "统计报表和导出接口"
+STAT_DATE="$(date '+%Y-%m-%d')"
+
+STATISTICS_REBUILD_STATUS="$(
+    curl -sS -o "${STATISTICS_REBUILD_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data "{\"statDate\":\"${STAT_DATE}\"}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/statistics/daily/rebuild"
+)"
+[[ "${STATISTICS_REBUILD_STATUS}" == "200" ]]
+grep -q "\"statDate\"[[:space:]]*:[[:space:]]*\"${STAT_DATE}\"" "${STATISTICS_REBUILD_BODY}"
+grep -q '"created"[[:space:]]*:' "${STATISTICS_REBUILD_BODY}"
+grep -q '"bidCount"[[:space:]]*:' "${STATISTICS_REBUILD_BODY}"
+
+STATISTICS_DAILY_STATUS="$(
+    curl -sS -o "${STATISTICS_DAILY_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/statistics/daily?startDate=${STAT_DATE}&endDate=${STAT_DATE}"
+)"
+[[ "${STATISTICS_DAILY_STATUS}" == "200" ]]
+grep -q "\"statDate\"[[:space:]]*:[[:space:]]*\"${STAT_DATE}\"" "${STATISTICS_DAILY_BODY}"
+grep -q '"total"[[:space:]]*:[[:space:]]*1' "${STATISTICS_DAILY_BODY}"
+
+STATISTICS_EXPORT_STATUS="$(
+    curl -sS -o "${STATISTICS_EXPORT_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/statistics/daily/export?startDate=${STAT_DATE}&endDate=${STAT_DATE}"
+)"
+[[ "${STATISTICS_EXPORT_STATUS}" == "200" ]]
+grep -q "\"fileName\"[[:space:]]*:[[:space:]]*\"statistics_daily_${STAT_DATE}_${STAT_DATE}.csv\"" "${STATISTICS_EXPORT_BODY}"
+grep -q '"rowCount"[[:space:]]*:[[:space:]]*1' "${STATISTICS_EXPORT_BODY}"
+grep -q 'stat_date,auction_count,sold_count,unsold_count,bid_count,gmv_amount' "${STATISTICS_EXPORT_BODY}"
+
+mark_step "权限负向、驳回审核和会话失效接口"
 BIDDER_FREEZE_STATUS="$(
     curl -sS -o "${BIDDER_FREEZE_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \
@@ -1274,6 +1440,101 @@ SUPPORT_STATUS="$(
 [[ "${SUPPORT_STATUS}" == "403" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*4108' "${SUPPORT_STATUS_BODY}"
 
+STATISTICS_SUPPORT_DENIED_STATUS="$(
+    curl -sS -o "${STATISTICS_SUPPORT_DENIED_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/statistics/daily?startDate=${STAT_DATE}&endDate=${STAT_DATE}"
+)"
+[[ "${STATISTICS_SUPPORT_DENIED_STATUS}" == "403" ]]
+grep -q '"code"[[:space:]]*:[[:space:]]*4108' "${STATISTICS_SUPPORT_DENIED_BODY}"
+
+mark_step "运维日志、异常看板、补偿和通知重试接口"
+OPS_OPERATION_LOGS_STATUS="$(
+    curl -sS -o "${OPS_OPERATION_LOGS_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/operation-logs?moduleName=statistics&result=SUCCESS&limit=20"
+)"
+[[ "${OPS_OPERATION_LOGS_STATUS}" == "200" ]]
+grep -q '"moduleName"[[:space:]]*:[[:space:]]*"statistics"' "${OPS_OPERATION_LOGS_BODY}"
+grep -q '"operationName"[[:space:]]*:[[:space:]]*"rebuild_daily_statistics"' "${OPS_OPERATION_LOGS_BODY}"
+
+OPS_TASK_LOGS_STATUS="$(
+    curl -sS -o "${OPS_TASK_LOGS_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/task-logs?taskType=STATISTICS_DAILY_AGGREGATION&taskStatus=SUCCESS&limit=20"
+)"
+[[ "${OPS_TASK_LOGS_STATUS}" == "200" ]]
+grep -q '"taskType"[[:space:]]*:[[:space:]]*"STATISTICS_DAILY_AGGREGATION"' "${OPS_TASK_LOGS_BODY}"
+grep -q "\"bizKey\"[[:space:]]*:[[:space:]]*\"${STAT_DATE}\"" "${OPS_TASK_LOGS_BODY}"
+
+OPS_EXCEPTIONS_BEFORE_STATUS="$(
+    curl -sS -o "${OPS_EXCEPTIONS_BEFORE_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/exceptions?limit=20"
+)"
+[[ "${OPS_EXCEPTIONS_BEFORE_STATUS}" == "200" ]]
+grep -q '"list"[[:space:]]*:' "${OPS_EXCEPTIONS_BEFORE_BODY}"
+
+OPS_MARK_EXCEPTION_STATUS="$(
+    curl -sS -o "${OPS_MARK_EXCEPTION_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        --data "{\"exceptionType\":\"REDIS_DEGRADED\",\"bizKey\":\"http_s25_${PUBLIC_AUCTION_ID}\",\"detail\":\"manual mark from S25 http\"}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/exceptions/mark"
+)"
+[[ "${OPS_MARK_EXCEPTION_STATUS}" == "200" ]]
+grep -q '"exceptionType"[[:space:]]*:[[:space:]]*"REDIS_DEGRADED"' "${OPS_MARK_EXCEPTION_BODY}"
+
+OPS_EXCEPTIONS_AFTER_STATUS="$(
+    curl -sS -o "${OPS_EXCEPTIONS_AFTER_BODY}" -w "%{http_code}" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/exceptions?limit=20"
+)"
+[[ "${OPS_EXCEPTIONS_AFTER_STATUS}" == "200" ]]
+grep -q '"sourceType"[[:space:]]*:[[:space:]]*"MANUAL_MARK"' "${OPS_EXCEPTIONS_AFTER_BODY}"
+grep -q "\"bizKey\"[[:space:]]*:[[:space:]]*\"http_s25_${PUBLIC_AUCTION_ID}\"" "${OPS_EXCEPTIONS_AFTER_BODY}"
+
+OPS_COMPENSATION_STATUS="$(
+    curl -sS -o "${OPS_COMPENSATION_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data "{\"compensationType\":\"STATISTICS_DAILY_AGGREGATION\",\"bizKey\":\"${STAT_DATE}\",\"limit\":20}" \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/compensations"
+)"
+[[ "${OPS_COMPENSATION_STATUS}" == "200" ]]
+grep -q '"compensationType"[[:space:]]*:[[:space:]]*"STATISTICS_DAILY_AGGREGATION"' "${OPS_COMPENSATION_BODY}"
+grep -q '"succeeded"[[:space:]]*:[[:space:]]*1' "${OPS_COMPENSATION_BODY}"
+
+OPS_RETRY_SUPPORT_DENIED_STATUS="$(
+    curl -sS -o "${OPS_RETRY_SUPPORT_DENIED_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${SUPPORT_TOKEN}" \
+        --data '{"limit":1}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/notifications/retry"
+)"
+[[ "${OPS_RETRY_SUPPORT_DENIED_STATUS}" == "403" ]]
+grep -q '"code"[[:space:]]*:[[:space:]]*4108' "${OPS_RETRY_SUPPORT_DENIED_BODY}"
+
+OPS_RETRY_NOTIFICATION_STATUS="$(
+    curl -sS -o "${OPS_RETRY_NOTIFICATION_BODY}" -w "%{http_code}" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        --data '{"limit":1}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/ops/notifications/retry"
+)"
+[[ "${OPS_RETRY_NOTIFICATION_STATUS}" == "200" ]]
+grep -q '"scanned"[[:space:]]*:' "${OPS_RETRY_NOTIFICATION_BODY}"
+
+mark_step "系统上下文、冻结登录和统一 JSON 404"
 ADMIN_STATUS="$(
     curl -sS -o "${ADMIN_STATUS_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \

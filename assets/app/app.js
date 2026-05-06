@@ -9,7 +9,7 @@ const routeRoles = {
     notifications: ["USER", "ADMIN", "SUPPORT"],
     seller: ["USER"],
     admin: ["ADMIN"],
-    support: ["SUPPORT"],
+    support: ["ADMIN", "SUPPORT"],
     api: ["USER", "ADMIN", "SUPPORT"],
 };
 
@@ -50,6 +50,15 @@ const endpoints = [
     { name: "提交评价", path: "POST /api/reviews" },
     { name: "订单评价", path: "GET /api/orders/{id}/reviews" },
     { name: "信用摘要", path: "GET /api/users/{id}/reviews/summary" },
+    { name: "日报查询", path: "GET /api/admin/statistics/daily" },
+    { name: "日报重跑", path: "POST /api/admin/statistics/daily/rebuild" },
+    { name: "日报导出", path: "GET /api/admin/statistics/daily/export" },
+    { name: "操作日志", path: "GET /api/admin/ops/operation-logs" },
+    { name: "任务日志", path: "GET /api/admin/ops/task-logs" },
+    { name: "异常看板", path: "GET /api/admin/ops/exceptions" },
+    { name: "标记异常", path: "POST /api/admin/ops/exceptions/mark" },
+    { name: "通知重试", path: "POST /api/admin/ops/notifications/retry" },
+    { name: "补偿入口", path: "POST /api/admin/ops/compensations" },
     { name: "上下文", path: "GET /api/system/context" },
 ];
 
@@ -80,6 +89,14 @@ const state = {
     adminAuctions: [],
     selectedAuction: null,
     auditLogs: [],
+    statisticsLoaded: false,
+    statisticsRecords: [],
+    statisticsExport: null,
+    opsLoaded: false,
+    operationLogs: [],
+    taskLogs: [],
+    systemExceptions: [],
+    opsActionResult: null,
 };
 
 const statusClassMap = {
@@ -108,16 +125,17 @@ function $all(selector) {
 }
 
 function setStatus(label, kind = "") {
-    const badge = $("#statusBadge");
-    if (!badge) {
-        return;
-    }
-    badge.textContent = label;
-    badge.className = `status-badge${kind ? ` ${kind}` : ""}`;
+    $all("[data-status-badge]").forEach(badge => {
+        badge.textContent = label;
+        badge.className = `status-badge${kind ? ` ${kind}` : ""}`;
+    });
 }
 
 function toast(message) {
     const element = $("#toast");
+    if (!element) {
+        return;
+    }
     element.textContent = message;
     element.classList.add("show");
     window.clearTimeout(toast.timer);
@@ -146,6 +164,65 @@ function setText(selector, value) {
     }
 }
 
+function setRequestBusy(isBusy) {
+    request.activeCount = Math.max(0, (request.activeCount || 0) + (isBusy ? 1 : -1));
+    document.body.classList.toggle("is-busy", request.activeCount > 0);
+    document.body.setAttribute("aria-busy", request.activeCount > 0 ? "true" : "false");
+}
+
+function validateForm(selector, message = "请先补全必填项") {
+    const form = typeof selector === "string" ? $(selector) : selector;
+    if (!form || form.reportValidity()) {
+        return true;
+    }
+    setStatus("表单未完成", "error");
+    toast(message);
+    return false;
+}
+
+function requireFiniteNumber(selector, label, min = null, max = null) {
+    const input = $(selector);
+    const value = Number(input?.value);
+    const belowMin = min !== null && value < min;
+    const aboveMax = max !== null && value > max;
+    if (!Number.isFinite(value) || belowMin || aboveMax) {
+        input?.focus();
+        const rangeText = min !== null && max !== null
+            ? `${min}-${max}`
+            : min !== null
+                ? `不小于 ${min}`
+                : `不大于 ${max}`;
+        throw new Error(`${label}必须为${rangeText}的数字`);
+    }
+    return value;
+}
+
+function validateDateRange(startSelector, endSelector, label = "日期范围") {
+    const startValue = $(startSelector)?.value || "";
+    const endValue = $(endSelector)?.value || "";
+    if (!startValue || !endValue || startValue > endValue) {
+        setStatus("日期范围无效", "error");
+        toast(`${label}无效`);
+        return false;
+    }
+    return true;
+}
+
+function validateAuctionForm() {
+    if (!validateForm("#auctionForm")) {
+        return false;
+    }
+    const start = parseDateTime($("#auctionStartTimeInput").value);
+    const end = parseDateTime($("#auctionEndTimeInput").value);
+    if (!start || !end || end.getTime() <= start.getTime()) {
+        setStatus("拍卖时间无效", "error");
+        toast("结束时间必须晚于开始时间");
+        $("#auctionEndTimeInput").focus();
+        return false;
+    }
+    return true;
+}
+
 function clearSession() {
     state.token = "";
     state.user = null;
@@ -172,6 +249,14 @@ function clearSession() {
     state.adminAuctions = [];
     state.selectedAuction = null;
     state.auditLogs = [];
+    state.statisticsLoaded = false;
+    state.statisticsRecords = [];
+    state.statisticsExport = null;
+    state.opsLoaded = false;
+    state.operationLogs = [];
+    state.taskLogs = [];
+    state.systemExceptions = [];
+    state.opsActionResult = null;
     window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
@@ -215,6 +300,16 @@ function setRoute(route, options = {}) {
         return;
     }
     if (!canEnter(requestedRoute)) {
+        if (state.user) {
+            const fallbackRoute = visibleRoutesForRole(state.user.roleCode)[0] || "home";
+            state.route = fallbackRoute;
+            render();
+            syncHash(fallbackRoute);
+            if (!options.silent) {
+                toast("当前角色无权访问");
+            }
+            return;
+        }
         state.route = "gate";
         render();
         syncHash("gate");
@@ -240,7 +335,12 @@ function setRoute(route, options = {}) {
         loadNotifications({ silent: true });
     }
     if (requestedRoute === "admin" && !state.adminLoaded) {
+        ensureStatisticsDateDefaults();
         loadAdminDashboard({ silent: true });
+    }
+    if (requestedRoute === "support" && !state.opsLoaded) {
+        ensureStatisticsDateDefaults();
+        loadOpsDashboard({ silent: true });
     }
 }
 
@@ -250,10 +350,19 @@ function renderNavigation() {
         const allowed = button.dataset.roles.split(",");
         button.hidden = !state.user || !allowed.includes(role);
         button.classList.toggle("active", button.dataset.route === state.route);
+        button.setAttribute("aria-current", button.dataset.route === state.route ? "page" : "false");
     });
 
     $all("[data-role-entry]").forEach(panel => {
         panel.hidden = panel.dataset.roleEntry !== role;
+    });
+
+    const isAdmin = state.user?.roleCode === "ADMIN";
+    $all("[data-admin-only]").forEach(panel => {
+        panel.classList.toggle("is-locked", !isAdmin);
+        panel.querySelectorAll("input, select, textarea, button").forEach(control => {
+            control.disabled = !isAdmin;
+        });
     });
 }
 
@@ -486,6 +595,27 @@ function toDateTimeLocalValue(value) {
         return "";
     }
     return normalized.replace(" ", "T").slice(0, 16);
+}
+
+function todayDateText() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function ensureStatisticsDateDefaults() {
+    const today = todayDateText();
+    if ($("#statisticsStartDateInput") && !$("#statisticsStartDateInput").value) {
+        $("#statisticsStartDateInput").value = today;
+    }
+    if ($("#statisticsEndDateInput") && !$("#statisticsEndDateInput").value) {
+        $("#statisticsEndDateInput").value = today;
+    }
+    if ($("#compensationBizKeyInput") && !$("#compensationBizKeyInput").value) {
+        $("#compensationBizKeyInput").value = today;
+    }
 }
 
 function renderPendingItems() {
@@ -764,6 +894,213 @@ function renderAdmin() {
     renderAuditLogs();
     renderAdminAuctions();
     renderSelectedAuction();
+    renderStatistics();
+}
+
+function sumStatistics(fieldName) {
+    return state.statisticsRecords.reduce(
+        (total, record) => total + Number(record[fieldName] || 0),
+        0
+    );
+}
+
+function appendMetric(container, label, value) {
+    const box = document.createElement("div");
+    box.className = "metric-box";
+    const text = document.createElement("span");
+    text.textContent = label;
+    const strong = document.createElement("strong");
+    strong.textContent = value;
+    box.append(text, strong);
+    container.append(box);
+}
+
+function renderStatistics() {
+    const summary = $("#statisticsSummaryPanel");
+    const list = $("#statisticsList");
+    const exportPreview = $("#statisticsExportPreview");
+    if (!summary || !list || !exportPreview) {
+        return;
+    }
+
+    summary.innerHTML = "";
+    appendMetric(summary, "拍卖数", String(sumStatistics("auctionCount")));
+    appendMetric(summary, "成交数", String(sumStatistics("soldCount")));
+    appendMetric(summary, "流拍数", String(sumStatistics("unsoldCount")));
+    appendMetric(summary, "出价数", String(sumStatistics("bidCount")));
+    appendMetric(summary, "GMV", toMoney(sumStatistics("gmvAmount")));
+
+    list.innerHTML = "";
+    if (!state.statisticsRecords.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无日报记录";
+        list.append(empty);
+    } else {
+        state.statisticsRecords.forEach(record => {
+            const card = document.createElement("article");
+            card.className = "item-card";
+            const head = document.createElement("div");
+            head.className = "item-card-head";
+            const titleBox = document.createElement("div");
+            const title = document.createElement("h3");
+            title.textContent = record.statDate;
+            const meta = document.createElement("div");
+            meta.className = "item-meta";
+            ["auctionCount", "soldCount", "unsoldCount", "bidCount"].forEach(fieldName => {
+                const span = document.createElement("span");
+                span.textContent = `${fieldName} ${record[fieldName] || 0}`;
+                meta.append(span);
+            });
+            const gmv = document.createElement("span");
+            gmv.textContent = `GMV ${toMoney(record.gmvAmount)}`;
+            meta.append(gmv);
+            titleBox.append(title, meta);
+            const status = document.createElement("span");
+            status.className = "item-status ready";
+            status.textContent = `#${record.statId || "-"}`;
+            head.append(titleBox, status);
+            card.append(head);
+            list.append(card);
+        });
+    }
+
+    exportPreview.textContent = state.statisticsExport?.csvContent || "";
+}
+
+function renderOperationLogs() {
+    const list = $("#opsOperationLogList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+    if (!state.operationLogs.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无操作日志";
+        list.append(empty);
+        return;
+    }
+    state.operationLogs.forEach(log => {
+        const card = document.createElement("article");
+        card.className = "item-card";
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = `${log.moduleName || "-"} / ${log.operationName || "-"}`;
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        [log.operatorRole || "-", log.bizKey || "-", log.createdAt || "-"].forEach(value => {
+            const span = document.createElement("span");
+            span.textContent = value;
+            meta.append(span);
+        });
+        titleBox.append(title, meta);
+        const status = document.createElement("span");
+        status.className = `item-status ${log.result === "SUCCESS" ? "ready" : "rejected"}`;
+        status.textContent = log.result || "-";
+        head.append(titleBox, status);
+        const detail = document.createElement("p");
+        detail.className = "notification-content";
+        detail.textContent = log.detail || "-";
+        card.append(head, detail);
+        list.append(card);
+    });
+}
+
+function renderTaskLogs() {
+    const list = $("#opsTaskLogList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+    if (!state.taskLogs.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无任务日志";
+        list.append(empty);
+        return;
+    }
+    state.taskLogs.forEach(log => {
+        const card = document.createElement("article");
+        card.className = "item-card";
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = log.taskType || "-";
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        [`biz ${log.bizKey || "-"}`, `retry ${log.retryCount || 0}`, log.createdAt || "-"].forEach(value => {
+            const span = document.createElement("span");
+            span.textContent = value;
+            meta.append(span);
+        });
+        titleBox.append(title, meta);
+        const status = document.createElement("span");
+        status.className = `item-status ${log.taskStatus === "SUCCESS" ? "ready" : "running"}`;
+        status.textContent = log.taskStatus || "-";
+        head.append(titleBox, status);
+        const detail = document.createElement("p");
+        detail.className = "notification-content";
+        detail.textContent = log.lastError || "-";
+        card.append(head, detail);
+        list.append(card);
+    });
+}
+
+function renderSystemExceptions() {
+    const list = $("#opsExceptionList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+    if (!state.systemExceptions.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "暂无异常";
+        list.append(empty);
+        return;
+    }
+    state.systemExceptions.forEach(entry => {
+        const card = document.createElement("article");
+        card.className = "item-card";
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        const titleBox = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = entry.summary || entry.sourceType || "-";
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        [entry.sourceType || "-", entry.bizKey || "-", entry.occurredAt || "-"].forEach(value => {
+            const span = document.createElement("span");
+            span.textContent = value;
+            meta.append(span);
+        });
+        titleBox.append(title, meta);
+        const status = document.createElement("span");
+        status.className = `item-status ${entry.retryable ? "running" : "ready"}`;
+        status.textContent = entry.currentStatus || "-";
+        head.append(titleBox, status);
+        const detail = document.createElement("p");
+        detail.className = "notification-content";
+        detail.textContent = entry.detail || "-";
+        card.append(head, detail);
+        list.append(card);
+    });
+}
+
+function renderOps() {
+    renderOperationLogs();
+    renderTaskLogs();
+    renderSystemExceptions();
+    const result = $("#opsActionResult");
+    if (result) {
+        result.textContent = state.opsActionResult
+            ? JSON.stringify(state.opsActionResult, null, 2)
+            : "";
+    }
 }
 
 function parseDateTime(value) {
@@ -1403,6 +1740,9 @@ function render() {
     if (activeRoute === "admin") {
         renderAdmin();
     }
+    if (activeRoute === "support") {
+        renderOps();
+    }
 }
 
 async function request(path, options = {}) {
@@ -1415,26 +1755,31 @@ async function request(path, options = {}) {
         headers.Authorization = `Bearer ${state.token}`;
     }
 
-    const response = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers,
-    });
+    setRequestBusy(true);
+    try {
+        const response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers,
+        });
 
-    const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json")
-        ? await response.json()
-        : { code: response.status, message: await response.text(), data: {} };
-    showResponse(payload);
+        const contentType = response.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json")
+            ? await response.json()
+            : { code: response.status, message: await response.text(), data: {} };
+        showResponse(payload);
 
-    if (!response.ok || payload.code !== 0) {
-        if (response.status === 401 || [4103, 4104, 4105, 4106, 4107].includes(payload.code)) {
-            clearSession();
-            setRoute("gate", { silent: true });
+        if (!response.ok || payload.code !== 0) {
+            if (response.status === 401 || [4103, 4104, 4105, 4106, 4107].includes(payload.code)) {
+                clearSession();
+                setRoute("gate", { silent: true });
+            }
+            throw new Error(payload.message || `请求失败: ${response.status}`);
         }
-        throw new Error(payload.message || `请求失败: ${response.status}`);
-    }
 
-    return payload;
+        return payload;
+    } finally {
+        setRequestBusy(false);
+    }
 }
 
 function currentHashRoute() {
@@ -1466,6 +1811,9 @@ async function loadCurrentUser(options = {}) {
 
 async function login(event) {
     event.preventDefault();
+    if (!validateForm("#loginForm")) {
+        return;
+    }
     setStatus("登录中");
 
     try {
@@ -1493,6 +1841,9 @@ async function login(event) {
 
 async function register(event) {
     event.preventDefault();
+    if (!validateForm("#registerForm")) {
+        return;
+    }
     setStatus("注册中");
 
     try {
@@ -1538,6 +1889,9 @@ async function logout() {
 
 async function changeUserStatus(event) {
     event.preventDefault();
+    if (!validateForm("#statusForm")) {
+        return;
+    }
     const userId = $("#statusUserIdInput").value.trim();
     if (!userId) {
         toast("请输入目标用户 ID");
@@ -1609,6 +1963,9 @@ function readItemFormPayload() {
 
 async function saveItem(event) {
     event.preventDefault();
+    if (!validateForm("#itemForm")) {
+        return;
+    }
     const editId = $("#itemEditIdInput").value.trim();
     const payload = readItemFormPayload();
 
@@ -1636,6 +1993,9 @@ async function saveItem(event) {
 
 async function addItemImage(event) {
     event.preventDefault();
+    if (!validateForm("#imageForm")) {
+        return;
+    }
     const itemId = $("#imageItemIdInput").value.trim();
     if (!itemId) {
         toast("请输入拍品 ID");
@@ -1748,6 +2108,9 @@ async function loadAuditLogs(itemId) {
 
 async function submitAudit(event) {
     event.preventDefault();
+    if (!validateForm("#auditForm")) {
+        return;
+    }
     const itemId = $("#auditItemIdInput").value.trim();
     if (!itemId) {
         toast("请输入拍品 ID");
@@ -1798,13 +2161,90 @@ async function loadAdminAuctions(options = {}) {
 }
 
 async function loadAdminDashboard(options = {}) {
-    await Promise.all([
-        loadPendingItems({ silent: true }),
-        loadAdminAuctions({ silent: true }),
-    ]);
-    state.adminLoaded = true;
-    if (!options.silent) {
-        toast("后台数据已刷新");
+    ensureStatisticsDateDefaults();
+    try {
+        await Promise.all([
+            loadPendingItems({ silent: true }),
+            loadAdminAuctions({ silent: true }),
+            loadStatistics({ silent: true }),
+        ]);
+        state.adminLoaded = true;
+        if (!options.silent) {
+            toast("后台数据已刷新");
+        }
+    } catch (error) {
+        setStatus("后台加载失败", "error");
+        if (!options.silent) {
+            toast(error.message);
+        }
+    }
+}
+
+function statisticsQueryString() {
+    ensureStatisticsDateDefaults();
+    if (!validateDateRange("#statisticsStartDateInput", "#statisticsEndDateInput", "统计日期范围")) {
+        throw new Error("statistics date range invalid");
+    }
+    const params = new URLSearchParams();
+    params.set("startDate", $("#statisticsStartDateInput").value);
+    params.set("endDate", $("#statisticsEndDateInput").value);
+    return `?${params.toString()}`;
+}
+
+async function loadStatistics(options = {}) {
+    if (state.user?.roleCode !== "ADMIN") {
+        return;
+    }
+    setStatus("加载统计");
+    try {
+        const payload = await request(`/admin/statistics/daily${statisticsQueryString()}`);
+        state.statisticsRecords = payload.data.list || [];
+        state.statisticsLoaded = true;
+        renderStatistics();
+        setStatus("统计已加载", "success");
+        if (!options.silent) {
+            toast("统计报表已刷新");
+        }
+    } catch (error) {
+        setStatus("统计失败", "error");
+        toast(error.message);
+    }
+}
+
+async function rebuildStatistics() {
+    ensureStatisticsDateDefaults();
+    if (!validateDateRange("#statisticsStartDateInput", "#statisticsEndDateInput", "统计日期范围")) {
+        return;
+    }
+    const statDate = $("#statisticsEndDateInput").value || todayDateText();
+    setStatus("重跑统计");
+    try {
+        await request("/admin/statistics/daily/rebuild", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ statDate }),
+        });
+        await loadStatistics({ silent: true });
+        state.opsLoaded = false;
+        setStatus("统计已重跑", "success");
+        toast("统计日报已重跑");
+    } catch (error) {
+        setStatus("重跑失败", "error");
+        toast(error.message);
+    }
+}
+
+async function exportStatistics() {
+    setStatus("导出统计");
+    try {
+        const payload = await request(`/admin/statistics/daily/export${statisticsQueryString()}`);
+        state.statisticsExport = payload.data;
+        renderStatistics();
+        setStatus("统计已导出", "success");
+        toast(`CSV 行数 ${payload.data.rowCount || 0}`);
+    } catch (error) {
+        setStatus("导出失败", "error");
+        toast(error.message);
     }
 }
 
@@ -1823,6 +2263,9 @@ async function selectAuction(auctionId) {
 
 async function saveAuction(event) {
     event.preventDefault();
+    if (!validateAuctionForm()) {
+        return;
+    }
     const editId = $("#auctionEditIdInput").value.trim();
     const payload = readAuctionFormPayload();
     if (editId) {
@@ -1991,6 +2434,13 @@ async function submitPublicBid(event) {
     if (!auctionId || !input) {
         return;
     }
+    try {
+        requireFiniteNumber("#buyerBidAmountInput", "出价金额", 0.01);
+    } catch (error) {
+        setStatus("出价金额无效", "error");
+        toast(error.message);
+        return;
+    }
 
     setStatus("提交出价");
     try {
@@ -2141,6 +2591,9 @@ async function confirmSelectedReceipt() {
 
 async function submitSelectedOrderReview(event) {
     event.preventDefault();
+    if (!validateForm(event.currentTarget)) {
+        return;
+    }
     const orderId = selectedOrderId();
     if (!orderId) {
         return;
@@ -2215,6 +2668,153 @@ async function markNotificationRead(notificationId) {
     }
 }
 
+function opsLimit() {
+    return requireFiniteNumber("#opsLimitInput", "返回条数", 1, 100);
+}
+
+function opsLogQueryString() {
+    const params = new URLSearchParams();
+    const moduleName = $("#opsModuleFilterInput")?.value.trim() || "";
+    const result = $("#opsResultFilterSelect")?.value || "";
+    params.set("limit", String(opsLimit()));
+    if (moduleName) {
+        params.set("moduleName", moduleName);
+    }
+    if (result) {
+        params.set("result", result);
+    }
+    return `?${params.toString()}`;
+}
+
+function opsTaskQueryString() {
+    const params = new URLSearchParams();
+    const taskType = $("#opsTaskTypeFilterSelect")?.value || "";
+    const taskStatus = $("#opsTaskStatusFilterSelect")?.value || "";
+    params.set("limit", String(opsLimit()));
+    if (taskType) {
+        params.set("taskType", taskType);
+    }
+    if (taskStatus) {
+        params.set("taskStatus", taskStatus);
+    }
+    return `?${params.toString()}`;
+}
+
+async function loadOpsDashboard(options = {}) {
+    setStatus("加载运维");
+    try {
+        const [operationPayload, taskPayload, exceptionPayload] = await Promise.all([
+            request(`/admin/ops/operation-logs${opsLogQueryString()}`),
+            request(`/admin/ops/task-logs${opsTaskQueryString()}`),
+            request(`/admin/ops/exceptions?limit=${encodeURIComponent(String(opsLimit()))}`),
+        ]);
+        state.operationLogs = operationPayload.data.list || [];
+        state.taskLogs = taskPayload.data.list || [];
+        state.systemExceptions = exceptionPayload.data.list || [];
+        state.opsLoaded = true;
+        renderOps();
+        setStatus("运维已加载", "success");
+        if (!options.silent) {
+            toast("运维数据已刷新");
+        }
+    } catch (error) {
+        setStatus("运维失败", "error");
+        toast(error.message);
+    }
+}
+
+async function markOpsException(event) {
+    event.preventDefault();
+    if (!validateForm("#markExceptionForm")) {
+        return;
+    }
+    setStatus("标记异常");
+    try {
+        const payload = await request("/admin/ops/exceptions/mark", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                exceptionType: $("#markExceptionTypeInput").value.trim(),
+                bizKey: $("#markBizKeyInput").value.trim(),
+                detail: $("#markDetailInput").value.trim(),
+            }),
+        });
+        state.opsActionResult = payload.data;
+        await loadOpsDashboard({ silent: true });
+        setStatus("异常已标记", "success");
+        toast("异常已标记");
+    } catch (error) {
+        setStatus("标记失败", "error");
+        toast(error.message);
+    }
+}
+
+async function runCompensation(event) {
+    event.preventDefault();
+    if (state.user?.roleCode !== "ADMIN") {
+        setStatus("权限不足", "error");
+        toast("仅管理员可执行补偿");
+        return;
+    }
+    if (!validateForm("#compensationForm")) {
+        return;
+    }
+    setStatus("执行补偿");
+    try {
+        const payload = await request("/admin/ops/compensations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                compensationType: $("#compensationTypeSelect").value,
+                bizKey: $("#compensationBizKeyInput").value.trim(),
+                limit: Number($("#compensationLimitInput").value || 20),
+            }),
+        });
+        state.opsActionResult = payload.data;
+        await loadOpsDashboard({ silent: true });
+        setStatus("补偿已执行", "success");
+        toast("补偿已执行");
+    } catch (error) {
+        setStatus("补偿失败", "error");
+        toast(error.message);
+    }
+}
+
+async function retryNotifications(event) {
+    event.preventDefault();
+    if (state.user?.roleCode !== "ADMIN") {
+        setStatus("权限不足", "error");
+        toast("仅管理员可重试通知");
+        return;
+    }
+    if (!validateForm("#retryNotificationForm")) {
+        return;
+    }
+    setStatus("重试通知");
+    const body = {
+        limit: Number($("#retryNotificationLimitInput").value || 20),
+    };
+    const notificationId = $("#retryNotificationIdInput").value.trim();
+    if (notificationId) {
+        body.notificationId = Number(notificationId);
+    }
+
+    try {
+        const payload = await request("/admin/ops/notifications/retry", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        });
+        state.opsActionResult = payload.data;
+        await loadOpsDashboard({ silent: true });
+        setStatus("通知已重试", "success");
+        toast("通知已重试");
+    } catch (error) {
+        setStatus("重试失败", "error");
+        toast(error.message);
+    }
+}
+
 async function verifyNotFound() {
     setStatus("验证 404");
     try {
@@ -2280,6 +2880,21 @@ function bindEvents() {
         state.adminLoaded = false;
         loadAdminAuctions();
     });
+    $("#statisticsFilterForm").addEventListener("submit", event => {
+        event.preventDefault();
+        loadStatistics();
+    });
+    $("#refreshStatisticsButton").addEventListener("click", () => loadStatistics());
+    $("#rebuildStatisticsButton").addEventListener("click", rebuildStatistics);
+    $("#exportStatisticsButton").addEventListener("click", exportStatistics);
+    $("#opsLogFilterForm").addEventListener("submit", event => {
+        event.preventDefault();
+        loadOpsDashboard();
+    });
+    $("#refreshOpsButton").addEventListener("click", () => loadOpsDashboard());
+    $("#markExceptionForm").addEventListener("submit", markOpsException);
+    $("#compensationForm").addEventListener("submit", runCompensation);
+    $("#retryNotificationForm").addEventListener("submit", retryNotifications);
     $("#contextButton").addEventListener("click", () => loadCurrentUser({ route: "api" }));
     $("#notFoundButton").addEventListener("click", verifyNotFound);
 

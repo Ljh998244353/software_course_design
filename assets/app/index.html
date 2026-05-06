@@ -19,10 +19,11 @@
             <button class="nav-button" type="button" data-route="notifications" data-roles="USER,ADMIN,SUPPORT">通知</button>
             <button class="nav-button" type="button" data-route="seller" data-roles="USER">卖家</button>
             <button class="nav-button" type="button" data-route="admin" data-roles="ADMIN">管理</button>
-            <button class="nav-button" type="button" data-route="support" data-roles="SUPPORT">运维</button>
+            <button class="nav-button" type="button" data-route="support" data-roles="ADMIN,SUPPORT">运维</button>
             <button class="nav-button" type="button" data-route="api" data-roles="USER,ADMIN,SUPPORT">接口</button>
         </nav>
         <div class="session-box">
+            <span id="globalStatusBadge" class="status-badge" data-status-badge aria-live="polite">等待请求</span>
             <span id="sessionLabel">未登录</span>
             <button id="logoutButton" class="icon-text-button" type="button" hidden>退出</button>
         </div>
@@ -37,11 +38,11 @@
                 </div>
                 <label>
                     <span>用户名</span>
-                    <input id="usernameInput" name="username" type="text" value="admin" autocomplete="username">
+                    <input id="usernameInput" name="username" type="text" value="admin" autocomplete="username" maxlength="64" required>
                 </label>
                 <label>
                     <span>密码</span>
-                    <input id="passwordInput" name="password" type="password" value="Admin@123" autocomplete="current-password">
+                    <input id="passwordInput" name="password" type="password" value="Admin@123" autocomplete="current-password" maxlength="128" required>
                 </label>
                 <button class="primary-button" type="submit">登录</button>
             </form>
@@ -54,26 +55,26 @@
                 <div class="compact-grid">
                     <label>
                         <span>用户名</span>
-                        <input id="registerUsernameInput" name="username" type="text" autocomplete="username">
+                        <input id="registerUsernameInput" name="username" type="text" autocomplete="username" maxlength="64" required>
                     </label>
                     <label>
                         <span>昵称</span>
-                        <input id="registerNicknameInput" name="nickname" type="text" autocomplete="nickname">
+                        <input id="registerNicknameInput" name="nickname" type="text" autocomplete="nickname" maxlength="64">
                     </label>
                 </div>
                 <div class="compact-grid">
                     <label>
                         <span>手机号</span>
-                        <input id="registerPhoneInput" name="phone" type="tel" autocomplete="tel">
+                        <input id="registerPhoneInput" name="phone" type="tel" autocomplete="tel" inputmode="numeric" pattern="[0-9]{11}" maxlength="11" required>
                     </label>
                     <label>
                         <span>邮箱</span>
-                        <input id="registerEmailInput" name="email" type="email" autocomplete="email">
+                        <input id="registerEmailInput" name="email" type="email" autocomplete="email" maxlength="120" required>
                     </label>
                 </div>
                 <label>
                     <span>密码</span>
-                    <input id="registerPasswordInput" name="password" type="password" autocomplete="new-password">
+                    <input id="registerPasswordInput" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
                 </label>
                 <button class="secondary-button" type="submit">创建账号</button>
             </form>
@@ -107,7 +108,10 @@
             <article class="surface-panel role-panel" data-role-entry="ADMIN">
                 <span class="eyebrow">Admin</span>
                 <h2>后台管理入口</h2>
-                <button class="secondary-button" type="button" data-route-jump="admin">后台管理</button>
+                <div class="entry-actions">
+                    <button class="secondary-button" type="button" data-route-jump="admin">后台管理</button>
+                    <button class="secondary-button" type="button" data-route-jump="support">运维视图</button>
+                </div>
             </article>
 
             <article class="surface-panel role-panel" data-role-entry="SUPPORT">
@@ -287,20 +291,20 @@
                     <input id="itemEditIdInput" type="hidden">
                     <label>
                         <span>标题</span>
-                        <input id="itemTitleInput" name="title" type="text" maxlength="200">
+                        <input id="itemTitleInput" name="title" type="text" maxlength="200" required>
                     </label>
                     <label>
                         <span>描述</span>
-                        <textarea id="itemDescriptionInput" name="description" rows="4"></textarea>
+                        <textarea id="itemDescriptionInput" name="description" rows="4" maxlength="2000" required></textarea>
                     </label>
                     <div class="compact-grid">
                         <label>
                             <span>分类 ID</span>
-                            <input id="itemCategoryInput" name="categoryId" type="number" min="1" value="1">
+                            <input id="itemCategoryInput" name="categoryId" type="number" min="1" value="1" required>
                         </label>
                         <label>
                             <span>建议起拍价</span>
-                            <input id="itemStartPriceInput" name="startPrice" type="number" min="0.01" step="0.01">
+                            <input id="itemStartPriceInput" name="startPrice" type="number" min="0.01" step="0.01" required>
                         </label>
                     </div>
                     <label>
@@ -321,11 +325,11 @@
                     <form id="imageForm">
                         <label>
                             <span>拍品 ID</span>
-                            <input id="imageItemIdInput" name="itemId" type="number" min="1">
+                            <input id="imageItemIdInput" name="itemId" type="number" min="1" required>
                         </label>
                         <label>
                             <span>图片地址</span>
-                            <input id="imageUrlInput" name="imageUrl" type="url">
+                            <input id="imageUrlInput" name="imageUrl" type="url" maxlength="500" required>
                         </label>
                         <div class="compact-grid">
                             <label>
@@ -385,7 +389,7 @@
                     <form id="statusForm" class="status-form">
                         <label>
                             <span>目标用户 ID</span>
-                            <input id="statusUserIdInput" name="userId" type="number" min="1">
+                            <input id="statusUserIdInput" name="userId" type="number" min="1" required>
                         </label>
                         <label>
                             <span>状态</span>
@@ -397,7 +401,7 @@
                         </label>
                         <label>
                             <span>原因</span>
-                            <input id="statusReasonInput" name="reason" type="text" value="admin update from app">
+                            <input id="statusReasonInput" name="reason" type="text" value="admin update from app" maxlength="200" required>
                         </label>
                         <button class="primary-button" type="submit">更新状态</button>
                     </form>
@@ -416,7 +420,7 @@
                         <div class="compact-grid">
                             <label>
                                 <span>拍品 ID</span>
-                                <input id="auditItemIdInput" name="itemId" type="number" min="1">
+                                <input id="auditItemIdInput" name="itemId" type="number" min="1" required>
                             </label>
                             <label>
                                 <span>结果</span>
@@ -428,7 +432,7 @@
                         </div>
                         <label>
                             <span>原因</span>
-                            <input id="auditReasonInput" name="reason" type="text" placeholder="REJECTED 时必填">
+                            <input id="auditReasonInput" name="reason" type="text" maxlength="300" placeholder="REJECTED 时必填">
                         </label>
                         <button class="primary-button" type="submit">提交审核</button>
                     </form>
@@ -443,26 +447,26 @@
                     <input id="auctionEditIdInput" type="hidden">
                     <label>
                         <span>拍品 ID</span>
-                        <input id="auctionItemIdInput" name="itemId" type="number" min="1">
+                        <input id="auctionItemIdInput" name="itemId" type="number" min="1" required>
                     </label>
                     <div class="compact-grid">
                         <label>
                             <span>开始时间</span>
-                            <input id="auctionStartTimeInput" name="startTime" type="datetime-local">
+                            <input id="auctionStartTimeInput" name="startTime" type="datetime-local" required>
                         </label>
                         <label>
                             <span>结束时间</span>
-                            <input id="auctionEndTimeInput" name="endTime" type="datetime-local">
+                            <input id="auctionEndTimeInput" name="endTime" type="datetime-local" required>
                         </label>
                     </div>
                     <div class="compact-grid">
                         <label>
                             <span>起拍价</span>
-                            <input id="auctionStartPriceInput" name="startPrice" type="number" min="0.01" step="0.01">
+                            <input id="auctionStartPriceInput" name="startPrice" type="number" min="0.01" step="0.01" required>
                         </label>
                         <label>
                             <span>加价幅度</span>
-                            <input id="auctionBidStepInput" name="bidStep" type="number" min="0.01" step="0.01">
+                            <input id="auctionBidStepInput" name="bidStep" type="number" min="0.01" step="0.01" required>
                         </label>
                     </div>
                     <div class="compact-grid">
@@ -502,6 +506,36 @@
                     <div id="adminAuctionList" class="item-list"></div>
                     <div id="adminAuctionDetailPanel" class="item-detail-panel" hidden></div>
                 </section>
+
+                <section class="work-panel statistics-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Statistics</span>
+                            <h2>统计报表</h2>
+                        </div>
+                        <button id="refreshStatisticsButton" class="text-button" type="button">刷新</button>
+                    </div>
+                    <form id="statisticsFilterForm" class="audit-form">
+                        <div class="compact-grid">
+                            <label>
+                            <span>开始日期</span>
+                                <input id="statisticsStartDateInput" name="startDate" type="date" required>
+                            </label>
+                            <label>
+                            <span>结束日期</span>
+                                <input id="statisticsEndDateInput" name="endDate" type="date" required>
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">查询日报</button>
+                            <button id="rebuildStatisticsButton" class="secondary-button" type="button">重跑当日</button>
+                            <button id="exportStatisticsButton" class="text-button" type="button">导出 CSV</button>
+                        </div>
+                    </form>
+                    <div id="statisticsSummaryPanel" class="summary-grid"></div>
+                    <div id="statisticsList" class="item-list"></div>
+                    <pre id="statisticsExportPreview" class="response-viewer compact-viewer"></pre>
+                </section>
             </div>
         </section>
 
@@ -510,10 +544,144 @@
                 <span class="eyebrow">Support</span>
                 <h1>运维视图</h1>
             </div>
-            <div class="placeholder-grid">
-                <div><strong>操作日志</strong><span>待 S25 接入</span></div>
-                <div><strong>任务日志</strong><span>待 S25 接入</span></div>
-                <div><strong>异常看板</strong><span>待 S25 接入</span></div>
+            <div class="ops-layout">
+                <section class="work-panel ops-filter-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Filter</span>
+                        <h2>日志筛选</h2>
+                    </div>
+                    <form id="opsLogFilterForm">
+                        <div class="compact-grid">
+                            <label>
+                                <span>模块</span>
+                                <input id="opsModuleFilterInput" name="moduleName" type="text" value="statistics">
+                            </label>
+                            <label>
+                                <span>结果</span>
+                                <select id="opsResultFilterSelect" name="result">
+                                    <option value="">全部结果</option>
+                                    <option value="SUCCESS">SUCCESS</option>
+                                    <option value="FAILED">FAILED</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="compact-grid">
+                            <label>
+                                <span>任务类型</span>
+                                <select id="opsTaskTypeFilterSelect" name="taskType">
+                                    <option value="">全部任务</option>
+                                    <option value="STATISTICS_DAILY_AGGREGATION">STATISTICS_DAILY_AGGREGATION</option>
+                                    <option value="NOTIFICATION_PUSH">NOTIFICATION_PUSH</option>
+                                    <option value="ORDER_SETTLEMENT">ORDER_SETTLEMENT</option>
+                                    <option value="ORDER_TIMEOUT_CLOSE">ORDER_TIMEOUT_CLOSE</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>任务状态</span>
+                                <select id="opsTaskStatusFilterSelect" name="taskStatus">
+                                    <option value="">全部状态</option>
+                                    <option value="SUCCESS">SUCCESS</option>
+                                    <option value="FAILED">FAILED</option>
+                                    <option value="SKIPPED">SKIPPED</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label>
+                            <span>返回条数</span>
+                            <input id="opsLimitInput" name="limit" type="number" min="1" max="100" value="20" required>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">刷新运维数据</button>
+                            <button id="refreshOpsButton" class="text-button" type="button">刷新</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="work-panel ops-exception-panel">
+                    <div class="list-toolbar">
+                        <div>
+                            <span class="eyebrow">Exceptions</span>
+                            <h2>异常看板</h2>
+                        </div>
+                    </div>
+                    <div id="opsExceptionList" class="item-list"></div>
+                    <form id="markExceptionForm" class="audit-form">
+                        <div class="compact-grid">
+                            <label>
+                                <span>异常类型</span>
+                                <input id="markExceptionTypeInput" name="exceptionType" type="text" value="REDIS_DEGRADED" maxlength="64" required>
+                            </label>
+                            <label>
+                                <span>业务键</span>
+                                <input id="markBizKeyInput" name="bizKey" type="text" value="manual_http_check" maxlength="120" required>
+                            </label>
+                        </div>
+                        <label>
+                            <span>备注</span>
+                            <input id="markDetailInput" name="detail" type="text" value="manual mark from app" maxlength="500" required>
+                        </label>
+                        <button class="secondary-button" type="submit">标记异常</button>
+                    </form>
+                </section>
+
+                <section class="work-panel ops-log-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Operation</span>
+                        <h2>操作日志</h2>
+                    </div>
+                    <div id="opsOperationLogList" class="item-list"></div>
+                </section>
+
+                <section class="work-panel ops-task-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Task</span>
+                        <h2>任务日志</h2>
+                    </div>
+                    <div id="opsTaskLogList" class="item-list"></div>
+                </section>
+
+                <section class="work-panel ops-action-panel">
+                    <div class="panel-head compact-head">
+                        <span class="eyebrow">Compensation</span>
+                        <h2>补偿入口</h2>
+                    </div>
+                    <form id="compensationForm" class="audit-form" data-admin-only>
+                        <label>
+                            <span>补偿类型</span>
+                            <select id="compensationTypeSelect" name="compensationType">
+                                <option value="STATISTICS_DAILY_AGGREGATION">STATISTICS_DAILY_AGGREGATION</option>
+                                <option value="NOTIFICATION_PUSH">NOTIFICATION_PUSH</option>
+                                <option value="ORDER_SETTLEMENT">ORDER_SETTLEMENT</option>
+                                <option value="ORDER_TIMEOUT_CLOSE">ORDER_TIMEOUT_CLOSE</option>
+                            </select>
+                        </label>
+                        <div class="compact-grid">
+                            <label>
+                                <span>业务键</span>
+                                <input id="compensationBizKeyInput" name="bizKey" type="text" maxlength="120">
+                            </label>
+                            <label>
+                                <span>数量</span>
+                                <input id="compensationLimitInput" name="limit" type="number" min="1" max="100" value="20" required>
+                            </label>
+                        </div>
+                        <button class="primary-button" type="submit">执行补偿</button>
+                    </form>
+                    <form id="retryNotificationForm" class="audit-form" data-admin-only>
+                        <div class="compact-grid">
+                            <label>
+                                <span>通知 ID</span>
+                                <input id="retryNotificationIdInput" name="notificationId" type="number" min="1">
+                            </label>
+                            <label>
+                                <span>数量</span>
+                                <input id="retryNotificationLimitInput" name="limit" type="number" min="1" max="100" value="20" required>
+                            </label>
+                        </div>
+                        <button class="secondary-button" type="submit">重试通知</button>
+                    </form>
+                    <pre id="opsActionResult" class="response-viewer compact-viewer"></pre>
+                </section>
             </div>
         </section>
 
@@ -524,7 +692,7 @@
             </div>
             <dl class="endpoint-list" id="endpointList"></dl>
             <div class="console-head">
-                <span id="statusBadge" class="status-badge">等待请求</span>
+                <span id="statusBadge" class="status-badge" data-status-badge>等待请求</span>
                 <button id="contextButton" class="text-button" type="button">刷新当前用户</button>
                 <button id="notFoundButton" class="text-button" type="button">验证 404</button>
             </div>
