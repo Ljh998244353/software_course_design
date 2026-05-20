@@ -21,7 +21,27 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
 pkg_check_modules(MYSQLCLIENT REQUIRED IMPORTED_TARGET mysqlclient)
 find_package(OpenSSL REQUIRED)
-find_library(CRYPT_LIBRARY crypt REQUIRED)
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles([=[
+#include <crypt.h>
+int main() {
+    crypt_data data{};
+    data.initialized = 0;
+    return crypt_r("password", "$6$salt$", &data) == nullptr;
+}
+]=] AUCTION_CRYPT_IN_LIBC)
+
+if(AUCTION_CRYPT_IN_LIBC)
+    set(CRYPT_LIBRARY "")
+else()
+    find_library(
+        CRYPT_LIBRARY
+        NAMES crypt libcrypt.so.1
+        PATHS /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu
+        REQUIRED
+    )
+endif()
 
 # Ubuntu 24.04's packaged Drogon still ships a FindMySQL.cmake that only looks
 # for mysqlclient_r/mariadbclient. Preseed the cache with the actual

@@ -9,7 +9,7 @@ if [[ ! -f "${ROOT_DIR}/config/app.local.json" ]]; then
     echo "config/app.local.json not found, fallback to config/app.example.json"
 fi
 
-cmake -S "${ROOT_DIR}" -B "${ROOT_DIR}/build"
+cmake -S "${ROOT_DIR}" -B "${ROOT_DIR}/build" -DCMAKE_CXX_COMPILER="${CXX:-/usr/bin/c++}"
 cmake --build "${ROOT_DIR}/build"
 
 echo "bootstrap completed"
