@@ -2,7 +2,7 @@
 
 ## 1. 定位
 
-本文档是 `/home/ljh/project/soft_course_design` 在后端 `v1.0` 基线之后的前端落地计划，用于指导 `frontend/` 下的 Next.js 14 多页面前端工程建设。
+本文档是 `/home/ljh/project/soft_course_design` 在后端 `v1.0` 基线之后的前端落地计划，用于指导 `frontend/` 下的 Next.js 多页面前端工程建设。
 
 本阶段目标不是立刻补齐全部 Drogon HTTP 控制器，而是先完成一个能直接看到前端效果、能本地运行、能展示完整 UI/UX 方向的富客户端骨架，然后再逐步切换到真实后端接口。
 
@@ -17,12 +17,14 @@
 
 ## 3. 技术栈
 
-- 工程骨架：Next.js 14 App Router
+- 工程骨架：Next.js 16 App Router
+- UI 运行时：React 19
 - 语言：TypeScript
 - 样式：Tailwind CSS 3.4+
 - 动画：Framer Motion
 - 服务端状态：`@tanstack/react-query`
 - 包管理：npm
+- Node.js 要求：`>=20.9.0`
 - 默认目录：`frontend/`
 - 后端 API 基线：C++20 + Drogon + MySQL，当前后端 `v1.0` 主要具备服务层和文档契约，真实 HTTP 控制器需要后续逐步接入。
 
@@ -154,7 +156,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 ### 7.2 模式定义
 
-- `mock`：默认，所有页面使用 `frontend/lib/api/mockAdapter.ts`，确保不依赖尚未补齐的 HTTP 控制器即可看到完整前端效果。
+- `mock`：默认，所有页面通过 `frontend/lib/api/client.ts` 调用 `frontend/lib/api/mock-data.ts` 中的 typed mock 数据，确保不依赖尚未补齐的 HTTP 控制器即可看到完整前端效果。
 - `live`：调用真实后端文档契约接口；如果后端返回 404/网络错误，应显示“API route not ready”。
 
 ### 7.3 首批对齐接口
@@ -192,6 +194,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - 已创建 `frontend/package.json`、`next.config.mjs`、`tsconfig.json`、`tailwind.config.ts`、`postcss.config.mjs` 和 `.env.example`。
 - 已创建 `frontend/app/layout.tsx`、`frontend/app/providers.tsx`、`frontend/app/globals.css`，接入 React Query Provider 和浅色工业级设计系统。
 - 已创建 `frontend/lib/api/client.ts`、`mock-data.ts`、`types/auction.ts`，默认 Mock 模式可运行，live 模式保留真实接口调用入口。
+- 后续已按安全修复要求升级到 Next.js `16.2.6`、React `19.2.6` 和对应 React 19 类型包；生产构建脚本固定为 `next build --webpack`，规避当前 WSL2/Codex 沙箱下 Turbopack 进程/端口限制。
 
 ### F16-1：7 个物理页面视觉骨架
 
@@ -252,7 +255,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 ### F16-4：前端文档与本地演示验证
 
-状态：进行中。
+状态：已完成。
 
 目标：补齐前端 README、API readiness、设计系统说明和本地运行记录。
 
@@ -263,11 +266,32 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - `docs/schedule.md` 已同步当前前端进度和 handoff。
 - 本地能通过 `npm install`、`npm run typecheck`、`npm run build`。
 
-实际进展：
+实际完成：
 
-- 已完成本地 `npm install`、`npm run typecheck`、`npm run build`。
-- 暂未创建 `frontend/README.md` 和 `frontend/API_READINESS.md`，因为当前仓库约束要求除非明确需要，不主动新增 Markdown 文档；后续若继续 F16-4，可在用户确认后补齐这两个前端文档。
-- `npm audit` 当前剩余 1 个 moderate 和 1 个 high，来源为 Next.js 14 依赖链；可用修复版本要求升级到 Next 16，已暂不跨主版本升级。
+- 已创建 `frontend/README.md`，覆盖安装、运行、构建、mock/live 模式切换、页面路由和目录结构说明。
+- 已创建 `frontend/API_READINESS.md`，记录 12 个接口接入矩阵、后端控制器缺口和 F17 建议接入顺序。
+- `docs/schedule.md` 已同步 F16 全部完成状态和 handoff。
+- `npm run typecheck` 与 `npm run build` 通过，8 个 App Router 页面全部生成。
+
+### F16-5：Next 16 安全升级与构建验证
+
+状态：已完成。
+
+目标：按用户要求把前端升级到 Next.js 16，清理 Next.js 14 依赖链的 high 风险，并同步验证与记录。
+
+实际完成：
+
+- 已升级 `next` 到 `^16.2.6`、`react`/`react-dom` 到 `^19.2.6`、`@types/react`/`@types/react-dom` 到 React 19 对应版本。
+- 已更新 `frontend/package-lock.json`，并保留 Mock/live API 策略不变。
+- 已将 `npm run build` 固定为 `next build --webpack`；Next.js 16 默认 Turbopack 在当前 WSL2/Codex 沙箱中会因创建进程/绑定端口受限失败，webpack 构建路径通过验证。
+- 已在 `next.config.mjs` 设置 `outputFileTracingRoot` 为 `frontend/`，避免 Next.js 16 因上级目录 lockfile 误判 workspace root。
+- Next.js 16 会生成 `.next/types`，`npm run typecheck` 已改为 `next typegen && tsc --noEmit`，可在 fresh clone 没有 `.next` 的状态下独立执行。
+
+验证结果：
+
+- 无 `.next` 状态下 `npm run typecheck` 通过，先生成 route types 再执行 `tsc --noEmit`。
+- `npm run build` 通过，Next.js `16.2.6 (webpack)` 生成 8 个 App Router 页面，其中 7 个为计划内业务页面。
+- `npm audit --json` 执行成功，high/critical 为 0，剩余 2 个 moderate，来源为 Next.js `16.2.6` 内部依赖 `postcss 8.4.31` 的 advisory；当前 npm 给出的 force fix 会降级到异常的 Next `9.3.3`，不采用。
 
 ### F17：真实后端 HTTP 控制器逐步接入
 
@@ -351,23 +375,23 @@ ctest --test-dir build --output-on-failure
 
 ## 11. 当前 Handoff
 
-- Step ID: F16-0 到 F16-3
-- 当前状态: 已完成；F16-4 进行中
-- 已完成: 创建 `frontend/` Next.js 14 工程、Tailwind 设计系统、React Query Provider、Mock API、7 个物理页面、竞价详情核心状态机、发布/支付/管理 Mock 交互闭环。
+- Step ID: F16（含 F16-0 到 F16-5）
+- 当前状态: 已完成
+- 已完成: 创建 `frontend/` Next.js 工程、Tailwind 设计系统、React Query Provider、Mock API、7 个物理页面、竞价详情核心状态机、发布/支付/管理 Mock 交互闭环、前端 README/API_READINESS，并升级到 Next.js 16 与 React 19。
 - 修改文件: `frontend/`、`.gitignore`、`docs/frontend-next-schedule.md`、`docs/schedule.md`。
 - 验证命令:
   - `cd frontend && npm install`
+  - `cd frontend && npm install next@^16 react@^19 react-dom@^19 @types/react@^19 @types/react-dom@^19`
   - `cd frontend && npm run typecheck`
   - `cd frontend && npm run build`
   - `cd frontend && npm audit --json`
 - 验证结果:
-  - `npm install` 通过，并生成 `package-lock.json`
+  - Next.js 已升级到 `16.2.6`，React 已升级到 `19.2.6`
   - `npm run typecheck` 通过
-  - `npm run build` 通过，生成 8 个 App Router 页面，其中 7 个为计划内业务页面
-  - `npm audit --json` 剩余 1 个 moderate 和 1 个 high，修复需要升级到 Next 16，当前暂不跨主版本升级
+  - `npm run build` 通过，使用 webpack 构建生成 8 个 App Router 页面，其中 7 个为计划内业务页面
+  - `npm audit --json` 剩余 2 个 moderate，high/critical 为 0
 - 未覆盖风险:
-  - 尚未创建 `frontend/README.md` 和 `frontend/API_READINESS.md`
-  - 尚未启动 `npm run dev` 做浏览器截图或人工视觉验收
   - 尚未接入真实 Drogon HTTP 控制器和 WebSocket
-- 下一步: 继续 F16-4，补前端 README/API readiness，启动本地 dev server 做页面走查；之后进入 F17 按接口优先级接入真实后端。
-- 下一步必须先读: `docs/schedule.md`、`docs/frontend-next-schedule.md`、`frontend/`、`docs/接口联调记录.md`。
+  - `npm audit` 剩余 2 个 moderate，等待 Next.js 后续补丁释放可用修复版本
+- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。
+- 下一步必须先读: `docs/schedule.md`、`docs/frontend-next-schedule.md`、`frontend/API_READINESS.md`、`docs/接口联调记录.md`。
