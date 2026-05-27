@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gavel, Loader2, ShieldCheck } from "lucide-react";
 import { login } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 
@@ -13,13 +14,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState("Buyer@123");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
+  const { refresh } = useAuth();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    await login(username);
-    setToast("Mock 登录成功，正在进入拍卖大厅");
-    setTimeout(() => router.push("/auction/hall"), 650);
+    try {
+      const result = await login(username, password);
+      await refresh();
+      setToast(`登录成功，欢迎 ${result.user_info.nickname}`);
+      setTimeout(() => router.push("/auction/hall"), 650);
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "登录失败");
+      setLoading(false);
+    }
   }
 
   return (

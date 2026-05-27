@@ -1,5 +1,12 @@
 import { mockAuctions, mockBids, mockOrder, mockReviewItems } from "@/lib/api/mock-data";
-import type { AdminReviewItem, AuctionItem, BidRecord, OrderSummary } from "@/types/auction";
+import type {
+  AdminReviewItem,
+  AuctionItem,
+  BidRecord,
+  LoginResponse,
+  OrderSummary,
+  UserProfile,
+} from "@/types/auction";
 
 type ApiMode = "mock" | "live";
 
@@ -9,13 +16,53 @@ function apiMode(): ApiMode {
   return process.env.NEXT_PUBLIC_API_MODE === "live" ? "live" : "mock";
 }
 
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("auth_token");
+}
+
+function storeToken(token: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("auth_token", token);
+  }
+}
+
+function clearToken() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("auth_token");
+  }
+}
+
 async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:18080";
-  const response = await fetch(`${baseUrl}${path}`, init);
-  if (!response.ok) {
-    throw new Error(response.status === 404 ? "API route not ready" : `HTTP ${response.status}`);
+  const headers: Record<string, string> = {
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+  const token = getStoredToken();
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
-  return response.json() as Promise<T>;
+  const response = await fetch(`${baseUrl}${path}`, { ...init, headers });
+  const json = (await response.json().catch(() => null)) as {
+    code?: number;
+    message?: string;
+    data?: T;
+  } | null;
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearToken();
+    }
+    throw new Error(
+      json?.message || (response.status === 404 ? "API route not ready" : `HTTP ${response.status}`)
+    );
+  }
+  if (!json || typeof json.code !== "number") {
+    throw new Error("invalid API response");
+  }
+  if (json.code !== 0) {
+    throw new Error(json.message || `API error ${json.code}`);
+  }
+  return json.data as T;
 }
 
 export async function getAuctions(): Promise<AuctionItem[]> {
@@ -47,7 +94,7 @@ export async function placeBid(auctionId: string, amount: number): Promise<BidRe
     return liveFetch<BidRecord>(`/api/auctions/${auctionId}/bids`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, idempotencyKey: crypto.randomUUID() })
+      body: JSON.stringify({ amount, idempotencyKey: crypto.randomUUID() }),
     });
   }
 
@@ -65,20 +112,58 @@ export async function placeBid(auctionId: string, amount: number): Promise<BidRe
     bidder: "buyer_demo",
     amount,
     createdAt: new Date().toISOString(),
-    status: "SUCCESS"
+    status: "SUCCESS",
   };
 }
 
-export async function login(username: string) {
+export async function login(username: string, password?: string): Promise<LoginResponse> {
   if (apiMode() === "live") {
-    return liveFetch<{ token: string; username: string }>("/api/auth/login", {
+    const result = await liveFetch<LoginResponse>("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password: "mock" })
+      body: JSON.stringify({ username, password: password ?? "" }),
     });
+    storeToken(result.token);
+    return result;
   }
   await delay(480);
-  return { token: "mock-token", username };
+  const result = {
+    token: "mock-token",
+    expire_at: new Date(Date.now() + 3600_000).toISOString(),
+    user_info: {
+      user_id: 1,
+      username,
+      nickname: username,
+      role_code: "USER",
+      status: "ACTIVE",
+    },
+  };
+  storeToken(result.token);
+  return result;
+}
+
+export async function getMe(): Promise<UserProfile> {
+  if (apiMode() === "live") {
+    return liveFetch<UserProfile>("/api/auth/me");
+  }
+  await delay(100);
+  return {
+    user_id: 1,
+    username: "buyer_demo",
+    nickname: "买家演示",
+    role_code: "USER",
+    status: "ACTIVE",
+  };
+}
+
+export async function logout(): Promise<void> {
+  if (apiMode() === "live") {
+    await liveFetch<{ message: string }>("/api/auth/logout", { method: "POST" });
+    clearToken();
+    return;
+  }
+  await delay(100);
+  clearToken();
 }
 
 export async function getOrder(orderId: string): Promise<OrderSummary> {

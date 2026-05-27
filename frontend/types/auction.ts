@@ -50,3 +50,17 @@ export type AdminReviewItem = {
   submittedAt: string;
   price: number;
 };
+
+export type UserProfile = {
+  user_id: number;
+  username: string;
+  nickname: string;
+  role_code: string;
+  status: string;
+};
+
+export type LoginResponse = {
+  token: string;
+  expire_at: string;
+  user_info: UserProfile;
+};

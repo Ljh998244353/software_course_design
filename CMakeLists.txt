@@ -76,6 +76,7 @@ else()
 endif()
 
 set(AUCTION_CORE_SOURCES
+    src/access/http/auth_http.cpp
     src/access/http/health_http.cpp
     src/application/database_health_service.cpp
     src/application/health_service.cpp

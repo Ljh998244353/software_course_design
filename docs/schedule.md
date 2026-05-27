@@ -53,7 +53,7 @@
 
 当前最优先的实际下一步是：
 
-- `F17`：在已完成 F16 前端视觉和 Mock 交互闭环后，按页面优先级逐步接入真实 Drogon HTTP 与 WebSocket 接口。
+- `F17`：在已完成 F16 前端视觉和 Mock 交互闭环后，按页面优先级逐步接入真实 Drogon HTTP 与 WebSocket 接口。Auth 已接入，下一步 Auction list/detail。
 
 详细前端设计要求、页面拆分、Mock/live API 策略和阶段计划见 [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)。
 
@@ -78,7 +78,7 @@
 | S14 | 完成高风险专项测试 | 需要主链路代码和测试基线 | 执行并发出价、拍卖结束竞争、支付回调幂等、Redis 降级、通知失败、安全负向测试 | 高风险链路均有验证结果和问题闭环 | `tests/stress/`、`tests/integration/`、`tests/security/` | `docs/测试报告.md` | 已完成 | 已落地 `auction_high_risk_flow` 与 `auction_security_negative`，覆盖并发、结束竞争、支付幂等、缓存降级、通知失败重试和安全负向；同时修复出价金额三位小数校验缺陷 |
 | S15 | 完成部署、演示与答辩交付 | 需要联调与专项测试完成 | 补齐部署脚本、初始化流程、演示数据、演示账号、答辩脚本与最终交付说明 | 系统可在目标环境复现并完成完整演示 | `scripts/deploy/`、`config/`、`sql/demo_data.sql` | `docs/部署与答辩说明.md` | 已完成 | 已落地演示初始化、服务启动、答辩提纲和最终发布验证脚本；最终回归 15/15 通过 |
 | F16 | 落地 Next.js 前端可视化骨架和 Mock 交互闭环 | 后端 v1.0 服务层、接口文档、部署脚本已完成；真实 HTTP 控制器尚未批量接入 | 新建 `frontend/`，实现 Next.js、TypeScript、Tailwind、Framer Motion、React Query、7 个物理页面、Mock API、设计系统、竞价回滚和降级 UI | 首页和 7 个页面可本地看到效果；Mock 模式跑通核心交互；`npm run typecheck` 与 `npm run build` 通过；同步前端文档 | `frontend/` | `docs/frontend-next-schedule.md`、`docs/schedule.md` | 已完成 | F16-0 到 F16-5 全部完成：`frontend/`、7 个页面、Mock API、竞价回滚/限流/降级、发布/支付/管理交互、README/API_READINESS 和 Next 16/React 19 安全升级已落地，`npm run typecheck` 与 `npm run build` 通过 |
-| F17 | 逐步接入真实 Drogon HTTP 与 WebSocket 接口 | F16 可视化和 Mock 闭环完成后开始 | 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序替换 Mock 调用并补后端控制器/验证 | 每组 API live 模式可跑通；Mock 模式保留；前后端验证和 API readiness 文档同步 | `frontend/`、`src/access/http/`、`src/ws/`、`tests/http/` | `docs/frontend-next-schedule.md`、对应模块说明、`docs/接口联调记录.md` | 未开始 | 不在 F16 前置实现；避免因后端控制器缺口阻塞前端视觉落地 |
+| F17 | 逐步接入真实 Drogon HTTP 与 WebSocket 接口 | F16 可视化和 Mock 闭环完成后开始 | 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序替换 Mock 调用并补后端控制器/验证 | 每组 API live 模式可跑通；Mock 模式保留；前后端验证和 API readiness 文档同步 | `frontend/`、`src/access/http/`、`src/ws/`、`tests/http/` | `docs/frontend-next-schedule.md`、对应模块说明、`docs/接口联调记录.md` | 进行中 | Auth 已接入；下一步 Auction list/detail |
 
 ## 6. 当前分配原则
 
@@ -135,6 +135,7 @@
 | 2026-05-27 | PROGRESS-SYNC | 已完成 | 修正 F16 进度口径不一致：新会话固定恢复文本已更新为 `F17 未开始`，`F16-SCHEDULE` 代码位置已从待创建改为实际 `frontend/`，前端 Mock 文件名已对齐实际 `client.ts` 和 `mock-data.ts`；同时已强化 `cpp-auction-course-design` skill，要求每次实现、验证、handoff 或前端 readiness 状态变化都同步统一进度文件 | [frontend](/home/ljh/project/soft_course_design/frontend) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)、[frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
 | 2026-05-27 | F16-4 | 已完成 | 已补齐 `frontend/README.md`（安装/运行/构建/mock+live 模式说明）和 `frontend/API_READINESS.md`（12 个接口接入矩阵、后端控制器缺口、F17 接入顺序）；`npm run typecheck` 与 `npm run build` 通过，8 个 App Router 页面全部生成 | [README.md](/home/ljh/project/soft_course_design/frontend/README.md)、[API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
 | 2026-05-27 | F16-5 | 已完成 | 按用户要求升级前端到 Next.js `16.2.6`、React `19.2.6` 和 React 19 类型包；`npm run build` 固定为 `next build --webpack`，`npm run typecheck` 改为 `next typegen && tsc --noEmit`，并在 `next.config.mjs` 设置 `outputFileTracingRoot`；无 `.next` 状态下 `npm run typecheck` 与随后 `npm run build` 均通过；`npm audit --json` high/critical 为 0，剩余 2 个 moderate（Next 16 内部 postcss advisory，当前 npm force fix 会降级到 Next 9.3.3，不采用） | [package.json](/home/ljh/project/soft_course_design/frontend/package.json)、[next.config.mjs](/home/ljh/project/soft_course_design/frontend/next.config.mjs)、[package-lock.json](/home/ljh/project/soft_course_design/frontend/package-lock.json) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Auth | 已完成 | 已创建 Auth HTTP 控制器（`src/access/http/auth_http.h/.cpp`），注册 `/api/auth/register`、`/api/auth/login`、`/api/auth/logout`、`/api/auth/me` 四个路由；已接入 `application_bootstrap.cpp` 启动流程，创建 `InMemoryAuthSessionStore`、`AuthService`、`AuthMiddleware` 实例并注册路由；已补齐 Auth HTTP 本地 CORS/OPTIONS；已更新前端 `client.ts` 支持 password 参数、mock/live token 存储、`getMe()`、`logout()` 和后端错误 message 透传；已更新登录页传递 password 并处理错误；`cmake --build build`、非数据库冒烟 CTest、前端 `npm run typecheck` 与 `npm run build` 通过；当前本机全量 `ctest --test-dir build --output-on-failure` 在数据库用例启动临时 MySQL 时失败，错误日志为 `Unable to lock ./ibdata1 error: 11`，需清理或重建 `build/test_mysql` 后重跑数据库套件 | [auth_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auth_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
 
@@ -341,7 +342,7 @@
 9. 若执行 F16/F17，读取 `frontend/` 目录；若执行后端验证，读取 scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
 
 当前正在做：F17 真实后端 HTTP 控制器逐步接入
-当前状态：S00-S15 已完成；F16 已完成（含 F16-0 到 F16-5）；F17 未开始
+当前状态：S00-S15 已完成；F16 已完成（含 F16-0 到 F16-5）；F17 进行中，Auth 已接入，下一步 Auction list/detail
 
 本次若需要继续：
 - 先读取 `docs/frontend-next-schedule.md` 和 `frontend/API_READINESS.md`，按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端

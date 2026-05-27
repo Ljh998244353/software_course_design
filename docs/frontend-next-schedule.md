@@ -295,13 +295,28 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 ### F17：真实后端 HTTP 控制器逐步接入
 
-状态：未开始。
+状态：进行中。
 
 目标：按页面优先级逐步把 Mock API 替换为真实 Drogon HTTP 接口。
 
 建议顺序：
 
-1. Auth：`POST /api/auth/login`、`GET /api/auth/me`。
+1. Auth：`POST /api/auth/login`、`GET /api/auth/me`。 ✅ 已完成
+
+#### F17-Auth 实际完成
+
+- 已创建 `src/access/http/auth_http.h` 和 `src/access/http/auth_http.cpp`，注册 4 个路由：
+  - `POST /api/auth/register` - 用户注册
+  - `POST /api/auth/login` - 用户登录
+  - `POST /api/auth/logout` - 用户登出（需 Bearer Token）
+  - `GET /api/auth/me` - 获取当前用户（需 Bearer Token）
+- 已更新 `src/common/runtime/application_bootstrap.cpp`，创建 `InMemoryAuthSessionStore`、`AuthService`、`AuthMiddleware` 实例并注册路由
+- 已更新 `CMakeLists.txt` 添加 `src/access/http/auth_http.cpp`
+- 已更新 `frontend/lib/api/client.ts`：`login()` 增加 `password` 参数，新增 `getMe()` 和 `logout()`，mock/live 模式均自动管理 token 存储，live 错误优先展示后端统一响应 message
+- Auth HTTP 响应已补齐本地前端 live 模式所需 CORS 响应头和 `OPTIONS` 预检处理
+- 已更新 `frontend/app/auth/login/page.tsx`：传递 password 并处理登录错误
+- 已更新 `frontend/types/auction.ts`：新增 `UserProfile` 和 `LoginResponse` 类型
+- 验证：`cmake --build build`、非数据库冒烟 CTest、前端 `npm run typecheck` 与 `npm run build` 通过；当前本机全量 `ctest --test-dir build --output-on-failure` 在数据库用例启动临时 MySQL 时失败，错误日志为 `Unable to lock ./ibdata1 error: 11`，需清理或重建 `build/test_mysql` 后重跑数据库套件
 2. Auction list/detail：`GET /api/auctions`、`GET /api/auctions/{id}`。
 3. Bid：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/bids`。
 4. Publish：`POST /api/items`、图片元数据、提交审核。

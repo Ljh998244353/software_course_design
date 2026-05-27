@@ -6,8 +6,8 @@
 
 | 接口 | 方法 | 前端使用处 | Mock 状态 | Live 状态 | 后端控制器 |
 |---|---|---|---|---|---|
-| `/api/auth/login` | POST | `/auth/login` | 已实现 | 待接入 | 待创建 |
-| `/api/auth/me` | GET | 全局会话恢复 | 未实现 | 待接入 | 待创建 |
+| `/api/auth/login` | POST | `/auth/login` | 已实现 | 已接入 | `src/access/http/auth_http.cpp` |
+| `/api/auth/me` | GET | 全局会话恢复 | 已实现 | 已接入 | `src/access/http/auth_http.cpp` |
 | `/api/auctions` | GET | `/`、`/auction/hall` | 已实现 | 待接入 | 待创建 |
 | `/api/auctions/{id}` | GET | `/auction/detail/[id]` | 已实现 | 待接入 | 待创建 |
 | `/api/auctions/{id}/bids` | GET | 出价历史墙 | 已实现 | 待接入 | 待创建 |
@@ -23,11 +23,11 @@
 
 当前后端 v1.0 具备完整的服务层（`src/modules/`）和仓储层，但 Drogon HTTP 控制器尚未批量接入。以下控制器需要在 F17 阶段逐步补齐：
 
-### Auth 控制器
-- `POST /api/auth/login` - 用户登录
-- `GET /api/auth/me` - 获取当前用户信息
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/logout` - 用户登出
+### Auth 控制器（已接入）
+- `POST /api/auth/login` - 用户登录 ✅
+- `GET /api/auth/me` - 获取当前用户信息 ✅
+- `POST /api/auth/register` - 用户注册 ✅
+- `POST /api/auth/logout` - 用户登出 ✅
 
 ### Auction 控制器
 - `GET /api/auctions` - 拍卖列表（支持筛选）
@@ -68,6 +68,6 @@
 
 ## 当前状态
 
-- **Mock 模式**: 完整可用，7 个页面均可通过 mock 数据正常交互
-- **Live 模式**: 所有接口返回 "API route not ready"，等待 F17 接入后端控制器
+- **Mock 模式**: 完整可用，7 个页面均可通过 mock 数据正常交互；登录态会写入本地 token，导航会话恢复可用
+- **Live 模式**: Auth 登录、会话恢复、登出和注册已接入真实 Drogon 控制器，并支持本地前端跨端口 CORS/OPTIONS；Auction、Bid、Publish、Checkout、Admin 和 WebSocket 仍等待 F17 后续接入
 - **WebSocket**: 前端已有降级 UI（Amber 横幅 + 轮询），等待 F17 接入真实通道
