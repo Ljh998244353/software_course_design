@@ -2,4 +2,6 @@ build/
 logs/
 data/
 config/app.local.json
-
+frontend/.next/
+frontend/node_modules/
+frontend/tsconfig.tsbuildinfo

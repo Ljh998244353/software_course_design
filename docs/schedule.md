@@ -53,7 +53,10 @@
 
 当前最优先的实际下一步是：
 
-- 无新的计划内开发步骤；若继续扩展，优先从真实 HTTP 控制器批量接入或前端页面联调开始。
+- `F16-4`：在已落地可运行前端骨架后，补齐前端 README/API readiness 与本地浏览器走查记录。
+- `F17`：在前端视觉和交互闭环稳定后，再按页面优先级逐步接入真实 Drogon HTTP 与 WebSocket 接口。
+
+详细前端设计要求、页面拆分、Mock/live API 策略和阶段计划见 [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)。
 
 ## 5. Step-by-Step Schedule
 
@@ -75,6 +78,8 @@
 | S13 | 落地自动化测试基线 | 需要已有可运行工程 | 统一 CTest、断言式测试二进制、单元测试、模块测试、集成/契约测试入口、基础测试脚本和执行方式 | 测试框架可运行，核心模块都有最小自动化覆盖，且可按分层/模块统一执行 | `tests/`、`CMakeLists.txt`、`scripts/` | `docs/测试计划与用例说明.md` | 已完成 | 已统一 `CTest + test_*.sh + 断言式测试二进制` 基线，新增 suite/module 标签、MySQL 资源锁和 `scripts/test.sh` 分组入口；当前接口契约测试继续复用 `tests/integration/`，不额外创建空骨架 |
 | S14 | 完成高风险专项测试 | 需要主链路代码和测试基线 | 执行并发出价、拍卖结束竞争、支付回调幂等、Redis 降级、通知失败、安全负向测试 | 高风险链路均有验证结果和问题闭环 | `tests/stress/`、`tests/integration/`、`tests/security/` | `docs/测试报告.md` | 已完成 | 已落地 `auction_high_risk_flow` 与 `auction_security_negative`，覆盖并发、结束竞争、支付幂等、缓存降级、通知失败重试和安全负向；同时修复出价金额三位小数校验缺陷 |
 | S15 | 完成部署、演示与答辩交付 | 需要联调与专项测试完成 | 补齐部署脚本、初始化流程、演示数据、演示账号、答辩脚本与最终交付说明 | 系统可在目标环境复现并完成完整演示 | `scripts/deploy/`、`config/`、`sql/demo_data.sql` | `docs/部署与答辩说明.md` | 已完成 | 已落地演示初始化、服务启动、答辩提纲和最终发布验证脚本；最终回归 15/15 通过 |
+| F16 | 落地 Next.js 前端可视化骨架和 Mock 交互闭环 | 后端 v1.0 服务层、接口文档、部署脚本已完成；真实 HTTP 控制器尚未批量接入 | 新建 `frontend/`，实现 Next.js 14、TypeScript、Tailwind、Framer Motion、React Query、7 个物理页面、Mock API、设计系统、竞价回滚和降级 UI | 首页和 7 个页面可本地看到效果；Mock 模式跑通核心交互；`npm run typecheck` 与 `npm run build` 通过；同步前端文档 | `frontend/` | `docs/frontend-next-schedule.md`、`docs/schedule.md` | 进行中 | F16-0 到 F16-3 已完成：`frontend/`、7 个页面、Mock API、竞价回滚/限流/降级、发布/支付/管理交互已落地，`npm run typecheck` 与 `npm run build` 通过；F16-4 仍需前端 README/API readiness 和浏览器走查 |
+| F17 | 逐步接入真实 Drogon HTTP 与 WebSocket 接口 | F16 可视化和 Mock 闭环完成后开始 | 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序替换 Mock 调用并补后端控制器/验证 | 每组 API live 模式可跑通；Mock 模式保留；前后端验证和 API readiness 文档同步 | `frontend/`、`src/access/http/`、`src/ws/`、`tests/http/` | `docs/frontend-next-schedule.md`、对应模块说明、`docs/接口联调记录.md` | 未开始 | 不在 F16 前置实现；避免因后端控制器缺口阻塞前端视觉落地 |
 
 ## 6. 当前分配原则
 
@@ -125,6 +130,9 @@
 | 2026-04-29 | S15 | 已完成 | 已新增 `scripts/deploy/` 部署演示脚本、`sql/demo_data.sql` 演示数据和 `docs/部署与答辩说明.md`；已调整 `config/nginx.conf` 为非特权演示端口 `18081` 并代理应用端口 `18080`；已同步环境配置说明和最终交付口径 | [init_demo_env.sh](/home/ljh/project/soft_course_design/scripts/deploy/init_demo_env.sh) | [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md) |
 | 2026-04-29 | S15-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/deploy/init_demo_env.sh`、`scripts/deploy/verify_release.sh`，并启动 `scripts/deploy/run_demo_server.sh` 后访问 `curl http://127.0.0.1:18080/healthz`；演示库 `auction_demo` schema/seed 检查通过，高风险专项 2/2 通过，全量 `ctest` 15/15 通过，健康检查返回 `status=ok` | [verify_release.sh](/home/ljh/project/soft_course_design/scripts/deploy/verify_release.sh) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F16-SCHEDULE | 已完成 | 新增 Next.js 前端落地 schedule，明确先完成可见前端效果和 Mock 交互闭环，再逐步接入真实后端；详细归档浅色工业级 UI/UX、7 个物理页面、竞价回滚、WebSocket 降级和限流设计要求 | 待创建 `frontend/` | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F16-0~F16-3 | 已完成 | 已创建 Next.js 14 前端工程、Tailwind 设计系统、React Query Provider、Mock API、7 个物理页面、竞价详情核心状态机、发布/支付/管理 Mock 交互闭环；`npm run typecheck` 与 `npm run build` 通过 | [frontend](/home/ljh/project/soft_course_design/frontend) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F16-VERIFY | 已完成 | 顺序执行 `cd frontend && npm install`、`npm run typecheck`、`npm run build`、`npm audit --json`；构建通过，`npm audit` 剩余 1 个 moderate 和 1 个 high，修复需升级到 Next 16，当前暂不跨主版本升级 | [package.json](/home/ljh/project/soft_course_design/frontend/package.json) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
 
@@ -143,102 +151,96 @@
 ## 模块 Handoff
 
 ### 1. 基本信息
-- Step ID: S15
-- 模块名称: 部署、演示与答辩交付
-- 当前状态: 已完成
-- 对应文档: `docs/部署与答辩说明.md`
-- 对应代码目录: `scripts/deploy/` `config/` `sql/`
-- 已有可复用基础目录: `scripts/` `config/` `sql/` `tests/` `build/`
+- Step ID: F16-0 到 F16-3
+- 模块名称: Next.js 前端可视化骨架与 Mock 交互闭环
+- 当前状态: 已完成；F16-4 进行中
+- 对应文档: `docs/frontend-next-schedule.md`
+- 对应代码目录: `frontend/`
+- 已有可复用基础目录: `frontend/app/` `frontend/components/` `frontend/lib/` `frontend/types/`
 
 ### 2. 本次实际完成
 - 已完成功能:
-  - 已新增 `scripts/deploy/init_demo_env.sh`，统一执行构建、用户态 MySQL 初始化、演示配置生成、演示图片占位、演示数据导入、`--check-config` 和 `--check-db`
-  - 已新增 `scripts/deploy/run_demo_server.sh`，使用 `build/demo_config/app.demo.json` 启动演示服务
-  - 已新增 `scripts/deploy/show_demo_walkthrough.sh`，输出答辩展示顺序、演示账号和高风险说明
-  - 已新增 `scripts/deploy/verify_release.sh`，串联演示初始化、高风险专项和全量 CTest
-  - 已新增 `sql/demo_data.sql`，提供可重复导入的演示账号、拍品、拍卖、出价、订单、支付、评价、通知、任务日志、操作日志和统计日报
-  - 已调整 `config/nginx.conf`，本地演示入口改为非特权端口 `18081`，代理应用端口 `18080`，并补齐 WebSocket 代理头
-  - 已新增 `docs/部署与答辩说明.md`，并同步更新 `docs/环境配置说明.md` 和本文档
+  - 已创建 `frontend/` Next.js 14 + TypeScript + Tailwind 前端工程，不改 C++ CMake 构建链
+  - 已接入 React Query Provider、全局浅色工业级设计系统、Skeleton、Toast、导航和降级横幅
+  - 已实现 `/`、`/auth/login`、`/auction/hall`、`/auction/detail/[id]`、`/auction/publish`、`/checkout/[orderId]`、`/admin/dashboard` 七个 App Router 物理页面
+  - 已实现 Mock API adapter，覆盖拍卖列表、拍卖详情、出价历史、出价提交、登录、订单支付、管理审核数据
+  - 已实现竞价详情核心状态机：pending 出价行、成功刷新、`409 Conflict` 回滚、Shake、Toast、`429` 冷却遮罩和实时通道降级提示
+  - 已实现发布向导草稿保存、UUID 幂等令牌、支付方式选择与成功态、管理员审核抽屉和 Mock 审核行移除
+  - 已更新 `.gitignore`，排除 `frontend/node_modules/`、`frontend/.next/` 和 `frontend/tsconfig.tsbuildinfo`
 - 实际修改文件:
-  - [init_demo_env.sh](/home/ljh/project/soft_course_design/scripts/deploy/init_demo_env.sh)
-  - [run_demo_server.sh](/home/ljh/project/soft_course_design/scripts/deploy/run_demo_server.sh)
-  - [show_demo_walkthrough.sh](/home/ljh/project/soft_course_design/scripts/deploy/show_demo_walkthrough.sh)
-  - [verify_release.sh](/home/ljh/project/soft_course_design/scripts/deploy/verify_release.sh)
-  - [demo_data.sql](/home/ljh/project/soft_course_design/sql/demo_data.sql)
-  - [nginx.conf](/home/ljh/project/soft_course_design/config/nginx.conf)
-  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
-  - [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md)
+  - [frontend/package.json](/home/ljh/project/soft_course_design/frontend/package.json)
+  - [frontend/app/page.tsx](/home/ljh/project/soft_course_design/frontend/app/page.tsx)
+  - [frontend/app/auction/detail/[id]/page.tsx](/home/ljh/project/soft_course_design/frontend/app/auction/detail/[id]/page.tsx)
+  - [frontend/lib/api/client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)
+  - [frontend/lib/api/mock-data.ts](/home/ljh/project/soft_course_design/frontend/lib/api/mock-data.ts)
+  - [.gitignore](/home/ljh/project/soft_course_design/.gitignore)
+  - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 未完成功能:
-  - 无计划内未完成功能
+  - F16-4 尚未创建 `frontend/README.md` 与 `frontend/API_READINESS.md`
+  - 尚未启动 `npm run dev` 做浏览器视觉走查或截图验收
 - 明确不在本步处理的内容:
   - Drogon 控制器批量接入
-  - 真实前端页面开发
-  - 真实 200 并发在线性能压测
+  - 真实 WebSocket 接入
+  - 真实 HTTP live 模式联调
 
 ### 3. 关键设计决定
-- 决定 1: S15 继续复用 `scripts/bootstrap.sh`、`scripts/db/setup_local_mysql.sh`、`sql/schema.sql`、`sql/seed.sql` 和 `scripts/test.sh`
-- 原因: 现有构建、数据库和测试基线已经稳定，最终交付应降低额外环境差异
+- 决定 1: F16 默认使用 `NEXT_PUBLIC_API_MODE=mock`
+- 原因: 当前后端 v1.0 主要具备服务层和文档契约，真实 Drogon HTTP 控制器尚未批量接入，不能阻塞前端视觉闭环
 - 影响范围:
-  - 演示环境和测试环境共用同一套 schema、seed 和用户态 MySQL 启动方式
-  - 最终回归继续使用 CTest 标签体系，不引入新测试框架
+  - 前端可独立运行和构建
+  - live 模式入口保留在 `frontend/lib/api/client.ts`，后续 F17 逐步替换 Mock
 
-- 决定 2: 演示数据库默认使用独立库名 `auction_demo`
-- 原因: 避免演示数据污染自动化测试默认库 `auction_system`
+- 决定 2: 竞价详情先用短轮询和显式降级横幅模拟实时通道
+- 原因: 真实 `/ws/auction/{id}` 仍待 F17 接入，前端必须先表达断连和价格不新鲜的安全状态
 - 影响范围:
-  - `init_demo_env.sh` 通过 `AUCTION_DEMO_DB_NAME` 可切换演示库
-  - `verify_release.sh` 可先初始化演示库，再运行测试库回归
+  - 大厅使用 5 秒短轮询思想
+  - 详情页保留 WebSocket 降级 UI，不把前端乐观价格当作权威事实
 
-- 决定 3: Nginx 模板使用 `18081` 作为本地演示入口
-- 原因: 避免监听 80 端口触发 sudo 需求，符合本仓库非 sudo 操作约束
+- 决定 3: Next.js 版本保持 14 系列并升级到 `14.2.35`
+- 原因: `docs/frontend-next-schedule.md` 指定 Next.js 14；安装时 `14.2.18` 报 critical 漏洞，升级到 14 系列最新补丁后 critical 消除
 - 影响范围:
-  - 应用仍监听 `127.0.0.1:18080`
-  - Nginx 只作为可选反向代理模板，不影响应用直接启动和健康检查
+  - `npm audit` 仍剩余 high/moderate，完全修复需升到 Next 16，留待用户确认是否跨主版本升级
 
 ### 4. 验证结果
 - 执行命令:
-  - `cmake -S . -B build`
-  - `cmake --build build`
-  - `scripts/deploy/init_demo_env.sh`
-  - `scripts/deploy/verify_release.sh`
-  - `scripts/deploy/run_demo_server.sh`
-  - `curl http://127.0.0.1:18080/healthz`
-  - `ctest --test-dir build --output-on-failure`
+  - `cd frontend && npm install`
+  - `cd frontend && npm install next@14.2.35`
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm audit --json`
 - 结果:
-  - CMake 配置成功，Drogon 已被检测到，HTTP 服务目标启用
-  - 演示库 `auction_demo` 初始化成功，schema 表数 15/15，seed 检查通过
-  - `scripts/test.sh risk` 为 2/2 通过
-  - 全量 `ctest` 为 15/15 通过
-  - `/healthz` 返回 `code=0`、`status=ok`、`drogonEnabled=true`
+  - 依赖安装成功并生成 `frontend/package-lock.json`
+  - `npm run typecheck` 通过
+  - `npm run build` 通过，Next 生成 8 个 App Router 页面，其中 7 个为计划内业务页面
+  - `npm audit --json` 剩余 1 个 moderate 和 1 个 high，修复建议为升级 Next 16
 - 未执行的测试:
-  - 200 并发在线性能测试
+  - 后端 CTest
+  - 浏览器截图或 Playwright 视觉检查
 - 原因:
-  - 真实 200 并发在线压测超出课程设计当前自动化回归范围
+  - 本次未修改后端代码
+  - 当前 F16-4 浏览器走查尚未执行
 
 ### 5. 当前风险/阻塞
-- 风险 1: 真实 HTTP 控制器仍未批量接入，当前契约测试仍是服务层映射验证
-- 风险 2: 当前 Redis 仍为可替换旁路能力，高风险验证使用进程内缓存失败注入
-- 风险 3: 若用户态 MySQL 残留进程占用 `build/test_mysql/data/ibdata1`，初始化脚本会因 InnoDB 锁失败而中断
+- 风险 1: 真实 HTTP 控制器仍未批量接入，live 模式页面会遇到 `API route not ready`
+- 风险 2: `npm audit` 剩余 Next.js 14 依赖链 high/moderate 漏洞，完全修复需跨主版本升级到 Next 16
+- 风险 3: 当前视觉只通过构建验证，尚未进行浏览器截图和移动端视口走查
 - 阻塞项:
   - 无
 - 需要注意的坑:
-  - 若测试脚本卡住，优先检查 `build/test_mysql/data/ibdata1` 是否被残留 `mysqld` 占用
-  - 在 Codex 沙箱中运行依赖本地 MySQL 的入口时，可能需要沙箱外权限
-  - `scripts/deploy/run_demo_server.sh` 会长驻占用 `127.0.0.1:18080`，验证后需停止进程
+  - 在 Codex 沙箱中执行 `npm install` 可能因网络受限超时，需要沙箱外权限
+  - `node_modules/` 和 `.next/` 已加入 `.gitignore`，不要提交依赖和构建产物
+  - F16-4 若要严格完成，需要用户确认是否允许新增 `frontend/README.md` 和 `frontend/API_READINESS.md`
 
 ### 6. 下一步
-- 下一步 Step ID: 无计划内步骤
-- 下一步目标: 若继续扩展，建议优先补真实 HTTP 控制器批量接入或前端页面联调
+- 下一步 Step ID: F16-4
+- 下一步目标: 补齐前端 README/API readiness、本地 `npm run dev` 浏览器走查记录；之后进入 F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
-  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
-  - [测试报告.md](/home/ljh/project/soft_course_design/docs/测试报告.md)
-  - [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md)
+  - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
+  - [frontend](/home/ljh/project/soft_course_design/frontend)
   - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
-  - [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md)
-  - [scripts/deploy](/home/ljh/project/soft_course_design/scripts/deploy)
-  - [demo_data.sql](/home/ljh/project/soft_course_design/sql/demo_data.sql)
-  - [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt)
+  - [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md)
 
 ## 10. 模块 Handoff 模板
 
@@ -316,21 +318,24 @@
 
 请先读取并对齐以下内容后再继续：
 1. docs/schedule.md
-2. docs/部署与答辩说明.md
-3. docs/环境配置说明.md
-4. docs/测试报告.md
-5. docs/测试计划与用例说明.md
-6. docs/接口联调记录.md
-7. docs/系统概要设计报告.md
-8. 对应代码目录 scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
+2. docs/frontend-next-schedule.md
+3. docs/部署与答辩说明.md
+4. docs/环境配置说明.md
+5. docs/测试报告.md
+6. docs/测试计划与用例说明.md
+7. docs/接口联调记录.md
+8. docs/系统概要设计报告.md
+9. 若执行 F16/F17，读取未来 `frontend/` 目录；若执行后端验证，读取 scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
 
-当前正在做：无计划内步骤
-当前状态：S00-S15 已完成
+当前正在做：F16 Next.js 前端可视化骨架准备阶段
+当前状态：S00-S15 已完成；F16/F17 已规划但尚未开始代码落地
 
 本次若需要继续：
-- 先确认用户指定的新目标，不要默认新增功能
+- 先读取 `docs/frontend-next-schedule.md`，严格按其中记录的浅色工业级 UI/UX、7 个物理页面、Mock/live API 策略和阶段计划执行
+- F16 必须先完成能本地看到效果的 Next.js 前端页面和 Mock 交互闭环，不要等待真实 HTTP 控制器全部补齐
+- F17 才逐步接入真实 Drogon HTTP 与 WebSocket 接口，且必须保留 Mock 模式
 - 若只是交付或答辩复现，优先使用 `scripts/deploy/init_demo_env.sh`、`scripts/deploy/run_demo_server.sh`、`scripts/deploy/show_demo_walkthrough.sh` 和 `scripts/deploy/verify_release.sh`
-- 若继续开发，建议优先补真实 HTTP 控制器批量接入或前端页面联调，并同步更新对应文档和 `docs/schedule.md`
+- 每完成一个前端阶段，都同步更新 `docs/frontend-next-schedule.md`、`docs/schedule.md` 和必要的 API readiness/测试记录
 
 注意约束：
 - 以实际代码落地为准，不以仅写文档算完成
