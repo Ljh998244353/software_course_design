@@ -2,12 +2,23 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { CheckCircle2, ImagePlus, Save, Send, UploadCloud } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Save, Send, UploadCloud } from "lucide-react";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
+import { addItemImage, createItem, submitItemForReview } from "@/lib/api/client";
 
 const steps = ["描述拍品", "上传实拍", "制定竞价契约", "检查并上架"];
+const draftStorageKey = "auction-publish-draft";
+
+type PublishDraft = {
+  title?: string;
+  description?: string;
+  price?: string;
+  images?: string[];
+  createdItemId?: string;
+  addedImageUrls?: string[];
+};
 
 export default function PublishPage() {
   const [step, setStep] = useState(0);
@@ -16,24 +27,36 @@ export default function PublishPage() {
   const [price, setPrice] = useState("300");
   const [images, setImages] = useState<string[]>([]);
   const [toast, setToast] = useState("");
+  const [toastTone, setToastTone] = useState<"success" | "danger">("success");
   const [idempotencyKey, setIdempotencyKey] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [createdItemId, setCreatedItemId] = useState<string | null>(null);
+  const [addedImageUrls, setAddedImageUrls] = useState<string[]>([]);
+  const [submittedItemId, setSubmittedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setIdempotencyKey(crypto.randomUUID());
-    const saved = localStorage.getItem("auction-publish-draft");
+    const saved = localStorage.getItem(draftStorageKey);
     if (saved) {
-      const draft = JSON.parse(saved) as { title?: string; description?: string; price?: string; images?: string[] };
+      const draft = JSON.parse(saved) as PublishDraft;
       setTitle(draft.title ?? "");
       setDescription(draft.description ?? "");
       setPrice(draft.price ?? "300");
       setImages(draft.images ?? []);
+      setCreatedItemId(draft.createdItemId ?? null);
+      setAddedImageUrls(draft.addedImageUrls ?? []);
     }
   }, []);
 
-  function saveDraft(next?: Partial<{ title: string; description: string; price: string; images: string[] }>) {
-    const payload = { title, description, price, images, ...next };
-    localStorage.setItem("auction-publish-draft", JSON.stringify(payload));
+  function saveDraft(next?: Partial<PublishDraft>) {
+    const payload = { title, description, price, images, createdItemId, addedImageUrls, ...next };
+    localStorage.setItem(draftStorageKey, JSON.stringify(payload));
     setToast("草稿已自动保存");
+  }
+
+  function rememberCreatedItem(itemId: string) {
+    setCreatedItemId(itemId);
+    saveDraft({ createdItemId: itemId });
   }
 
   function addImage(event: ChangeEvent<HTMLInputElement>) {
@@ -46,19 +69,68 @@ export default function PublishPage() {
     saveDraft({ images: next });
   }
 
-  function submit() {
-    setToast(`Mock 提交成功，幂等令牌 ${idempotencyKey.slice(0, 8)} 已随请求发送`);
+  async function submit() {
+    if (submitting) return;
+    setSubmitting(true);
+    setToast("");
+    try {
+      if (images.length === 0) {
+        throw new Error("请至少填写一张图片 URL 后再提交审核");
+      }
+
+      let itemId = createdItemId;
+      if (!itemId) {
+        const created = await createItem({
+          title,
+          description,
+          category_id: 1,
+          start_price: parseFloat(price) || 0,
+          cover_image_url: images[0] ?? "",
+        });
+        itemId = String(created.item_id);
+        rememberCreatedItem(itemId);
+      }
+
+      let nextAddedImageUrls = [...addedImageUrls];
+      for (const [index, image] of images.entries()) {
+        if (nextAddedImageUrls.includes(image)) {
+          continue;
+        }
+        await addItemImage(itemId, {
+          image_url: image,
+          sort_no: index + 1,
+          is_cover: index === 0,
+        });
+        nextAddedImageUrls = [...nextAddedImageUrls, image];
+        setAddedImageUrls(nextAddedImageUrls);
+        saveDraft({ createdItemId: itemId, addedImageUrls: nextAddedImageUrls });
+      }
+
+      const reviewed = await submitItemForReview(itemId);
+      setSubmittedItemId(String(reviewed.item_id));
+      setToast(`提交成功，拍品 #${reviewed.item_id} 已进入审核队列`);
+      setToastTone("success");
+      localStorage.removeItem(draftStorageKey);
+      setCreatedItemId(null);
+      setAddedImageUrls([]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "提交失败";
+      setToast(message);
+      setToastTone("danger");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <>
       <SiteNav />
-      <Toast message={toast} tone="success" />
+      <Toast message={toast} tone={toastTone} />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 rounded-lg border border-slate-200 bg-white p-6 shadow-card">
           <p className="text-sm font-bold text-indigo-600">PUBLISH WIZARD</p>
           <h1 className="mt-1 text-3xl font-black text-slate-950">拍品发布</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">首轮使用图片 URL 和 Mock 提交，保留后端 `POST /api/items` 接入点。</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">首轮使用图片 URL 提交，系统会保存草稿、图片元数据并进入审核队列。</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -146,7 +218,9 @@ export default function PublishPage() {
                 ))}
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
                   <CheckCircle2 className="h-5 w-5" />
-                  Mock 提交后进入管理员审核队列
+                  {submittedItemId
+                    ? `拍品 #${submittedItemId} 已提交审核`
+                    : "提交后进入管理员审核队列"}
                 </div>
               </div>
             ) : null}
@@ -156,9 +230,9 @@ export default function PublishPage() {
               {step < steps.length - 1 ? (
                 <Button onClick={() => setStep(Math.min(step + 1, steps.length - 1))}>下一步</Button>
               ) : (
-                <Button onClick={submit}>
-                  <Send className="h-4 w-4" />
-                  提交审核
+                <Button onClick={submit} disabled={submitting}>
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {submitting ? "提交中..." : "提交审核"}
                 </Button>
               )}
             </div>

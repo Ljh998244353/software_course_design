@@ -13,7 +13,9 @@
 | `/api/auctions/{id}/bids` | GET | 出价历史墙 | 已实现 | 已接入 | `src/access/http/bid_http.cpp` |
 | `/api/auctions/{id}/bids` | POST | `PLACE BID` | 已实现（含 409/429） | 已接入 | `src/access/http/bid_http.cpp` |
 | `/ws/auction/{id}` | WS | 详情实时价格 | 未实现（轮询降级） | 待接入 | 待创建 |
-| `/api/items` | POST | `/auction/publish` | 已实现 | 待接入 | 待创建 |
+| `/api/items` | POST | `/auction/publish` | 已实现 | 已接入 | `src/access/http/item_http.cpp` |
+| `/api/items/{id}/images` | POST | `/auction/publish` | 已实现 | 已接入 | `src/access/http/item_http.cpp` |
+| `/api/items/{id}/submit-review` | POST | `/auction/publish` | 已实现 | 已接入 | `src/access/http/item_http.cpp` |
 | `/api/orders/{id}` | GET | `/checkout/[orderId]` | 已实现 | 待接入 | 待创建 |
 | `/api/orders/{id}/pay` | POST | `/checkout/[orderId]` | 已实现 | 待接入 | 待创建 |
 | `/api/admin/items/pending` | GET | `/admin/dashboard` | 已实现 | 待接入 | 待创建 |
@@ -38,10 +40,11 @@
 - `GET /api/auctions/{id}/bids` - 出价历史 ✅
 - `POST /api/auctions/{id}/bids` - 提交出价 ✅
 
-### Item 控制器
-- `POST /api/items` - 创建拍品
-- `PUT /api/items/{id}` - 修改拍品
-- `POST /api/items/{id}/submit-review` - 提交审核
+### Item 控制器（已接入）
+- `POST /api/items` - 创建拍品 ✅
+- `PUT /api/items/{id}` - 修改拍品 ✅
+- `POST /api/items/{id}/images` - 写入图片 URL 元数据 ✅
+- `POST /api/items/{id}/submit-review` - 提交审核 ✅
 
 ### Order 控制器
 - `GET /api/orders/{id}` - 订单详情
@@ -69,5 +72,5 @@
 ## 当前状态
 
 - **Mock 模式**: 完整可用，7 个页面均可通过 mock 数据正常交互；登录态会写入本地 token，导航会话恢复可用
-- **Live 模式**: Auth 登录、会话恢复、登出和注册已接入真实 Drogon 控制器；Auction 列表和详情已接入真实 Drogon 控制器；Bid 出价和历史已接入真实 Drogon 控制器；Publish、Checkout、Admin 和 WebSocket 仍等待 F17 后续接入
+- **Live 模式**: Auth 登录、会话恢复、登出和注册已接入真实 Drogon 控制器；Auction 列表和详情已接入真实 Drogon 控制器；Bid 出价和历史已接入真实 Drogon 控制器；Publish（拍品创建、图片元数据、修改、提交审核）已接入真实 Drogon 控制器；Checkout、Admin 和 WebSocket 仍等待 F17 后续接入
 - **WebSocket**: 前端已有降级 UI（Amber 横幅 + 轮询），等待 F17 接入真实通道

@@ -7,9 +7,12 @@ import type {
   BidHistoryEntryRaw,
   BidHistoryResponseRaw,
   BidRecord,
+  CreateItemRaw,
+  ItemImageRaw,
   LoginResponse,
   OrderSummary,
   PlaceBidResultRaw,
+  SubmitReviewRaw,
   UserProfile,
 } from "@/types/auction";
 
@@ -264,4 +267,66 @@ export async function getAdminReviews(): Promise<AdminReviewItem[]> {
   }
   await delay(260);
   return mockReviewItems;
+}
+
+export async function createItem(params: {
+  title: string;
+  description: string;
+  category_id: number;
+  start_price: number;
+  cover_image_url: string;
+}): Promise<CreateItemRaw> {
+  if (apiMode() === "live") {
+    return liveFetch<CreateItemRaw>("/api/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+  await delay(400);
+  return {
+    item_id: Math.floor(Math.random() * 10000) + 100,
+    item_status: "DRAFT",
+    created_at: new Date().toISOString(),
+  };
+}
+
+export async function addItemImage(
+  itemId: string,
+  params: {
+    image_url: string;
+    sort_no?: number;
+    is_cover?: boolean;
+  }
+): Promise<ItemImageRaw> {
+  if (apiMode() === "live") {
+    return liveFetch<ItemImageRaw>(`/api/items/${itemId}/images`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  }
+  await delay(180);
+  return {
+    image_id: Math.floor(Math.random() * 10000) + 100,
+    item_id: Number(itemId),
+    image_url: params.image_url,
+    sort_no: params.sort_no ?? 1,
+    is_cover: params.is_cover ?? false,
+    created_at: new Date().toISOString(),
+  };
+}
+
+export async function submitItemForReview(itemId: string): Promise<SubmitReviewRaw> {
+  if (apiMode() === "live") {
+    return liveFetch<SubmitReviewRaw>(`/api/items/${itemId}/submit-review`, {
+      method: "POST",
+    });
+  }
+  await delay(300);
+  return {
+    item_id: Number(itemId),
+    item_status: "PENDING_AUDIT",
+    submitted_at: new Date().toISOString(),
+  };
 }

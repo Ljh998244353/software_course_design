@@ -109,3 +109,30 @@ export type PlaceBidResultRaw = {
   extended: boolean;
   server_time: string;
 };
+
+export type CreateItemRaw = {
+  item_id: number;
+  item_status: string;
+  created_at: string;
+};
+
+export type UpdateItemRaw = {
+  item_id: number;
+  item_status: string;
+  updated_at: string;
+};
+
+export type SubmitReviewRaw = {
+  item_id: number;
+  item_status: string;
+  submitted_at: string;
+};
+
+export type ItemImageRaw = {
+  image_id: number;
+  item_id: number;
+  image_url: string;
+  sort_no: number;
+  is_cover: boolean;
+  created_at: string;
+};

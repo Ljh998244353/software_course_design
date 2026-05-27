@@ -353,8 +353,31 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - 已同步修复相邻 Auction HTTP 控制器：`src/access/http/auction_http.cpp` 的拍卖详情 `auction_id` 以及列表分页参数同样执行严格数字解析
 - 验证：`git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过
 
+#### F17-Publish 实际完成
+
+- 已创建 `src/access/http/item_http.h` 和 `src/access/http/item_http.cpp`，注册 3 个路由：
+  - `POST /api/items` - 创建草稿拍品（需 Bearer Token，请求体含 `title`、`description`、`category_id`、`start_price`、`cover_image_url`）
+  - `PUT /api/items/{id}` - 修改拍品（需 Bearer Token，请求体字段均可选）
+  - `POST /api/items/{id}/submit-review` - 提交审核（需 Bearer Token）
+- 已更新 `src/common/runtime/application_bootstrap.cpp`，实例化 `ItemService` 并注册路由
+- 已更新 `CMakeLists.txt` 添加 `src/access/http/item_http.cpp`
+- 已更新 `frontend/types/auction.ts`：新增 `CreateItemRaw`、`UpdateItemRaw`、`SubmitReviewRaw` 类型
+- 已更新 `frontend/lib/api/client.ts`：新增 `createItem()` 和 `submitItemForReview()` 函数，mock/live 模式均支持
+- 已更新 `frontend/app/auction/publish/page.tsx`：实现真实 API 提交流程（创建草稿 -> 提交审核）、加载状态和错误 Toast
+- 已更新 `frontend/API_READINESS.md`：标记 Item create/update/submit-review 为已接入
+- 验证：`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过
+
+#### F17-Publish-FIX 实际完成
+
+- 修复 live 发布流程缺陷：`cover_image_url` 只写入拍品主表，不会产生 `item_image` 元数据；而 `SubmitForAudit` 明确要求至少存在一条图片元数据
+- 已在 `src/access/http/item_http.cpp` 新增 `POST /api/items/{id}/images`，复用 `ItemService::AddItemImage` 写入图片 URL 元数据并维护封面
+- 已更新前端 `create -> add images -> submit-review` 提交流程；提交审核失败后复用本地已创建的 `item_id` 和已写入图片 URL，避免重试时重复创建草稿或重复写图
+- 已新增服务层回归断言：仅提供 `cover_image_url` 但未写 `item_image` 时，提交审核必须失败
+- 已同步 `frontend/API_READINESS.md` 与 `docs/物品与审核模块说明.md`
+- 验证：`git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过；`ctest --test-dir build --output-on-failure -R auction_item_flow` 初次因残留测试 MySQL `Unable to lock ./ibdata1 error: 11` 失败，停止残留 `mysqld --datadir=build/test_mysql/data` 进程后重跑通过
+
 3. Bid：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/bids`。 ✅ 已完成
-4. Publish：`POST /api/items`、图片元数据、提交审核。
+4. Publish：`POST /api/items`、图片元数据、提交审核。 ✅ 已完成
 5. Checkout：订单查询、支付发起。
 6. Admin：统计、待审、运维数据。
 7. WebSocket：`/ws/auction/{id}`。
@@ -443,5 +466,5 @@ ctest --test-dir build --output-on-failure
 - 未覆盖风险:
   - 尚未接入真实 Drogon HTTP 控制器和 WebSocket
   - `npm audit` 剩余 2 个 moderate，等待 Next.js 后续补丁释放可用修复版本
-- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。Auth/Auction/Bid 已完成，下一步 Publish。
+- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。Auth/Auction/Bid/Publish 已完成，下一步 Checkout。
 - 下一步必须先读: `docs/schedule.md`、`docs/frontend-next-schedule.md`、`frontend/API_READINESS.md`、`docs/接口联调记录.md`。

@@ -78,7 +78,7 @@
 | S14 | 完成高风险专项测试 | 需要主链路代码和测试基线 | 执行并发出价、拍卖结束竞争、支付回调幂等、Redis 降级、通知失败、安全负向测试 | 高风险链路均有验证结果和问题闭环 | `tests/stress/`、`tests/integration/`、`tests/security/` | `docs/测试报告.md` | 已完成 | 已落地 `auction_high_risk_flow` 与 `auction_security_negative`，覆盖并发、结束竞争、支付幂等、缓存降级、通知失败重试和安全负向；同时修复出价金额三位小数校验缺陷 |
 | S15 | 完成部署、演示与答辩交付 | 需要联调与专项测试完成 | 补齐部署脚本、初始化流程、演示数据、演示账号、答辩脚本与最终交付说明 | 系统可在目标环境复现并完成完整演示 | `scripts/deploy/`、`config/`、`sql/demo_data.sql` | `docs/部署与答辩说明.md` | 已完成 | 已落地演示初始化、服务启动、答辩提纲和最终发布验证脚本；最终回归 15/15 通过 |
 | F16 | 落地 Next.js 前端可视化骨架和 Mock 交互闭环 | 后端 v1.0 服务层、接口文档、部署脚本已完成；真实 HTTP 控制器尚未批量接入 | 新建 `frontend/`，实现 Next.js、TypeScript、Tailwind、Framer Motion、React Query、7 个物理页面、Mock API、设计系统、竞价回滚和降级 UI | 首页和 7 个页面可本地看到效果；Mock 模式跑通核心交互；`npm run typecheck` 与 `npm run build` 通过；同步前端文档 | `frontend/` | `docs/frontend-next-schedule.md`、`docs/schedule.md` | 已完成 | F16-0 到 F16-5 全部完成：`frontend/`、7 个页面、Mock API、竞价回滚/限流/降级、发布/支付/管理交互、README/API_READINESS 和 Next 16/React 19 安全升级已落地，`npm run typecheck` 与 `npm run build` 通过 |
-| F17 | 逐步接入真实 Drogon HTTP 与 WebSocket 接口 | F16 可视化和 Mock 闭环完成后开始 | 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序替换 Mock 调用并补后端控制器/验证 | 每组 API live 模式可跑通；Mock 模式保留；前后端验证和 API readiness 文档同步 | `frontend/`、`src/access/http/`、`src/ws/`、`tests/http/` | `docs/frontend-next-schedule.md`、对应模块说明、`docs/接口联调记录.md` | 进行中 | Auth 已接入；Auction list/detail 已接入；Bid 已接入；下一步 Publish |
+| F17 | 逐步接入真实 Drogon HTTP 与 WebSocket 接口 | F16 可视化和 Mock 闭环完成后开始 | 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序替换 Mock 调用并补后端控制器/验证 | 每组 API live 模式可跑通；Mock 模式保留；前后端验证和 API readiness 文档同步 | `frontend/`、`src/access/http/`、`src/ws/`、`tests/http/` | `docs/frontend-next-schedule.md`、对应模块说明、`docs/接口联调记录.md` | 进行中 | Auth 已接入；Auction list/detail 已接入；Bid 已接入；Publish 已接入；下一步 Checkout |
 
 ## 6. 当前分配原则
 
@@ -140,6 +140,8 @@
 | 2026-05-27 | F17-Auction-FIX | 已完成 | 修复 code review 发现的 Auction live 接入问题：`GET /api/auctions/{id}` 改为显式接收 Drogon 路径参数，避免详情接口误报 `auction id is required`；前端 live 图片增加空值占位和 `/uploads/...` 后端 base URL 归一化，并在 Next 图片配置中允许本地后端图片源；同步修正当前推荐下一步为 Bid；验证通过 `cmake --build build`、`scripts/test.sh smoke`、`cd frontend && npm run typecheck`、`cd frontend && npm run build` | [auction_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auction_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[next.config.mjs](/home/ljh/project/soft_course_design/frontend/next.config.mjs) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-05-27 | F17-Bid | 已完成 | 已创建 Bid HTTP 控制器（`src/access/http/bid_http.h/.cpp`），注册 `GET /api/auctions/{id}/bids`（公开出价历史，支持分页）和 `POST /api/auctions/{id}/bids`（提交出价，需 Bearer Token）两个路由；已更新 `application_bootstrap.cpp` 实例化 `InMemoryAuctionEventGateway`、`NotificationService`、`InMemoryBidCacheStore`、`BidService` 并注册路由；已更新 `CMakeLists.txt` 添加 `bid_http.cpp`；已更新前端 `client.ts`：`getBids` 和 `placeBid` live 模式现正确映射后端 `BidHistoryResponseRaw`/`PlaceBidResultRaw` 响应为前端 `BidRecord` 类型，请求体使用 `request_id`/`bid_amount` 字段；已更新 `frontend/types/auction.ts` 新增 `BidHistoryEntryRaw`、`BidHistoryResponseRaw`、`PlaceBidResultRaw` 类型；已修复 `liveFetch` 错误消息格式以包含 HTTP 状态码，确保详情页 409/429 错误处理在 live 模式下正常工作；已更新 `API_READINESS.md` 标记 Bid list/place 为已接入；`cmake --build build`、`scripts/test.sh smoke`、`npm run typecheck`、`npm run build` 均通过 | [bid_http.cpp](/home/ljh/project/soft_course_design/src/access/http/bid_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 | 2026-05-27 | F17-Bid-FIX | 已完成 | 修复 code review 发现的 HTTP 数字参数解析缺陷：`bid_http.cpp` 的 `auction_id`、`page_no`、`page_size` 以及相邻 `auction_http.cpp` 的拍卖详情 id 和分页参数现在要求整段字符串均为合法数字，避免 `1abc` 被静默解析为 `1`；验证通过 `git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、`cd frontend && npm run typecheck`、`cd frontend && npm run build` | [bid_http.cpp](/home/ljh/project/soft_course_design/src/access/http/bid_http.cpp)、[auction_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auction_http.cpp) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Publish | 已完成 | 已创建 Item HTTP 控制器（`src/access/http/item_http.h/.cpp`），注册 `POST /api/items`（创建草稿拍品，需 Bearer Token）、`PUT /api/items/{id}`（修改拍品，需 Bearer Token）和 `POST /api/items/{id}/submit-review`（提交审核，需 Bearer Token）三个路由；已更新 `application_bootstrap.cpp` 实例化 `ItemService` 并注册路由；已更新 `CMakeLists.txt` 添加 `item_http.cpp`；已更新前端 `client.ts` 新增 `createItem()` 和 `submitItemForReview()` 函数，mock/live 模式均支持；已更新 `frontend/types/auction.ts` 新增 `CreateItemRaw`、`UpdateItemRaw`、`SubmitReviewRaw` 类型；已更新发布页 `/auction/publish` 实现真实 API 提交流程（创建草稿 -> 提交审核）、加载状态和错误处理；已更新 `API_READINESS.md` 标记 Item create/update/submit-review 为已接入；`cmake --build build`、`scripts/test.sh smoke`、`npm run typecheck`、`npm run build` 均通过 | [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[publish/page.tsx](/home/ljh/project/soft_course_design/frontend/app/auction/publish/page.tsx) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Publish-FIX | 已完成 | 修复 code review 发现的 Publish live 闭环缺陷：新增 `POST /api/items/{id}/images` 图片 URL 元数据路由，前端发布页改为创建/复用草稿后先写入图片元数据再提交审核，并在提交失败重试时复用本地 `item_id` 与已写入图片 URL，避免重复创建草稿；新增 `auction_item_flow` 服务层回归断言，确认只有 `cover_image_url` 但无 `item_image` 时不能提交审核；已同步 API readiness、物品模块文档和前端计划；验证通过 `git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、`cd frontend && npm run typecheck`、`cd frontend && npm run build`、`ctest --test-dir build --output-on-failure -R auction_item_flow`；其中 `auction_item_flow` 初次因残留测试 MySQL `Unable to lock ./ibdata1 error: 11` 失败，停止残留 `mysqld --datadir=build/test_mysql/data` 进程后重跑通过 | [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[publish/page.tsx](/home/ljh/project/soft_course_design/frontend/app/auction/publish/page.tsx)、[item_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/item/item_flow_tests.cpp) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)、[frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
 
 ## 8. 后续更新规则
 
@@ -251,15 +253,15 @@
   - F17 开始接入 live 模式时，必须保留 Mock 模式，避免后端控制器缺口阻塞前端演示
 
 ### 6. 下一步
-- 下一步 Step ID: F17-Publish
-- 下一步目标: 接入 Item HTTP 控制器，注册 `POST /api/items`、`PUT /api/items/{id}`、`POST /api/items/{id}/submit-review` 路由，更新前端 live 模式
+- 下一步 Step ID: F17-Checkout
+- 下一步目标: 接入 Order HTTP 控制器，注册 `GET /api/orders/{id}` 和 `POST /api/orders/{id}/pay` 路由，更新前端 live 模式
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
   - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
   - [frontend/API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)
   - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
   - [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md)
-  - `src/modules/item/item_service.h`
+  - `src/modules/order/order_service.h`
 
 ## 10. 模块 Handoff 模板
 
@@ -347,7 +349,7 @@
 9. 若执行 F16/F17，读取 `frontend/` 目录；若执行后端验证，读取 scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
 
 当前正在做：F17 真实后端 HTTP 控制器逐步接入
-当前状态：S00-S15 已完成；F16 已完成（含 F16-0 到 F16-5）；F17 进行中，Auth 已接入，Auction list/detail 已接入，Bid 已接入，下一步 Publish
+当前状态：S00-S15 已完成；F16 已完成（含 F16-0 到 F16-5）；F17 进行中，Auth 已接入，Auction list/detail 已接入，Bid 已接入，Publish 已接入，下一步 Checkout
 
 本次若需要继续：
 - 先读取 `docs/frontend-next-schedule.md` 和 `frontend/API_READINESS.md`，按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端

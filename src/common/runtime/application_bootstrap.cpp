@@ -8,6 +8,7 @@
 #include "access/http/auth_http.h"
 #include "access/http/bid_http.h"
 #include "access/http/health_http.h"
+#include "access/http/item_http.h"
 #include "application/database_health_service.h"
 #include "application/health_service.h"
 #include "common/config/config_loader.h"
@@ -18,6 +19,7 @@
 #include "modules/auth/auth_session_store.h"
 #include "modules/bid/bid_cache_store.h"
 #include "modules/bid/bid_service.h"
+#include "modules/item/item_service.h"
 #include "modules/notification/notification_service.h"
 #include "ws/auction_event_gateway.h"
 
@@ -91,6 +93,9 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
     modules::bid::InMemoryBidCacheStore bid_cache_store;
     modules::bid::BidService bid_service(app_config, kProjectRoot, auth_middleware, notification_service, bid_cache_store);
     access::http::RegisterBidHttpRoutes(bid_service);
+
+    modules::item::ItemService item_service(app_config, kProjectRoot, auth_middleware);
+    access::http::RegisterItemHttpRoutes(item_service);
 
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);
