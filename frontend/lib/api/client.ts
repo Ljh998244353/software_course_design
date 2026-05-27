@@ -4,9 +4,12 @@ import type {
   AuctionDetailRaw,
   AuctionItem,
   AuctionSummaryRaw,
+  BidHistoryEntryRaw,
+  BidHistoryResponseRaw,
   BidRecord,
   LoginResponse,
   OrderSummary,
+  PlaceBidResultRaw,
   UserProfile,
 } from "@/types/auction";
 
@@ -58,6 +61,28 @@ function mapAuctionDetail(raw: AuctionDetailRaw): AuctionItem {
   };
 }
 
+function mapBidHistoryEntry(raw: BidHistoryEntryRaw, auctionId: string): BidRecord {
+  return {
+    id: String(raw.bid_id),
+    auctionId,
+    bidder: raw.bidder_masked,
+    amount: raw.bid_amount,
+    createdAt: raw.bid_time,
+    status: raw.bid_status === "WINNING" ? "SUCCESS" : "OUTBID",
+  };
+}
+
+function mapPlaceBidResult(raw: PlaceBidResultRaw): BidRecord {
+  return {
+    id: String(raw.bid_id),
+    auctionId: String(raw.auction_id),
+    bidder: raw.highest_bidder_masked,
+    amount: raw.bid_amount,
+    createdAt: raw.server_time,
+    status: raw.bid_status === "WINNING" ? "SUCCESS" : "OUTBID",
+  };
+}
+
 function apiMode(): ApiMode {
   return process.env.NEXT_PUBLIC_API_MODE === "live" ? "live" : "mock";
 }
@@ -98,7 +123,9 @@ async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
       clearToken();
     }
     throw new Error(
-      json?.message || (response.status === 404 ? "API route not ready" : `HTTP ${response.status}`)
+      json?.message
+        ? `${response.status} ${json.message}`
+        : (response.status === 404 ? "API route not ready" : `HTTP ${response.status}`)
     );
   }
   if (!json || typeof json.code !== "number") {
@@ -130,7 +157,8 @@ export async function getAuction(id: string): Promise<AuctionItem> {
 
 export async function getBids(auctionId: string): Promise<BidRecord[]> {
   if (apiMode() === "live") {
-    return liveFetch<BidRecord[]>(`/api/auctions/${auctionId}/bids`);
+    const raw = await liveFetch<BidHistoryResponseRaw>(`/api/auctions/${auctionId}/bids`);
+    return raw.records.map((entry) => mapBidHistoryEntry(entry, auctionId));
   }
   await delay(180);
   return mockBids.filter((bid) => bid.auctionId === "AUC-1001" || bid.auctionId === auctionId);
@@ -138,11 +166,12 @@ export async function getBids(auctionId: string): Promise<BidRecord[]> {
 
 export async function placeBid(auctionId: string, amount: number): Promise<BidRecord> {
   if (apiMode() === "live") {
-    return liveFetch<BidRecord>(`/api/auctions/${auctionId}/bids`, {
+    const raw = await liveFetch<PlaceBidResultRaw>(`/api/auctions/${auctionId}/bids`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, idempotencyKey: crypto.randomUUID() }),
+      body: JSON.stringify({ bid_amount: amount, request_id: crypto.randomUUID() }),
     });
+    return mapPlaceBidResult(raw);
   }
 
   await delay(520);

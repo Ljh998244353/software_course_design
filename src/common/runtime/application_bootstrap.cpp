@@ -6,6 +6,7 @@
 
 #include "access/http/auction_http.h"
 #include "access/http/auth_http.h"
+#include "access/http/bid_http.h"
 #include "access/http/health_http.h"
 #include "application/database_health_service.h"
 #include "application/health_service.h"
@@ -15,6 +16,10 @@
 #include "modules/auction/auction_service.h"
 #include "modules/auth/auth_service.h"
 #include "modules/auth/auth_session_store.h"
+#include "modules/bid/bid_cache_store.h"
+#include "modules/bid/bid_service.h"
+#include "modules/notification/notification_service.h"
+#include "ws/auction_event_gateway.h"
 
 #if AUCTION_HAS_DROGON
 #include <drogon/drogon.h>
@@ -80,6 +85,12 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
 
     modules::auction::AuctionService auction_service(app_config, kProjectRoot, auth_middleware);
     access::http::RegisterAuctionHttpRoutes(auction_service);
+
+    ws::InMemoryAuctionEventGateway event_gateway;
+    modules::notification::NotificationService notification_service(app_config, kProjectRoot, event_gateway);
+    modules::bid::InMemoryBidCacheStore bid_cache_store;
+    modules::bid::BidService bid_service(app_config, kProjectRoot, auth_middleware, notification_service, bid_cache_store);
+    access::http::RegisterBidHttpRoutes(bid_service);
 
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);

@@ -83,3 +83,29 @@ export type AuctionDetailRaw = AuctionSummaryRaw & {
   extend_seconds: number;
   highest_bidder_masked: string;
 };
+
+export type BidHistoryEntryRaw = {
+  bid_id: number;
+  bid_amount: number;
+  bid_status: string;
+  bid_time: string;
+  bidder_masked: string;
+};
+
+export type BidHistoryResponseRaw = {
+  records: BidHistoryEntryRaw[];
+  page_no: number;
+  page_size: number;
+};
+
+export type PlaceBidResultRaw = {
+  bid_id: number;
+  auction_id: number;
+  bid_amount: number;
+  bid_status: string;
+  current_price: number;
+  highest_bidder_masked: string;
+  end_time: string;
+  extended: boolean;
+  server_time: string;
+};

@@ -333,7 +333,27 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - 已修复 live 模式拍卖图片地址归一化：空图使用占位图，`/uploads/...` 自动拼接后端 base URL，并允许本地后端图片源
 - 已更新 `frontend/API_READINESS.md`：标记 Auction list/detail 为已接入
 - 验证：`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过
-3. Bid：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/bids`。
+
+#### F17-Bid 实际完成
+
+- 已创建 `src/access/http/bid_http.h` 和 `src/access/http/bid_http.cpp`，注册 2 个路由：
+  - `GET /api/auctions/{id}/bids` - 公开出价历史（支持 page_no、page_size 分页）
+  - `POST /api/auctions/{id}/bids` - 提交出价（需 Bearer Token，请求体含 `request_id` 和 `bid_amount`）
+- 已更新 `src/common/runtime/application_bootstrap.cpp`，实例化 `InMemoryAuctionEventGateway`、`NotificationService`、`InMemoryBidCacheStore`、`BidService` 并注册路由
+- 已更新 `CMakeLists.txt` 添加 `src/access/http/bid_http.cpp`
+- 已更新 `frontend/types/auction.ts`：新增 `BidHistoryEntryRaw`、`BidHistoryResponseRaw`、`PlaceBidResultRaw` 类型
+- 已更新 `frontend/lib/api/client.ts`：新增 `mapBidHistoryEntry` 和 `mapPlaceBidResult` 映射函数；`getBids` live 模式正确解析后端 `{ records, page_no, page_size }` 响应；`placeBid` live 模式发送 `{ request_id, bid_amount }` 请求体并映射 `PlaceBidResult` 响应
+- 已修复 `liveFetch` 错误消息格式：HTTP 状态码前缀（如 `409 ...`），确保详情页 409/429 错误处理在 live 模式下正常工作
+- 已更新 `frontend/API_READINESS.md`：标记 Bid list/place 为已接入
+- 验证：`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过
+
+#### F17-Bid Code Review 修复
+
+- 已修复 HTTP 数字参数解析缺陷：`src/access/http/bid_http.cpp` 的 `auction_id`、`page_no`、`page_size` 现在要求整段字符串均为合法数字，`1abc`、`2xyz` 等畸形输入不再被 `std::stoull/std::stoi` 静默截断接受
+- 已同步修复相邻 Auction HTTP 控制器：`src/access/http/auction_http.cpp` 的拍卖详情 `auction_id` 以及列表分页参数同样执行严格数字解析
+- 验证：`git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过
+
+3. Bid：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/bids`。 ✅ 已完成
 4. Publish：`POST /api/items`、图片元数据、提交审核。
 5. Checkout：订单查询、支付发起。
 6. Admin：统计、待审、运维数据。
@@ -423,5 +443,5 @@ ctest --test-dir build --output-on-failure
 - 未覆盖风险:
   - 尚未接入真实 Drogon HTTP 控制器和 WebSocket
   - `npm audit` 剩余 2 个 moderate，等待 Next.js 后续补丁释放可用修复版本
-- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。
+- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。Auth/Auction/Bid 已完成，下一步 Publish。
 - 下一步必须先读: `docs/schedule.md`、`docs/frontend-next-schedule.md`、`frontend/API_READINESS.md`、`docs/接口联调记录.md`。

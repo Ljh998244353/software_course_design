@@ -62,17 +62,31 @@ void RegisterCorsPreflight(const std::string& path) {
 
 int SafeParseInt(const std::string& value, const std::string& param_name) {
     try {
-        return std::stoi(value);
+        std::size_t parsed = 0;
+        const auto result = std::stoi(value, &parsed);
+        if (parsed != value.size()) {
+            throw std::invalid_argument(param_name + " is not a valid number");
+        }
+        return result;
     } catch (const std::out_of_range&) {
         throw std::invalid_argument(param_name + " out of range");
+    } catch (const std::invalid_argument&) {
+        throw std::invalid_argument(param_name + " is not a valid number");
     }
 }
 
 std::uint64_t SafeParseUint64(const std::string& value, const std::string& param_name) {
     try {
-        return static_cast<std::uint64_t>(std::stoull(value));
+        std::size_t parsed = 0;
+        const auto result = static_cast<std::uint64_t>(std::stoull(value, &parsed));
+        if (parsed != value.size()) {
+            throw std::invalid_argument(param_name + " is not a valid number");
+        }
+        return result;
     } catch (const std::out_of_range&) {
         throw std::invalid_argument(param_name + " out of range");
+    } catch (const std::invalid_argument&) {
+        throw std::invalid_argument(param_name + " is not a valid number");
     }
 }
 
