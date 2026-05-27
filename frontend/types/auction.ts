@@ -1,4 +1,4 @@
-export type AuctionStatus = "PENDING_START" | "RUNNING" | "SETTLING" | "SOLD" | "UNSOLD";
+export type AuctionStatus = "PENDING_START" | "RUNNING" | "SETTLING" | "SOLD" | "UNSOLD" | "CANCELLED";
 
 export type AuctionItem = {
   id: string;
@@ -63,4 +63,23 @@ export type LoginResponse = {
   token: string;
   expire_at: string;
   user_info: UserProfile;
+};
+
+export type AuctionSummaryRaw = {
+  auction_id: number;
+  item_id: number;
+  title: string;
+  cover_image_url: string;
+  status: string;
+  current_price: number;
+  start_time: string;
+  end_time: string;
+};
+
+export type AuctionDetailRaw = AuctionSummaryRaw & {
+  start_price: number;
+  bid_step: number;
+  anti_sniping_window_seconds: number;
+  extend_seconds: number;
+  highest_bidder_masked: string;
 };

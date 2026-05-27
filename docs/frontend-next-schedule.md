@@ -302,6 +302,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 建议顺序：
 
 1. Auth：`POST /api/auth/login`、`GET /api/auth/me`。 ✅ 已完成
+2. Auction list/detail：`GET /api/auctions`、`GET /api/auctions/{id}`。 ✅ 已完成
 
 #### F17-Auth 实际完成
 
@@ -318,6 +319,20 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - 已更新 `frontend/types/auction.ts`：新增 `UserProfile` 和 `LoginResponse` 类型
 - 验证：`cmake --build build`、非数据库冒烟 CTest、前端 `npm run typecheck` 与 `npm run build` 通过；当前本机全量 `ctest --test-dir build --output-on-failure` 在数据库用例启动临时 MySQL 时失败，错误日志为 `Unable to lock ./ibdata1 error: 11`，需清理或重建 `build/test_mysql` 后重跑数据库套件
 2. Auction list/detail：`GET /api/auctions`、`GET /api/auctions/{id}`。
+
+#### F17-Auction 实际完成
+
+- 已创建 `src/access/http/auction_http.h` 和 `src/access/http/auction_http.cpp`，注册 2 个路由：
+  - `GET /api/auctions` - 公开拍卖列表（支持 keyword、status、page_no、page_size 查询参数）
+  - `GET /api/auctions/{id}` - 公开拍卖详情
+- 已更新 `src/common/runtime/application_bootstrap.cpp`，实例化 `AuctionService` 并注册路由
+- 已更新 `CMakeLists.txt` 添加 `src/access/http/auction_http.cpp`
+- 已更新 `frontend/types/auction.ts`：新增 `AuctionSummaryRaw` 和 `AuctionDetailRaw` 类型
+- 已更新 `frontend/lib/api/client.ts`：新增 `mapAuctionSummary` 和 `mapAuctionDetail` 映射函数，live 模式下自动将后端 `PublicAuctionSummary`/`PublicAuctionDetail` 响应转换为前端 `AuctionItem` 类型
+- 已修复 `GET /api/auctions/{id}` Drogon 路径参数绑定问题，详情路由现在显式接收 `{id}` 参数
+- 已修复 live 模式拍卖图片地址归一化：空图使用占位图，`/uploads/...` 自动拼接后端 base URL，并允许本地后端图片源
+- 已更新 `frontend/API_READINESS.md`：标记 Auction list/detail 为已接入
+- 验证：`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过
 3. Bid：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/bids`。
 4. Publish：`POST /api/items`、图片元数据、提交审核。
 5. Checkout：订单查询、支付发起。

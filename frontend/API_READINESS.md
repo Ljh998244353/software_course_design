@@ -8,8 +8,8 @@
 |---|---|---|---|---|---|
 | `/api/auth/login` | POST | `/auth/login` | 已实现 | 已接入 | `src/access/http/auth_http.cpp` |
 | `/api/auth/me` | GET | 全局会话恢复 | 已实现 | 已接入 | `src/access/http/auth_http.cpp` |
-| `/api/auctions` | GET | `/`、`/auction/hall` | 已实现 | 待接入 | 待创建 |
-| `/api/auctions/{id}` | GET | `/auction/detail/[id]` | 已实现 | 待接入 | 待创建 |
+| `/api/auctions` | GET | `/`、`/auction/hall` | 已实现 | 已接入 | `src/access/http/auction_http.cpp` |
+| `/api/auctions/{id}` | GET | `/auction/detail/[id]` | 已实现 | 已接入 | `src/access/http/auction_http.cpp` |
 | `/api/auctions/{id}/bids` | GET | 出价历史墙 | 已实现 | 待接入 | 待创建 |
 | `/api/auctions/{id}/bids` | POST | `PLACE BID` | 已实现（含 409/429） | 待接入 | 待创建 |
 | `/ws/auction/{id}` | WS | 详情实时价格 | 未实现（轮询降级） | 待接入 | 待创建 |
@@ -30,8 +30,8 @@
 - `POST /api/auth/logout` - 用户登出 ✅
 
 ### Auction 控制器
-- `GET /api/auctions` - 拍卖列表（支持筛选）
-- `GET /api/auctions/{id}` - 拍卖详情
+- `GET /api/auctions` - 拍卖列表（支持筛选） ✅
+- `GET /api/auctions/{id}` - 拍卖详情 ✅
 - `POST /api/auctions` - 创建拍卖（管理员）
 
 ### Bid 控制器
@@ -69,5 +69,5 @@
 ## 当前状态
 
 - **Mock 模式**: 完整可用，7 个页面均可通过 mock 数据正常交互；登录态会写入本地 token，导航会话恢复可用
-- **Live 模式**: Auth 登录、会话恢复、登出和注册已接入真实 Drogon 控制器，并支持本地前端跨端口 CORS/OPTIONS；Auction、Bid、Publish、Checkout、Admin 和 WebSocket 仍等待 F17 后续接入
+- **Live 模式**: Auth 登录、会话恢复、登出和注册已接入真实 Drogon 控制器；Auction 列表和详情已接入真实 Drogon 控制器；Bid、Publish、Checkout、Admin 和 WebSocket 仍等待 F17 后续接入
 - **WebSocket**: 前端已有降级 UI（Amber 横幅 + 轮询），等待 F17 接入真实通道

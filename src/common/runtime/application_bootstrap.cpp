@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "access/http/auction_http.h"
 #include "access/http/auth_http.h"
 #include "access/http/health_http.h"
 #include "application/database_health_service.h"
@@ -11,6 +12,7 @@
 #include "common/config/config_loader.h"
 #include "common/logging/logger.h"
 #include "middleware/auth_middleware.h"
+#include "modules/auction/auction_service.h"
 #include "modules/auth/auth_service.h"
 #include "modules/auth/auth_session_store.h"
 
@@ -75,6 +77,9 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
     modules::auth::AuthService auth_service(app_config, kProjectRoot, session_store);
     middleware::AuthMiddleware auth_middleware(auth_service);
     access::http::RegisterAuthHttpRoutes(auth_service, auth_middleware);
+
+    modules::auction::AuctionService auction_service(app_config, kProjectRoot, auth_middleware);
+    access::http::RegisterAuctionHttpRoutes(auction_service);
 
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);

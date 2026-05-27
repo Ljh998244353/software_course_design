@@ -1,7 +1,9 @@
 import { mockAuctions, mockBids, mockOrder, mockReviewItems } from "@/lib/api/mock-data";
 import type {
   AdminReviewItem,
+  AuctionDetailRaw,
   AuctionItem,
+  AuctionSummaryRaw,
   BidRecord,
   LoginResponse,
   OrderSummary,
@@ -11,6 +13,50 @@ import type {
 type ApiMode = "mock" | "live";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const fallbackAuctionImage =
+  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80";
+
+function apiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:18080";
+}
+
+function normalizeAuctionImageUrl(imageUrl: string): string {
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return fallbackAuctionImage;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (trimmed.startsWith("/")) return `${apiBaseUrl()}${trimmed}`;
+  return trimmed;
+}
+
+// Fields not yet provided by the live API are marked with TODO.
+function mapAuctionItem(raw: AuctionSummaryRaw): AuctionItem {
+  return {
+    id: String(raw.auction_id),
+    title: raw.title,
+    category: "", // TODO: not provided by live API
+    imageUrl: normalizeAuctionImageUrl(raw.cover_image_url),
+    currentPrice: raw.current_price,
+    startPrice: 0, // TODO: not provided by list API
+    minIncrement: 0, // TODO: not provided by list API
+    endTime: raw.end_time,
+    status: raw.status as AuctionItem["status"],
+    highestBidder: "", // TODO: not provided by list API
+    seller: { name: "", rating: 0, deals: 0 }, // TODO: not provided by live API
+    watchers: 0, // TODO: not provided by live API
+    location: "", // TODO: not provided by live API
+    tags: [], // TODO: not provided by live API
+    description: "", // TODO: not provided by live API
+  };
+}
+
+function mapAuctionDetail(raw: AuctionDetailRaw): AuctionItem {
+  return {
+    ...mapAuctionItem(raw),
+    startPrice: raw.start_price,
+    minIncrement: raw.bid_step,
+    highestBidder: raw.highest_bidder_masked,
+  };
+}
 
 function apiMode(): ApiMode {
   return process.env.NEXT_PUBLIC_API_MODE === "live" ? "live" : "mock";
@@ -34,7 +80,6 @@ function clearToken() {
 }
 
 async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:18080";
   const headers: Record<string, string> = {
     ...((init?.headers as Record<string, string>) ?? {}),
   };
@@ -42,7 +87,7 @@ async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (token && !headers["Authorization"]) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const response = await fetch(`${baseUrl}${path}`, { ...init, headers });
+  const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers });
   const json = (await response.json().catch(() => null)) as {
     code?: number;
     message?: string;
@@ -67,7 +112,8 @@ async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function getAuctions(): Promise<AuctionItem[]> {
   if (apiMode() === "live") {
-    return liveFetch<AuctionItem[]>("/api/auctions");
+    const raw = await liveFetch<AuctionSummaryRaw[]>("/api/auctions");
+    return raw.map(mapAuctionItem);
   }
   await delay(220);
   return mockAuctions;
@@ -75,7 +121,8 @@ export async function getAuctions(): Promise<AuctionItem[]> {
 
 export async function getAuction(id: string): Promise<AuctionItem> {
   if (apiMode() === "live") {
-    return liveFetch<AuctionItem>(`/api/auctions/${id}`);
+    const raw = await liveFetch<AuctionDetailRaw>(`/api/auctions/${id}`);
+    return mapAuctionDetail(raw);
   }
   await delay(180);
   return mockAuctions.find((auction) => auction.id === id) ?? mockAuctions[0];
