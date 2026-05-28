@@ -2,4 +2,8 @@ build/
 logs/
 data/
 config/app.local.json
+node_modules/
+.next/
+*.tsbuildinfo
+.env.local
 
