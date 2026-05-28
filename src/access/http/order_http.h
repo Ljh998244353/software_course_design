@@ -1,11 +1,13 @@
 #pragma once
 
-#include <memory>
-
-#include "common/http/http_service_context.h"
+#include "modules/order/order_service.h"
+#include "modules/payment/payment_service.h"
 
 namespace auction::access::http {
 
-void RegisterOrderHttpRoutes(std::shared_ptr<common::http::HttpServiceContext> services);
+void RegisterOrderHttpRoutes(
+    modules::order::OrderService& order_service,
+    modules::payment::PaymentService& payment_service
+);
 
 }  // namespace auction::access::http

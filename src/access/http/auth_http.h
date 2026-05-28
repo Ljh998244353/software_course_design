@@ -1,11 +1,13 @@
 #pragma once
 
-#include <memory>
-
-#include "common/http/http_service_context.h"
+#include "middleware/auth_middleware.h"
+#include "modules/auth/auth_service.h"
 
 namespace auction::access::http {
 
-void RegisterAuthHttpRoutes(std::shared_ptr<common::http::HttpServiceContext> services);
+void RegisterAuthHttpRoutes(
+    modules::auth::AuthService& auth_service,
+    middleware::AuthMiddleware& auth_middleware
+);
 
 }  // namespace auction::access::http

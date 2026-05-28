@@ -417,6 +417,38 @@ std::optional<modules::order::OrderRecord> OrderRepository::FindOrderById(
     return ::auction::repository::FindOrderById(connection(), order_id, false);
 }
 
+std::optional<OrderDetailAggregate> OrderRepository::FindOrderAggregateById(
+    const std::uint64_t order_id
+) const {
+    const auto result = ExecuteQuery(
+        connection(),
+        "SELECT o.order_id, o.order_no, o.auction_id, o.buyer_id, o.seller_id, "
+        "CAST(o.final_amount AS CHAR), o.order_status, COALESCE(CAST(o.pay_deadline_at AS CHAR), ''), "
+        "COALESCE(CAST(o.paid_at AS CHAR), ''), COALESCE(CAST(o.shipped_at AS CHAR), ''), "
+        "COALESCE(CAST(o.completed_at AS CHAR), ''), COALESCE(CAST(o.closed_at AS CHAR), ''), "
+        "CAST(o.created_at AS CHAR), CAST(o.updated_at AS CHAR), "
+        "a.auction_id, a.status, i.item_id, i.item_status, i.title "
+        "FROM order_info o "
+        "INNER JOIN auction a ON a.auction_id = o.auction_id "
+        "INNER JOIN item i ON i.item_id = a.item_id "
+        "WHERE o.order_id = " +
+            std::to_string(order_id) + " LIMIT 1"
+    );
+
+    if (MYSQL_ROW row = mysql_fetch_row(result.get()); row != nullptr) {
+        return OrderDetailAggregate{
+            .order = BuildOrderRecord(row, 0),
+            .auction_id = ReadRowUint64(row, 14),
+            .auction_status = ReadRowString(row, 15),
+            .item_id = ReadRowUint64(row, 16),
+            .item_status = ReadRowString(row, 17),
+            .item_title = ReadRowString(row, 18),
+        };
+    }
+
+    return std::nullopt;
+}
+
 std::optional<modules::order::OrderRecord> OrderRepository::FindOrderByIdForUpdate(
     const std::uint64_t order_id
 ) const {

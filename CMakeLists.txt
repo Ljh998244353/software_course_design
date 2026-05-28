@@ -21,27 +21,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
 pkg_check_modules(MYSQLCLIENT REQUIRED IMPORTED_TARGET mysqlclient)
 find_package(OpenSSL REQUIRED)
-include(CheckCXXSourceCompiles)
-
-check_cxx_source_compiles([=[
-#include <crypt.h>
-int main() {
-    crypt_data data{};
-    data.initialized = 0;
-    return crypt_r("password", "$6$salt$", &data) == nullptr;
-}
-]=] AUCTION_CRYPT_IN_LIBC)
-
-if(AUCTION_CRYPT_IN_LIBC)
-    set(CRYPT_LIBRARY "")
-else()
-    find_library(
-        CRYPT_LIBRARY
-        NAMES crypt libcrypt.so.1
-        PATHS /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu
-        REQUIRED
-    )
-endif()
+find_library(CRYPT_LIBRARY crypt REQUIRED)
 
 # Ubuntu 24.04's packaged Drogon still ships a FindMySQL.cmake that only looks
 # for mysqlclient_r/mariadbclient. Preseed the cache with the actual
@@ -96,32 +76,18 @@ else()
 endif()
 
 set(AUCTION_CORE_SOURCES
-    src/access/http/api_error_http.cpp
-    src/access/http/app_http.cpp
+    src/access/http/auction_http.cpp
     src/access/http/auth_http.cpp
-    src/access/http/audit_http.cpp
-    src/access/http/auction_admin_http.cpp
-    src/access/http/auction_public_http.cpp
     src/access/http/bid_http.cpp
-    src/access/http/business_http.cpp
-    src/access/http/demo_http.cpp
     src/access/http/health_http.cpp
     src/access/http/item_http.cpp
-    src/access/http/notification_http.cpp
-    src/access/http/ops_http.cpp
     src/access/http/order_http.cpp
-    src/access/http/payment_http.cpp
-    src/access/http/review_http.cpp
-    src/access/http/statistics_http.cpp
-    src/access/http/system_http.cpp
+    src/access/http/admin_http.cpp
     src/application/database_health_service.cpp
-    src/application/demo_dashboard_service.cpp
     src/application/health_service.cpp
     src/common/config/config_loader.cpp
     src/common/db/mysql_connection.cpp
     src/common/errors/error_code.cpp
-    src/common/http/http_service_context.cpp
-    src/common/http/http_utils.cpp
     src/common/logging/logger.cpp
     src/common/runtime/application_bootstrap.cpp
     src/jobs/auction_scheduler.cpp
@@ -224,12 +190,6 @@ target_link_libraries(auction_high_risk_tests PRIVATE auction_core)
 add_executable(auction_security_negative_tests tests/security/security_negative_tests.cpp)
 target_link_libraries(auction_security_negative_tests PRIVATE auction_core)
 
-add_executable(auction_demo_dashboard_tests tests/demo/demo_dashboard_tests.cpp)
-target_link_libraries(auction_demo_dashboard_tests PRIVATE auction_core)
-
-add_executable(auction_app_ui_acceptance_tests tests/ui/app_page_acceptance_tests.cpp)
-target_link_libraries(auction_app_ui_acceptance_tests PRIVATE auction_core)
-
 if(BUILD_TESTING)
     add_test(NAME auction_smoke_tests COMMAND auction_smoke_tests)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
@@ -246,12 +206,9 @@ if(BUILD_TESTING)
     add_test(NAME auction_ops_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_ops.sh)
     add_test(NAME auction_high_risk_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_high_risk.sh)
     add_test(NAME auction_security_negative COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_security.sh)
-    add_test(NAME auction_demo_dashboard COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_demo_frontend.sh)
-    add_test(NAME auction_http_baseline COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_http.sh)
-    add_test(NAME auction_app_ui_acceptance COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_ui.sh)
 
     set_tests_properties(
-        auction_smoke_tests auction_check_config auction_app_ui_acceptance
+        auction_smoke_tests auction_check_config
         PROPERTIES
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -269,8 +226,6 @@ if(BUILD_TESTING)
         auction_ops_flow
         auction_high_risk_flow
         auction_security_negative
-        auction_demo_dashboard
-        auction_http_baseline
         PROPERTIES
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             RESOURCE_LOCK auction_mysql_test_runtime
@@ -329,19 +284,5 @@ if(BUILD_TESTING)
     set_tests_properties(
         auction_security_negative
         PROPERTIES LABELS "suite_security;suite_risk;module_auth;module_bid;module_auction;module_payment;requires_mysql"
-    )
-    set_tests_properties(
-        auction_demo_dashboard
-        PROPERTIES LABELS "suite_demo;module_frontend;requires_mysql"
-    )
-    set_tests_properties(
-        auction_http_baseline
-        PROPERTIES
-            LABELS "suite_http;suite_contract;requires_mysql"
-            TIMEOUT 600
-    )
-    set_tests_properties(
-        auction_app_ui_acceptance
-        PROPERTIES LABELS "suite_ui;module_frontend"
     )
 endif()

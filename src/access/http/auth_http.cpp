@@ -1,10 +1,8 @@
 #include "access/http/auth_http.h"
 
-#include <cstdint>
-#include <stdexcept>
-#include <string>
-
-#include "common/http/http_utils.h"
+#include "common/errors/error_code.h"
+#include "common/http/api_response.h"
+#include "modules/auth/auth_exception.h"
 
 #if AUCTION_HAS_DROGON
 #include <drogon/drogon.h>
@@ -12,170 +10,241 @@
 
 namespace auction::access::http {
 
-namespace {
-
 #if AUCTION_HAS_DROGON
 
-Json::Value ToUserInfoJson(const modules::auth::UserProfile& profile) {
+namespace {
+
+void AddCorsHeaders(const drogon::HttpResponsePtr& response) {
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response->addHeader("Access-Control-Max-Age", "86400");
+}
+
+drogon::HttpResponsePtr MakeOk(Json::Value data) {
+    auto response = drogon::HttpResponse::newHttpJsonResponse(
+        common::http::ApiResponse::Success(std::move(data)).ToJsonValue()
+    );
+    response->setStatusCode(drogon::k200OK);
+    AddCorsHeaders(response);
+    return response;
+}
+
+drogon::HttpResponsePtr MakeError(
+    common::errors::ErrorCode code,
+    const std::string& message,
+    drogon::HttpStatusCode http_status = drogon::k400BadRequest
+) {
+    auto response = drogon::HttpResponse::newHttpJsonResponse(
+        common::http::ApiResponse::Failure(code, message).ToJsonValue()
+    );
+    response->setStatusCode(http_status);
+    AddCorsHeaders(response);
+    return response;
+}
+
+void RegisterCorsPreflight(const std::string& path) {
+    drogon::app().registerHandler(
+        path,
+        [](const drogon::HttpRequestPtr&,
+           std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            auto response = drogon::HttpResponse::newHttpResponse();
+            response->setStatusCode(drogon::k204NoContent);
+            AddCorsHeaders(response);
+            callback(response);
+        },
+        {drogon::Options}
+    );
+}
+
+Json::Value UserProfileToJson(const modules::auth::UserProfile& user) {
     Json::Value json(Json::objectValue);
-    json["userId"] = static_cast<Json::UInt64>(profile.user_id);
-    json["username"] = profile.username;
-    json["nickname"] = profile.nickname;
-    json["roleCode"] = profile.role_code;
-    json["status"] = profile.status;
+    json["user_id"] = static_cast<Json::UInt64>(user.user_id);
+    json["username"] = user.username;
+    json["nickname"] = user.nickname;
+    json["role_code"] = user.role_code;
+    json["status"] = user.status;
     return json;
 }
-
-Json::Value ToRegisterResultJson(const modules::auth::RegisterUserResult& result) {
-    Json::Value json(Json::objectValue);
-    json["userId"] = static_cast<Json::UInt64>(result.user_id);
-    json["username"] = result.username;
-    json["roleCode"] = result.role_code;
-    json["status"] = result.status;
-    return json;
-}
-
-Json::Value ToAuthContextJson(const modules::auth::AuthContext& context) {
-    Json::Value json(Json::objectValue);
-    json["userId"] = static_cast<Json::UInt64>(context.user_id);
-    json["username"] = context.username;
-    json["nickname"] = context.nickname;
-    json["roleCode"] = context.role_code;
-    json["status"] = context.status;
-    json["tokenExpireAt"] = modules::auth::ToIsoTimestamp(context.expire_at_epoch_seconds);
-    return json;
-}
-
-Json::Value ToChangeUserStatusJson(const modules::auth::ChangeUserStatusResult& result) {
-    Json::Value json(Json::objectValue);
-    json["userId"] = static_cast<Json::UInt64>(result.user_id);
-    json["oldStatus"] = result.old_status;
-    json["newStatus"] = result.new_status;
-    json["updatedAt"] = result.updated_at;
-    return json;
-}
-
-std::string ReadLoginPrincipal(const Json::Value& body) {
-    if (const auto principal = common::http::ReadOptionalString(body, "principal");
-        principal.has_value() && !principal->empty()) {
-        return *principal;
-    }
-    return common::http::ReadRequiredString(body, "username");
-}
-
-std::uint64_t ParseUserId(const std::string& raw_user_id) {
-    std::size_t parsed_length = 0;
-    const auto user_id = std::stoull(raw_user_id, &parsed_length);
-    if (parsed_length != raw_user_id.size() || user_id == 0) {
-        throw std::invalid_argument("user id must be a positive integer");
-    }
-    return user_id;
-}
-
-#endif
 
 }  // namespace
 
-void RegisterAuthHttpRoutes(const std::shared_ptr<common::http::HttpServiceContext> services) {
+#endif
+
+void RegisterAuthHttpRoutes(
+    modules::auth::AuthService& auth_service,
+    middleware::AuthMiddleware& auth_middleware
+) {
 #if AUCTION_HAS_DROGON
+
+    RegisterCorsPreflight("/api/auth/register");
+    RegisterCorsPreflight("/api/auth/login");
+    RegisterCorsPreflight("/api/auth/logout");
+    RegisterCorsPreflight("/api/auth/me");
+
+    // POST /api/auth/register
     drogon::app().registerHandler(
         "/api/auth/register",
-        [services](const drogon::HttpRequestPtr& request,
-                   std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-            callback(common::http::ExecuteApi([&]() {
-                const auto body = common::http::RequireJsonBody(request);
-                const auto result = services->auth_service().RegisterUser(
-                    modules::auth::RegisterUserRequest{
-                        .username = common::http::ReadRequiredString(body, "username"),
-                        .password = common::http::ReadRequiredString(body, "password"),
-                        .phone = common::http::ReadOptionalString(body, "phone").value_or(""),
-                        .email = common::http::ReadOptionalString(body, "email").value_or(""),
-                        .nickname =
-                            common::http::ReadOptionalString(body, "nickname").value_or(""),
-                    }
-                );
-                return common::http::ApiResponse::Success(ToRegisterResultJson(result));
-            }));
+        [&auth_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            const auto body = request->getJsonObject();
+            if (!body) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInvalidArgument,
+                    "request body must be valid JSON"
+                ));
+                return;
+            }
+
+            try {
+                modules::auth::RegisterUserRequest req;
+                req.username = body->get("username", "").asString();
+                req.password = body->get("password", "").asString();
+                req.phone = body->get("phone", "").asString();
+                req.email = body->get("email", "").asString();
+                req.nickname = body->get("nickname", req.username).asString();
+
+                const auto result = auth_service.RegisterUser(req);
+
+                Json::Value data(Json::objectValue);
+                data["user_id"] = static_cast<Json::UInt64>(result.user_id);
+                data["username"] = result.username;
+                data["role_code"] = result.role_code;
+                data["status"] = result.status;
+                callback(MakeOk(std::move(data)));
+            } catch (const modules::auth::AuthException& e) {
+                callback(MakeError(e.code(), e.what()));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
         },
         {drogon::Post}
     );
 
+    // POST /api/auth/login
     drogon::app().registerHandler(
         "/api/auth/login",
-        [services](const drogon::HttpRequestPtr& request,
-                   std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-            callback(common::http::ExecuteApi([&]() {
-                const auto body = common::http::RequireJsonBody(request);
-                const auto result = services->auth_service().Login(modules::auth::LoginRequest{
-                    .principal = ReadLoginPrincipal(body),
-                    .password = common::http::ReadRequiredString(body, "password"),
-                });
+        [&auth_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            const auto body = request->getJsonObject();
+            if (!body) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInvalidArgument,
+                    "request body must be valid JSON"
+                ));
+                return;
+            }
+
+            try {
+                modules::auth::LoginRequest req;
+                req.principal = body->get("username", body->get("principal", "")).asString();
+                req.password = body->get("password", "").asString();
+
+                const auto result = auth_service.Login(req);
 
                 Json::Value data(Json::objectValue);
                 data["token"] = result.token;
-                data["expireAt"] = result.expire_at;
-                data["userInfo"] = ToUserInfoJson(result.user_info);
-                return common::http::ApiResponse::Success(std::move(data));
-            }));
+                data["expire_at"] = result.expire_at;
+                data["user_info"] = UserProfileToJson(result.user_info);
+                callback(MakeOk(std::move(data)));
+            } catch (const modules::auth::AuthException& e) {
+                const auto http_status =
+                    (e.code() == common::errors::ErrorCode::kAuthCredentialInvalid ||
+                     e.code() == common::errors::ErrorCode::kAuthUserFrozen ||
+                     e.code() == common::errors::ErrorCode::kAuthUserDisabled)
+                        ? drogon::k401Unauthorized
+                        : drogon::k400BadRequest;
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
         },
         {drogon::Post}
     );
 
+    // POST /api/auth/logout
     drogon::app().registerHandler(
         "/api/auth/logout",
-        [services](const drogon::HttpRequestPtr& request,
-                   std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-            callback(common::http::ExecuteApi([&]() {
-                const auto context =
-                    common::http::RequireAuthContext(request, services->auth_middleware());
-                services->auth_service().Logout(context.token);
+        [&auth_service, &auth_middleware](const drogon::HttpRequestPtr& request,
+                                          std::function<void(const drogon::HttpResponsePtr&)>&&
+                                              callback) {
+            try {
+                const auto auth_header = request->getHeader("authorization");
+                const auto context = auth_middleware.RequireAuthenticated(auth_header);
+                auth_service.Logout(context.token);
 
                 Json::Value data(Json::objectValue);
-                data["success"] = true;
-                return common::http::ApiResponse::Success(std::move(data));
-            }));
+                data["message"] = "logged out";
+                callback(MakeOk(std::move(data)));
+            } catch (const modules::auth::AuthException& e) {
+                const auto http_status =
+                    (e.code() == common::errors::ErrorCode::kAuthTokenMissing ||
+                     e.code() == common::errors::ErrorCode::kAuthTokenExpired ||
+                     e.code() == common::errors::ErrorCode::kAuthSessionInvalid)
+                        ? drogon::k401Unauthorized
+                        : drogon::k400BadRequest;
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (...) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
         },
         {drogon::Post}
     );
 
+    // GET /api/auth/me
     drogon::app().registerHandler(
         "/api/auth/me",
-        [services](const drogon::HttpRequestPtr& request,
-                   std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-            callback(common::http::ExecuteApi([&]() {
-                const auto context =
-                    common::http::RequireAuthContext(request, services->auth_middleware());
-                return common::http::ApiResponse::Success(ToAuthContextJson(context));
-            }));
+        [&auth_middleware](const drogon::HttpRequestPtr& request,
+                           std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            try {
+                const auto auth_header = request->getHeader("authorization");
+                const auto context = auth_middleware.RequireAuthenticated(auth_header);
+
+                Json::Value data(Json::objectValue);
+                data["user_id"] = static_cast<Json::UInt64>(context.user_id);
+                data["username"] = context.username;
+                data["nickname"] = context.nickname;
+                data["role_code"] = context.role_code;
+                data["status"] = context.status;
+                callback(MakeOk(std::move(data)));
+            } catch (const modules::auth::AuthException& e) {
+                const auto http_status =
+                    (e.code() == common::errors::ErrorCode::kAuthTokenMissing ||
+                     e.code() == common::errors::ErrorCode::kAuthTokenExpired ||
+                     e.code() == common::errors::ErrorCode::kAuthSessionInvalid)
+                        ? drogon::k401Unauthorized
+                        : drogon::k400BadRequest;
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (...) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
         },
         {drogon::Get}
     );
 
-    drogon::app().registerHandler(
-        "/api/admin/users/{1}/status",
-        [services](const drogon::HttpRequestPtr& request,
-                   std::function<void(const drogon::HttpResponsePtr&)>&& callback,
-                   const std::string& raw_user_id) {
-            callback(common::http::ExecuteApi([&]() {
-                const auto context = common::http::RequireAnyRoleContext(
-                    request,
-                    services->auth_middleware(),
-                    {modules::auth::kRoleAdmin}
-                );
-                const auto body = common::http::RequireJsonBody(request);
-                const auto result = services->auth_service().ChangeUserStatus(
-                    context.token,
-                    ParseUserId(raw_user_id),
-                    common::http::ReadRequiredString(body, "status"),
-                    common::http::ReadOptionalString(body, "reason").value_or("")
-                );
-                return common::http::ApiResponse::Success(ToChangeUserStatusJson(result));
-            }));
-        },
-        {drogon::Patch}
-    );
 #else
-    static_cast<void>(services);
+    static_cast<void>(auth_service);
+    static_cast<void>(auth_middleware);
 #endif
 }
 

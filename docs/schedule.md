@@ -2,257 +2,391 @@
 
 ## 1. 文档目的
 
-本文档是 `/home/ljh/project/soft_course_design` 的统一上下文入口，用于让后续 agent 快速确认：
+本文档用于把本项目拆解成可逐步交给 agent 执行的实际开发任务，并作为统一进度记录入口。
 
-- 项目是什么
-- 当前真实进度到哪一步
-- 当前应继续做什么
-- 动手前必须理解哪些业务、架构和验证约束
+本次重写后的核心原则如下：
 
-本文件不再保留完整历史流水账。历史实现细节以代码、模块文档和测试为准；本文件只记录可恢复上下文和下一步执行入口。
+- 进度以实际代码落地为准，不再以“仅补充文档”视为步骤完成。
+- 每一步只有在“代码实现 + 可构建/可运行 + 最小测试或验证 + 文档同步更新”同时满足时，才允许标记为 `已完成`。
+- 仅完成设计文档、接口说明或状态机说明的步骤，统一标记为 `进行中`，不能标记为 `已完成`。
+- 每一步完成后，必须记录实际代码位置和对应文档位置。
+- 状态仅使用：`未开始`、`进行中`、`已完成`、`阻塞`。
 
-## 2. 新会话固定恢复文本
+## 2. 当前真实进度
 
-后续每次进入本项目开始新一轮任务，先读取并遵循下面这段文本：
+截至当前仓库，实际状态如下：
 
-```text
-这是 /home/ljh/project/soft_course_design 项目。
+- 已有需求基线文档：[需求规格说明书.md](/home/ljh/project/soft_course_design/docs/需求规格说明书.md)
+- 已有架构基线文档：[系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md)
+- 已有环境、数据库、认证、物品、拍卖、竞价、订单与支付模块设计文档
+- 已落地 `CMakeLists.txt`、`src/`、`tests/`、`config/`、`scripts/` 等工程骨架
+- 已完成配置加载、日志初始化、统一响应模型、错误码基线和冒烟测试
+- Drogon 当前已可在本机环境中被 CMake 检测到，HTTP 服务目标可启用；当前自动化验证仍以服务层和脚本闭环为主
 
-项目目标：课程设计用在线拍卖平台，浏览器访问，C++ 后端，Drogon HTTP 接入，MySQL 作为交易事实唯一来源，静态前端分为只读答辩演示台 `/demo` 和真实业务前端 `/app`。
+因此，真实进度应认定为：
 
-当前状态：
-- S00-S30 已完成。
-- 当前处于课程设计交付和答辩复现状态。
-- 当前下一步是按需答辩复现、演示或提交材料，不再有计划内新增开发步骤。
+- `S00-S15`：已完成
 
-继续前先读取：
-1. docs/schedule.md
-2. docs/需求规格说明书.md
-3. docs/系统概要设计报告.md
-4. docs/接口联调记录.md
-5. docs/测试计划与用例说明.md
-6. docs/前端演示模块说明.md
-7. 若继续 S30，还必须读取 docs/部署与答辩说明.md、docs/答辩演示操作手册.md、docs/前端演示模块说明.md、docs/测试计划与用例说明.md、scripts/deploy/、config/、sql/demo_data.sql、assets/app/。
+## 3. 步骤完成判定
 
-执行原则：
-- 用户未明确要求时，不默认新增功能。
-- 若只是交付或答辩复现，优先使用 scripts/deploy/init_demo_env.sh、scripts/deploy/run_demo_server.sh、http://127.0.0.1:18080/demo、http://127.0.0.1:18080/app、scripts/deploy/show_demo_walkthrough.sh 和 scripts/deploy/verify_release.sh。
-- 完整前端接入计划 S17-S30 已完成；用户未明确要求时，不新增业务功能。
-- 任一 S17-S30 步骤完成后，同步更新 docs/schedule.md、相关模块文档、测试计划和 handoff。
-- 如果 schedule.md、模块文档和代码现状不一致，优先以代码现状为准，并同步更新文档。
-- 始终用中文回答；任何 sudo 操作必须先询问用户。
-```
+从本次改版起，每一步至少同时满足以下条件，才允许改为 `已完成`：
 
-## 3. 当前进度速览
+1. 已有实际代码、脚本或配置文件提交到仓库。
+2. 已有明确的本地构建或运行方式，并完成最小验证。
+3. 已有与本步对应的测试、冒烟验证或验证记录。
+4. 已同步更新对应模块说明文档或接口说明文档。
+5. `schedule.md` 已记录该步的代码路径、文档路径和进度备注。
 
-项目当前已经具备：
+特别说明：
 
-- CMake 工程骨架、配置加载、日志、错误码、统一响应模型和基础测试。
-- MySQL schema、seed、Repository 基础封装和本地数据库验证脚本。
-- 认证权限、拍品审核、拍卖管理、竞价通知、订单支付、评价、统计、运维异常等服务层模块。
-- 主流程集成测试、高风险专项测试、HTTP 回归脚本、部署演示脚本和答辩演示数据。
-- `/demo` 只读答辩演示台，可从 `auction_demo` 聚合展示完整业务闭环。
-- `/app` 真实业务前端骨架，已接入认证、卖家拍品、管理员审核、管理端拍卖、公开拍卖、真实出价、轮询通知、订单支付、履约、评价、通知中心、用户信用、统计报表和运维异常页面，并完成全站 UX、状态处理和安全前端约束收口。
+- 仅新增 Markdown 文档，不算完成模块开发。
+- 仅创建空目录或空文件，不算完成模块开发。
+- 测试可以先小后大，但不能完全没有验证。
 
-当前真实状态：
+## 4. 当前推荐执行顺序
 
-- `S00-S16`：课程设计原计划内步骤已完成。
-- `S17-S28`：完整前端接入计划的前半段已完成。
-- `S29`：完整前端部署、演示数据和答辩脚本接入已完成。
-- `S30`：完整前端最终回归和 handoff 已完成。
-- 当前下一步：按需进行答辩复现、演示运行或提交材料。
+`S15` 已完成部署、演示与答辩交付；当前工程骨架、数据库基线、认证权限模块、物品审核模块、拍卖管理模块、竞价模块、订单支付模块、评价模块、统计模块、运维异常模块、统一测试基线、高风险专项测试和最终演示脚本均已具备可复用实现。
 
-当前已接入的真实业务 HTTP 范围：
+当前课程设计计划内步骤均已完成：
 
-- 认证与会话：`POST /api/auth/register`、`POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`、`PATCH /api/admin/users/{id}/status`。
-- 系统上下文：`GET /api/system/context`。
-- 卖家拍品：`POST /api/items`、`PUT /api/items/{id}`、`POST /api/items/{id}/images`、`DELETE /api/items/{itemId}/images/{imageId}`、`GET /api/items/mine`、`GET /api/items/{id}`、`POST /api/items/{id}/submit-audit`。
-- 管理员审核与拍卖：`GET /api/admin/items/pending`、`POST /api/admin/items/{id}/audit`、`GET /api/admin/items/{id}/audit-logs`、`POST /api/admin/auctions`、`GET /api/admin/auctions`、`GET /api/admin/auctions/{id}`、`PUT /api/admin/auctions/{id}`、`POST /api/admin/auctions/{id}/cancel`。
-- 公开拍卖：`GET /api/auctions`、`GET /api/auctions/{id}`、`GET /api/auctions/{id}/price`、`GET /api/auctions/{id}/bids`。
-- 竞价与通知轮询：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/my-bid`、`GET /api/notifications`、`PATCH /api/notifications/{id}/read`。
-- 订单支付和履约：`GET /api/orders/mine`、`GET /api/orders/{id}`、`POST /api/orders/{id}/pay`、`GET /api/orders/{id}/payment`、`POST /api/payments/callback`、`POST /api/orders/{id}/ship`、`POST /api/orders/{id}/confirm-receipt`。
-- 评价、通知中心和信用：`POST /api/reviews`、`GET /api/orders/{id}/reviews`、`GET /api/users/{id}/reviews/summary`、`GET /api/notifications`、`PATCH /api/notifications/{id}/read`。
-- 统计报表：`GET /api/admin/statistics/daily`、`POST /api/admin/statistics/daily/rebuild`、`GET /api/admin/statistics/daily/export`。
-- 运维异常：`GET /api/admin/ops/operation-logs`、`GET /api/admin/ops/task-logs`、`GET /api/admin/ops/exceptions`、`POST /api/admin/ops/exceptions/mark`、`POST /api/admin/ops/notifications/retry`、`POST /api/admin/ops/compensations`。
+1. `S00-S15`
 
-仍待收口的真实业务页面范围：
+当前最优先的实际下一步是：
 
-- 无计划内待收口页面；后续只按用户明确要求做缺陷修复或可选增强。
+- `F17`：在已完成 F16 前端视觉和 Mock 交互闭环后，按页面优先级逐步接入真实 Drogon HTTP 与 WebSocket 接口。Auth 已接入，Auction list/detail 已接入，Bid 已接入，Publish 已接入，Checkout 已接入，Admin 已接入，下一步 WebSocket。
 
-最近一次记录的验证来自 S30：
+详细前端设计要求、页面拆分、Mock/live API 策略和阶段计划见 [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)。
 
-- `bash -n scripts/deploy/init_demo_env.sh`
-- `bash -n scripts/deploy/run_demo_server.sh`
-- `bash -n scripts/deploy/show_demo_walkthrough.sh`
-- `bash -n scripts/deploy/verify_release.sh`
-- `bash -n scripts/test_ui.sh`
-- `bash -n scripts/test.sh`
-- `scripts/deploy/verify_release.sh`
-- 结果：脚本语法检查通过；`scripts/deploy/verify_release.sh` 通过，已初始化 `auction_demo`，检查 `/healthz`、`/demo`、`/app`、两套静态资源和 `/api/demo/dashboard`，并串联 `frontend`、`ui`、`http`、`risk` 与全量 `ctest 18/18`。验证前仅处理了一个指向本项目 `build/test_mysql/data` 且 socket 已不可连的残留测试 `mysqld`；沙箱内启动 MySQL socket 被限制后，按权限流程在沙箱外完成最终验证。
+## 5. Step-by-Step Schedule
 
-## 4. 核心业务和架构约束
+| 步骤 ID | 可分配给 agent 的实际目标 | 当前已有基础 | 需要实际完成的代码/脚本 | 完成判定 | 预计代码位置 | 完成后文档位置 | 当前状态 | 进度备注 |
+|---|---|---|---|---|---|---|---|---|
+| S00 | 冻结需求基线，确认角色、业务范围、性能与功能目标 | 已有需求文档 | 无新增代码要求 | 需求边界稳定，可作为后续开发输入 | 无 | [需求规格说明书.md](/home/ljh/project/soft_course_design/docs/需求规格说明书.md) | 已完成 | 这是需求基线步骤，不要求代码 |
+| S01 | 冻结架构基线，确认模块边界、分层、状态机与关键链路 | 已有架构文档 | 无新增代码要求 | 架构边界稳定，可作为实现基线 | 无 | [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md) | 已完成 | 这是架构基线步骤，不要求代码 |
+| S02 | 建立可编译、可启动的工程骨架 | 已有环境配置说明 | 创建 `CMakeLists.txt`、`src/main.cpp`、基础目录结构、配置加载、统一响应模型、错误码基线、日志初始化、最小启动入口 | 本地可完成配置和编译，服务可启动，至少完成一次工程冒烟验证 | `CMakeLists.txt`、`src/`、`config/`、`scripts/`、`tests/` | [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md) | 已完成 | 已落地工程骨架并通过 `cmake`、构建和 `ctest` 验证；当前本机已检测到 Drogon，可启用 HTTP 健康检查入口 |
+| S03 | 落地数据库初始化脚本与持久层基础能力 | 已有数据库设计说明 | 创建建表脚本、索引脚本、种子数据脚本、数据库连接配置、Repository 基础封装、数据库连通验证 | MySQL 可初始化核心表，应用可连库，至少有数据库冒烟验证 | `sql/schema.sql`、`sql/seed.sql`、`src/repository/`、`src/common/db/` | [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md) | 已完成 | 已落地 15 张核心表、基础种子数据、MySQL C API 封装、Repository 基类、`--check-db` 和数据库冒烟测试 |
+| S04 | 实现认证与权限模块代码 | 已有认证与权限模块设计文档 | 实现用户注册登录、密码哈希、Token 鉴权、中间件、RBAC、账号状态校验、认证相关测试 | 用户可注册/登录，受保护接口可鉴权，最小权限测试通过 | `src/modules/auth/`、`src/middleware/`、`tests/auth/` | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) | 已完成 | 已落地 MySQL 用户仓储、`SHA-512 crypt` 密码哈希、HMAC Token、进程内会话存储、鉴权中间件、管理员状态管理和认证自动化测试 |
+| S05 | 实现物品发布与审核模块代码 | 已有物品与审核模块设计文档 | 实现拍品 CRUD、图片元数据管理、提交审核、审核流转、审核日志、最小模块测试 | 卖家可提交拍品，管理员可审核，状态流转和日志落库可验证 | `src/modules/item/`、`src/modules/audit/`、`tests/item/` | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) | 已完成 | 已落地 `ItemService`、`ItemAuditService`、`ItemRepository` 和自动化测试，完成草稿、图片元数据、提交审核、驳回/通过和审核日志闭环 |
+| S06 | 实现拍卖管理模块代码 | 已有拍卖管理模块设计文档 | 实现活动创建、修改、取消、查询、开始调度、结束调度、活动状态切换、最小模块测试 | 管理员可创建活动，系统可按时间切换状态，拍卖和拍品状态协同可验证 | `src/modules/auction/`、`src/jobs/`、`tests/auction/` | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) | 已完成 | 已落地 `AuctionService`、`AuctionRepository`、`AuctionScheduler`、拍卖自动化测试和调度任务日志闭环 |
+| S07 | 实现竞价与实时通知模块代码 | 已有竞价与实时通知模块设计文档 | 实现出价接口、行级锁事务、幂等键、延时保护、竞价历史、Redis 热点缓存、WebSocket 推送、最小并发测试 | 并发出价下最高价一致，延时保护生效，通知失败不回滚事务 | `src/modules/bid/`、`src/modules/notification/`、`src/ws/`、`tests/bid/` | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) | 已完成 | 已落地竞价服务、通知服务、缓存/推送抽象、仓储与自动化测试；当前未接入真实 Redis 客户端，缓存默认使用可替换的进程内实现 |
+| S08 | 实现订单与支付结算模块代码 | 拍卖与竞价设计已具备输入条件 | 实现结束后生成订单、支付发起、支付回调、幂等处理、超时关闭、审计日志、最小模块测试 | 一场拍卖最多生成一笔订单，重复回调不重复记账 | `src/modules/order/`、`src/modules/payment/`、`tests/order/`、`tests/payment/` | `docs/订单与支付模块说明.md` | 已完成 | 已落地 `OrderService`、`PaymentService`、`OrderScheduler`、订单/支付仓储、mock 回调签名与自动化测试闭环 |
+| S09 | 实现评价与反馈模块代码 | 已具备 `review` 表、订单终态字段和通知基础设施 | 实现互评、评价查询、评价约束、信用汇总基础能力、最小模块测试 | 买卖双方可在订单完成后互评，评价与订单正确绑定 | `src/modules/review/`、`tests/review/` | `docs/评价与反馈模块说明.md` | 已完成 | 已落地 `ReviewService`、`ReviewRepository`、自动评价方向推导、重复评价约束、信用汇总查询和自动化测试闭环 |
+| S10 | 实现统计分析与报表模块代码 | 数据模型和业务链路设计已具备基础 | 实现日报表聚合、成交统计、流拍统计、出价统计、导出接口、统计任务测试 | 管理端可查看主要统计指标，统计结果可复算 | `src/modules/statistics/`、`src/jobs/`、`tests/statistics/` | `docs/统计分析与报表模块说明.md` | 已完成 | 已落地 `StatisticsService`、`StatisticsRepository`、`StatisticsScheduler`、CSV 导出与自动化测试闭环 |
+| S11 | 实现系统监控与异常处理模块代码 | 已有顶层日志、任务、降级设计 | 实现操作日志、任务日志、通知失败重试、异常标记、补偿入口、降级处理、最小验证 | 关键异常可观测、可追踪、可重试 | `src/modules/ops/`、`src/repository/`、`src/modules/notification/`、`tests/ops/` | `docs/系统监控与异常处理模块说明.md` | 已完成 | 已落地统一运维服务、异常看板、手工异常标记、失败通知重试和补偿入口，并通过自动化验证 |
+| S12 | 完成接口联调与主流程闭环 | 核心模块代码已具备后才能开始 | 联调认证、拍品、审核、活动、竞价、订单、支付、评价全链路，修正接口和状态切换问题 | 主流程可完整走通并可演示 | `src/`、`tests/integration/` | `docs/接口联调记录.md` | 已完成 | 已补齐支付后履约状态推进，新增 `tests/integration/full_flow_tests.cpp` 与 `scripts/test_integration.sh`，完成主流程联调与自动化验证 |
+| S13 | 落地自动化测试基线 | 需要已有可运行工程 | 统一 CTest、断言式测试二进制、单元测试、模块测试、集成/契约测试入口、基础测试脚本和执行方式 | 测试框架可运行，核心模块都有最小自动化覆盖，且可按分层/模块统一执行 | `tests/`、`CMakeLists.txt`、`scripts/` | `docs/测试计划与用例说明.md` | 已完成 | 已统一 `CTest + test_*.sh + 断言式测试二进制` 基线，新增 suite/module 标签、MySQL 资源锁和 `scripts/test.sh` 分组入口；当前接口契约测试继续复用 `tests/integration/`，不额外创建空骨架 |
+| S14 | 完成高风险专项测试 | 需要主链路代码和测试基线 | 执行并发出价、拍卖结束竞争、支付回调幂等、Redis 降级、通知失败、安全负向测试 | 高风险链路均有验证结果和问题闭环 | `tests/stress/`、`tests/integration/`、`tests/security/` | `docs/测试报告.md` | 已完成 | 已落地 `auction_high_risk_flow` 与 `auction_security_negative`，覆盖并发、结束竞争、支付幂等、缓存降级、通知失败重试和安全负向；同时修复出价金额三位小数校验缺陷 |
+| S15 | 完成部署、演示与答辩交付 | 需要联调与专项测试完成 | 补齐部署脚本、初始化流程、演示数据、演示账号、答辩脚本与最终交付说明 | 系统可在目标环境复现并完成完整演示 | `scripts/deploy/`、`config/`、`sql/demo_data.sql` | `docs/部署与答辩说明.md` | 已完成 | 已落地演示初始化、服务启动、答辩提纲和最终发布验证脚本；最终回归 15/15 通过 |
+| F16 | 落地 Next.js 前端可视化骨架和 Mock 交互闭环 | 后端 v1.0 服务层、接口文档、部署脚本已完成；真实 HTTP 控制器尚未批量接入 | 新建 `frontend/`，实现 Next.js、TypeScript、Tailwind、Framer Motion、React Query、7 个物理页面、Mock API、设计系统、竞价回滚和降级 UI | 首页和 7 个页面可本地看到效果；Mock 模式跑通核心交互；`npm run typecheck` 与 `npm run build` 通过；同步前端文档 | `frontend/` | `docs/frontend-next-schedule.md`、`docs/schedule.md` | 已完成 | F16-0 到 F16-5 全部完成：`frontend/`、7 个页面、Mock API、竞价回滚/限流/降级、发布/支付/管理交互、README/API_READINESS 和 Next 16/React 19 安全升级已落地，`npm run typecheck` 与 `npm run build` 通过 |
+| F17 | 逐步接入真实 Drogon HTTP 与 WebSocket 接口 | F16 可视化和 Mock 闭环完成后开始 | 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序替换 Mock 调用并补后端控制器/验证 | 每组 API live 模式可跑通；Mock 模式保留；前后端验证和 API readiness 文档同步 | `frontend/`、`src/access/http/`、`src/ws/`、`tests/http/` | `docs/frontend-next-schedule.md`、对应模块说明、`docs/接口联调记录.md` | 进行中 | Auth 已接入；Auction list/detail 已接入；Bid 已接入；Publish 已接入；Checkout 已接入；Admin 已接入；下一步 WebSocket |
 
-必须保持的项目边界：
+## 6. 当前分配原则
 
-- 项目是课程设计，不引入付费工具，不引入不必要的微服务、MQ、分布式锁、CQRS 或事件溯源。
-- 后端优先保持模块化单体：`src/modules/` 承载业务服务，`src/repository/` 访问数据库，`src/access/http/` 做 HTTP 接入。
-- MySQL 是拍卖、出价、订单、支付等交易事实的唯一来源。
-- Redis 或进程内缓存只能加速读取或旁路预检查，不能决定出价合法性、结算结果或支付状态。
-- `/demo` 是只读答辩演示台；完整业务页面必须使用真实 `/api/...` 接口，不能把 `/api/demo/dashboard` 当业务数据源。
-- 当前前端路线是静态 HTML/CSS/JS 加 C++ 服务托管；除非用户明确要求，不引入 Node/Vite/React 构建链。
+为了方便直接分配给 agent 执行，后续每一步建议拆成“一个模块、一个明确目标、一个明确代码目录”的粒度。
 
-关键业务不变量：
+按当前已确认进度，`S00-S15` 均已完成。
 
-- 同一拍卖任意时刻最多只有一个合法当前最高价和最高出价人。
-- 出价记录插入、拍卖当前价更新、最高出价人更新和延时保护必须在同一事务内成功或失败。
-- 拍卖结束后不能接受新的有效出价。
-- 一场拍卖最多生成一笔订单。
-- 支付回调必须幂等，重复回调不能重复记账或重复推进状态。
-- 发货、收货、评价、统计、补偿等后续动作必须遵守订单和支付状态机。
-- 所有写接口都需要认证、授权、输入校验和可审计错误处理。
+例如：
 
-## 5. Step 状态表
+- 若后续新增步骤，仍应优先完成代码、脚本、验证记录和文档同步，再更新模块文档
+- 若某一步尚未形成最小可验证闭环，则继续保持 `进行中`，不要提前改成 `已完成`
+- 已完成步骤也要继续记录验证命令和 handoff，避免上下文压缩后丢失真实进度
 
-### 5.1 已完成基线步骤 S00-S16
+## 7. 进度记录
 
-| 步骤 | 状态 | 交付摘要 | 主要位置 |
-|---|---|---|---|
-| S00 | 已完成 | 冻结需求基线 | `docs/需求规格说明书.md` |
-| S01 | 已完成 | 冻结架构基线 | `docs/系统概要设计报告.md` |
-| S02 | 已完成 | 工程骨架、配置、日志、错误码、冒烟测试 | `CMakeLists.txt`、`src/`、`config/`、`tests/` |
-| S03 | 已完成 | 数据库 schema、seed、Repository 基础和 DB 冒烟 | `sql/`、`src/common/db/`、`src/repository/` |
-| S04 | 已完成 | 注册登录、密码哈希、Token、RBAC、账号状态 | `src/modules/auth/`、`src/middleware/`、`tests/auth/` |
-| S05 | 已完成 | 拍品草稿、图片元数据、提交审核、审核日志 | `src/modules/item/`、`src/modules/audit/`、`tests/item/` |
-| S06 | 已完成 | 拍卖创建、修改、取消、调度和状态协同 | `src/modules/auction/`、`src/jobs/`、`tests/auction/` |
-| S07 | 已完成 | 出价事务、幂等、延时保护、通知和缓存抽象 | `src/modules/bid/`、`src/modules/notification/`、`src/ws/`、`tests/bid/` |
-| S08 | 已完成 | 订单生成、支付发起、回调幂等、超时关闭 | `src/modules/order/`、`src/modules/payment/`、`tests/order/`、`tests/payment/` |
-| S09 | 已完成 | 买卖双方互评、评价查询、信用汇总 | `src/modules/review/`、`tests/review/` |
-| S10 | 已完成 | 日报聚合、成交/流拍/出价统计和 CSV 导出 | `src/modules/statistics/`、`tests/statistics/` |
-| S11 | 已完成 | 操作日志、任务日志、异常看板、通知重试和补偿入口 | `src/modules/ops/`、`tests/ops/` |
-| S12 | 已完成 | 认证、拍品、审核、拍卖、竞价、订单、支付、评价主流程联调 | `tests/integration/`、`scripts/test_integration.sh` |
-| S13 | 已完成 | CTest、分层测试脚本、模块标签和测试计划 | `tests/`、`scripts/test.sh`、`docs/测试计划与用例说明.md` |
-| S14 | 已完成 | 并发出价、结束竞争、支付幂等、缓存降级、通知失败和安全负向测试 | `tests/stress/`、`tests/security/` |
-| S15 | 已完成 | 部署演示脚本、演示数据、答辩说明和发布验证 | `scripts/deploy/`、`sql/demo_data.sql`、`docs/部署与答辩说明.md` |
-| S16 | 已完成 | `/demo` 只读浏览器演示台和 `/api/demo/dashboard` | `assets/demo/`、`src/access/http/`、`tests/demo/` |
-
-### 5.2 完整前端接入步骤 S17-S30
-
-| 步骤 | 状态 | 目标 | 主要代码位置 | 文档位置 |
-|---|---|---|---|---|
-| S17 | 已完成 | 真实业务 HTTP 接入基线、`/app`、登录、系统上下文、统一 JSON 404 | `src/access/http/`、`src/common/http/`、`assets/app/`、`tests/http/` | `docs/接口联调记录.md`、`docs/前端演示模块说明.md` |
-| S18 | 已完成 | 注册、登录态、登出、当前用户、角色路由、管理员用户状态 | `src/access/http/auth_http.*`、`assets/app/`、`scripts/test_http.sh` | `docs/认证与权限模块说明.md`、`docs/前端演示模块说明.md` |
-| S19 | 已完成 | 卖家拍品创建、编辑、图片元数据、列表、详情、提交审核 | `src/access/http/item_http.*`、`assets/app/`、`scripts/test_http.sh` | `docs/物品与审核模块说明.md`、`docs/前端演示模块说明.md` |
-| S20 | 已完成 | 管理员待审、审核、审核日志、创建/修改/取消拍卖、管理端拍卖列表详情 | `src/access/http/audit_http.*`、`src/access/http/auction_admin_http.*`、`assets/app/` | `docs/物品与审核模块说明.md`、`docs/拍卖管理模块说明.md` |
-| S21 | 已完成 | 买家公开拍卖大厅、详情、当前价、出价历史 | `src/access/http/auction_public_http.*`、`assets/app/` | `docs/拍卖管理模块说明.md`、`docs/前端演示模块说明.md` |
-| S22 | 已完成 | 真实出价、我的出价状态、通知轮询、通知已读 | `src/access/http/bid_http.*`、`src/access/http/notification_http.*`、`assets/app/` | `docs/竞价与实时通知模块说明.md`、`docs/测试计划与用例说明.md` |
-| S23 | 已完成 | 订单、支付和履约页面 | `src/access/http/order_http.*`、`src/access/http/payment_http.*`、`assets/app/`、`scripts/test_http.sh` | `docs/订单与支付模块说明.md`、`docs/前端演示模块说明.md` |
-| S24 | 已完成 | 评价、通知中心和用户信用展示 | `src/access/http/review_http.*`、`src/access/http/notification_http.*`、`assets/app/`、`tests/http/` | `docs/评价与反馈模块说明.md`、`docs/竞价与实时通知模块说明.md` |
-| S25 | 已完成 | 统计报表和运维异常页面 | `src/access/http/statistics_http.*`、`src/access/http/ops_http.*`、`assets/app/`、`tests/http/` | `docs/统计分析与报表模块说明.md`、`docs/系统监控与异常处理模块说明.md` |
-| S26 | 已完成 | 全站 UX、状态处理和安全前端约束 | `assets/app/`、`tests/http/`、`scripts/` | `docs/前端演示模块说明.md`、`docs/测试计划与用例说明.md` |
-| S27 | 已完成 | 真实 HTTP 接口自动化回归收口 | `tests/http/`、`scripts/test_http.sh`、`scripts/test.sh`、`CMakeLists.txt` | `docs/测试计划与用例说明.md`、`docs/接口联调记录.md` |
-| S28 | 已完成 | 前端页面级验收脚本 | `scripts/test_ui.sh`、`tests/ui/`、`assets/app/` | `docs/测试计划与用例说明.md`、`docs/前端演示模块说明.md` |
-| S29 | 已完成 | 完整前端部署、演示数据和答辩脚本接入 | `scripts/deploy/`、`config/`、`sql/demo_data.sql`、`assets/app/` | `docs/部署与答辩说明.md`、`docs/答辩演示操作手册.md` |
-| S30 | 已完成 | 完整前端最终回归和 handoff | 全仓库 | `docs/schedule.md`、`docs/部署与答辩说明.md`、`docs/答辩演示操作手册.md` |
-
-## 6. 当前任务：已完成 S30
-
-### 6.1 S30 目标
-
-在 S29 已经完成 `/demo` 与 `/app` 双入口部署演示链路的基础上，执行完整最终回归，确认课程设计交付材料、演示脚本、测试入口和 handoff 一致。
-
-S30 已完成。当前仓库进入课程设计交付和答辩复现状态。
-
-### 6.2 S30 开始前必须读取
-
-- `docs/部署与答辩说明.md`
-- `docs/答辩演示操作手册.md`
-- `docs/前端演示模块说明.md`
-- `scripts/deploy/`
-- `config/`
-- `sql/demo_data.sql`
-- `assets/app/`
-
-### 6.3 S30 建议范围
-
-- 保持当前静态 HTML/CSS/JS 路线，不引入 Node/Vite/React 构建链。
-- 执行 `scripts/deploy/verify_release.sh` 和必要的分层测试，确认 `/demo`、`/app`、真实 HTTP 基线、前端页面级验收和高风险专项仍通过。
-- 复核部署与答辩说明、答辩演示操作手册、前端演示模块说明和测试计划是否与代码现状一致。
-- 输出最终 handoff，明确验证结果、剩余风险和交付边界。
-
-S30 不新增业务功能；只有发现最终回归、文档一致性或答辩复现链路缺陷时才做最小修复。
-
-S30 实际未新增业务功能，未引入付费工具、Node/Vite/React 构建链、微服务、MQ、分布式锁、CQRS 或事件溯源。
-
-### 6.4 S30 风险点
-
-- 不要为了最终交付引入付费服务或额外前端构建链。
-- `/demo` 只能作为只读答辩演示台，不能替代 `/app` 真实业务前端入口。
-- 不要为了演示便利放宽后端 RBAC、支付验签、状态机或审计约束。
-- 部署脚本应优先复用现有本地 MySQL、CMake、Drogon 服务和静态资源托管方式。
-
-## 7. 常用命令和验证规则
-
-常用本地命令：
-
-- `git status`
-- `cmake -S . -B build`
-- `cmake --build build`
-- `ctest --test-dir build --output-on-failure`
-- `scripts/test.sh smoke`
-- `scripts/test.sh module`
-- `scripts/test.sh contract`
-- `scripts/test.sh http`
-- `scripts/test.sh ui`
-- `scripts/test_http.sh`
-- `./build/bin/auction_app --check-config`
-- `scripts/deploy/init_demo_env.sh`
-- `scripts/deploy/run_demo_server.sh`
-- `scripts/deploy/verify_release.sh`
-
-验证和更新规则：
-
-1. 只写文档不算模块完成。
-2. 只创建空目录或空文件不算模块完成。
-3. 每个步骤完成时必须有代码、可运行验证、测试或冒烟记录、对应模块文档更新和 schedule 更新。
-4. 依赖本地 MySQL 或 HTTP 监听的测试在 Codex 沙箱内可能失败；如果是沙箱权限导致，按权限流程请求在沙箱外执行，不要用 sudo 绕过。
-5. 若 `build/test_mysql/data/ibdata1` 被残留 `mysqld` 锁住，只清理本项目测试 MySQL 进程，不要影响系统级 MySQL。
-6. 修改前先检查工作区，不能回滚用户已有修改。
+| 日期 | 步骤 ID | 状态 | 更新内容 | 代码位置 | 文档位置 |
+|---|---|---|---|---|---|
+| 2026-04-12 | S00 | 已完成 | 需求基线已存在，可直接作为开发输入 | 无 | [需求规格说明书.md](/home/ljh/project/soft_course_design/docs/需求规格说明书.md) |
+| 2026-04-12 | S01 | 已完成 | 架构基线已存在，可直接作为实现约束 | 无 | [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md) |
+| 2026-04-12 | S02 | 已完成 | 已落地 `CMakeLists.txt`、`src/`、`tests/`、配置模板、日志与错误码基础代码、启动脚本和冒烟测试；已完成 `cmake`、构建与 `ctest` 验证 | [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt) | [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md) |
+| 2026-04-12 | S03 | 已完成 | 已落地 `sql/schema.sql`、`sql/seed.sql`、`src/common/db/`、`src/repository/`、`tests/integration/database_smoke_tests.cpp` 和 `scripts/test_db.sh`；已完成本地 MySQL schema/seed/连库验证 | [sql](/home/ljh/project/soft_course_design/sql) | [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md) |
+| 2026-04-12 | S04 | 已完成 | 已落地 `src/modules/auth/`、`src/middleware/`、`tests/auth/auth_flow_tests.cpp` 和 `scripts/test_auth.sh`；已完成注册、登录、登出、Token 鉴权、RBAC 和管理员冻结/禁用闭环验证 | [auth_service.cpp](/home/ljh/project/soft_course_design/src/modules/auth/auth_service.cpp) | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) |
+| 2026-04-12 | S05 | 已完成 | 已落地 `src/modules/item/`、`src/modules/audit/`、`src/repository/item_repository.*`、`tests/item/item_flow_tests.cpp` 和 `scripts/test_item.sh`；已完成草稿创建、图片元数据管理、提交审核、管理员驳回/通过、审核日志和驳回后重提闭环验证 | [item_service.cpp](/home/ljh/project/soft_course_design/src/modules/item/item_service.cpp) | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) |
+| 2026-04-12 | S06 | 进行中 | 已有拍卖管理模块说明，但仓库中尚无活动与调度实现代码 | 待创建 `src/modules/auction/`、`src/jobs/` | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) |
+| 2026-04-12 | S07 | 进行中 | 已有竞价与实时通知模块说明，但仓库中尚无竞价、缓存和 WebSocket 实现代码 | 待创建 `src/modules/bid/`、`src/modules/notification/`、`src/ws/` | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) |
+| 2026-04-12 | S02-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`ctest --test-dir build --output-on-failure`，2 个测试全部通过 | [build](/home/ljh/project/soft_course_design/build) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-04-12 | S03-VERIFY | 已完成 | 顺序执行 `ctest --test-dir build --output-on-failure -E auction_database_smoke`、`ctest --test-dir build --output-on-failure -R auction_database_smoke`、`AUCTION_APP_CONFIG=build/test_config/app.mysql.test.json ./build/bin/auction_app --check-db`；数据库冒烟测试通过，`--check-db` 返回 15 张表、1 个管理员和 4 个基础分类 | [test_db.sh](/home/ljh/project/soft_course_design/scripts/test_db.sh) | [数据库设计说明.md](/home/ljh/project/soft_course_design/docs/数据库设计说明.md) |
+| 2026-04-12 | S04-VERIFY | 已完成 | 顺序执行 `ctest --test-dir build --output-on-failure`，4 个测试全部通过；其中 `auction_auth_flow` 已覆盖注册成功、重复账号、密码错误、Token 缺失、Token 过期、RBAC、冻结/禁用和登出失效 | [auth_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/auth/auth_flow_tests.cpp) | [认证与权限模块说明.md](/home/ljh/project/soft_course_design/docs/认证与权限模块说明.md) |
+| 2026-04-12 | S05-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_item.sh`、`ctest --test-dir build --output-on-failure`；`auction_item_flow` 已覆盖草稿创建、图片元数据管理、提交审核、驳回原因校验、驳回后回退 `DRAFT`、再次提交和审核通过，当前 `ctest` 5/5 全部通过 | [item_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/item/item_flow_tests.cpp) | [物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md) |
+| 2026-04-13 | S06 | 已完成 | 已落地 `src/modules/auction/`、`src/repository/auction_repository.*`、`src/jobs/auction_scheduler.*`、`tests/auction/auction_flow_tests.cpp` 和 `scripts/test_auction.sh`；已完成活动创建、修改、取消、管理端/公开端查询、开始调度、结束调度、`task_log` 记录和拍品状态协同闭环 | [auction_service.cpp](/home/ljh/project/soft_course_design/src/modules/auction/auction_service.cpp) | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) |
+| 2026-04-13 | S06-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_auction.sh`、`ctest --test-dir build --output-on-failure`；`auction_auction_flow` 已覆盖待开始活动创建/修改/取消、重复建拍限制、开始调度、无人出价流拍、有最高出价进入 `SETTLING`、延时保护顺延跳过和 `task_log` 校验，当前 `ctest` 6/6 全部通过 | [auction_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/auction/auction_flow_tests.cpp) | [拍卖管理模块说明.md](/home/ljh/project/soft_course_design/docs/拍卖管理模块说明.md) |
+| 2026-04-15 | S07 | 已完成 | 已落地 `src/modules/bid/`、`src/modules/notification/`、`src/ws/`、`src/repository/bid_repository.*`、`src/repository/notification_repository.*`、`tests/bid/bid_flow_tests.cpp` 和 `scripts/test_bid.sh`；已完成出价事务、幂等重试、延时保护、竞价历史、个人竞价状态、热点缓存刷新、被超越提醒、广播推送和通知失败补偿日志闭环 | [bid_service.cpp](/home/ljh/project/soft_course_design/src/modules/bid/bid_service.cpp) | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) |
+| 2026-04-15 | S07-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_bid.sh`、`ctest --test-dir build --output-on-failure`；`auction_bid_flow` 已覆盖首次出价、幂等重试、最低加价校验、延时保护、通知失败不回滚和最小并发竞价，当前 `ctest` 7/7 全部通过 | [bid_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/bid/bid_flow_tests.cpp) | [竞价与实时通知模块说明.md](/home/ljh/project/soft_course_design/docs/竞价与实时通知模块说明.md) |
+| 2026-04-15 | S08 | 已完成 | 已落地 `src/modules/order/`、`src/modules/payment/`、`src/repository/order_repository.*`、`src/repository/payment_repository.*`、`src/jobs/order_scheduler.*`、`tests/order/order_flow_tests.cpp`、`tests/payment/payment_flow_tests.cpp`、`scripts/test_order.sh` 和 `scripts/test_payment.sh`；已完成 `SETTLING` 建单、支付发起、回调验签与金额校验、重复成功回调幂等、超时关闭和站内通知/审计日志闭环 | [order_service.cpp](/home/ljh/project/soft_course_design/src/modules/order/order_service.cpp) | [订单与支付模块说明.md](/home/ljh/project/soft_course_design/docs/订单与支付模块说明.md) |
+| 2026-04-15 | S08-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_order.sh`、`scripts/test_payment.sh`、`ctest --test-dir build --output-on-failure`；`auction_order_flow` 已覆盖唯一建单与超时关闭，`auction_payment_flow` 已覆盖支付发起复用、成功回调、重复成功回调、金额不一致和验签失败，当前 `ctest` 9/9 全部通过 | [payment_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/payment/payment_flow_tests.cpp) | [订单与支付模块说明.md](/home/ljh/project/soft_course_design/docs/订单与支付模块说明.md) |
+| 2026-04-22 | S09 | 已完成 | 已落地 `src/modules/review/`、`src/repository/review_repository.*`、`tests/review/review_flow_tests.cpp` 和 `scripts/test_review.sh`；已完成互评提交、自动评价方向推导、重复评价约束、按订单查询互评记录、按用户汇总信用评分和第二条评价后订单推进到 `REVIEWED` 的闭环 | [review_service.cpp](/home/ljh/project/soft_course_design/src/modules/review/review_service.cpp) | [评价与反馈模块说明.md](/home/ljh/project/soft_course_design/docs/评价与反馈模块说明.md) |
+| 2026-04-22 | S09-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_review.sh`、`ctest --test-dir build --output-on-failure`；`auction_review_flow` 已覆盖买卖双方互评、重复评价、非订单参与方拒绝、订单状态约束和信用汇总；后续已修正 `auction_smoke_tests` 配置断言，`S09` 收尾时全量 `ctest` 为 10/10 通过 | [review_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/review/review_flow_tests.cpp) | [评价与反馈模块说明.md](/home/ljh/project/soft_course_design/docs/评价与反馈模块说明.md) |
+| 2026-04-22 | S10 | 已完成 | 已落地 `src/modules/statistics/`、`src/repository/statistics_repository.*`、`src/jobs/statistics_scheduler.*`、`tests/statistics/statistics_flow_tests.cpp` 和 `scripts/test_statistics.sh`；已完成日报聚合、成交/流拍/出价统计、管理员查询、CSV 导出、按天重跑覆盖和任务日志闭环 | [statistics_service.cpp](/home/ljh/project/soft_course_design/src/modules/statistics/statistics_service.cpp) | [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md) |
+| 2026-04-22 | S10-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_statistics.sh`、`ctest --test-dir build --output-on-failure`；`auction_statistics_flow` 已覆盖日报聚合、同日重跑覆盖、管理员查询、CSV 导出、日期范围校验和非管理员拒绝，当前全量 `ctest` 为 11/11 全部通过 | [statistics_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/statistics/statistics_flow_tests.cpp) | [统计分析与报表模块说明.md](/home/ljh/project/soft_course_design/docs/统计分析与报表模块说明.md) |
+| 2026-04-22 | S11 | 已完成 | 已落地 `src/modules/ops/`、`src/repository/ops_repository.*`、`tests/ops/ops_flow_tests.cpp` 和 `scripts/test_ops.sh`，并扩展 `src/modules/notification/` 与 `src/repository/notification_repository.*`；已完成操作日志查询、任务日志查询、异常看板、失败通知重试、手工异常标记和统一补偿入口闭环 | [ops_service.cpp](/home/ljh/project/soft_course_design/src/modules/ops/ops_service.cpp) | [系统监控与异常处理模块说明.md](/home/ljh/project/soft_course_design/docs/系统监控与异常处理模块说明.md) |
+| 2026-04-22 | S11-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_ops.sh`、`ctest --test-dir build --output-on-failure`；`auction_ops_flow` 已覆盖失败通知重试、Redis 降级手工标记、订单结算补偿、支付回调拒绝异常聚合、运维日志查询和权限校验，当前全量 `ctest` 为 12/12 全部通过 | [ops_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/ops/ops_flow_tests.cpp) | [系统监控与异常处理模块说明.md](/home/ljh/project/soft_course_design/docs/系统监控与异常处理模块说明.md) |
+| 2026-04-22 | S12 | 已完成 | 已扩展 `src/modules/order/`、`src/repository/order_repository.*`，补齐卖家发货与买家确认收货状态推进；已新增 `tests/integration/full_flow_tests.cpp` 和 `scripts/test_integration.sh`，完成认证、拍品、审核、活动、竞价、订单、支付、评价、统计、运维的主流程联调闭环 | [full_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/integration/full_flow_tests.cpp) | [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md) |
+| 2026-04-22 | S12-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test_integration.sh`、`ctest --test-dir build --output-on-failure`；`auction_integration_flow` 已覆盖支付后履约、互评、统计和运维查询联调，当前全量 `ctest` 为 13/13 全部通过 | [test_integration.sh](/home/ljh/project/soft_course_design/scripts/test_integration.sh) | [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md) |
+| 2026-04-22 | S13 | 已完成 | 已扩展 `CMakeLists.txt` 和 `scripts/test.sh`，统一 `CTest` 标签、模块分组入口与 MySQL 资源锁；已新增 `docs/测试计划与用例说明.md`，明确当前测试分层、执行方式和覆盖边界 | [scripts/test.sh](/home/ljh/project/soft_course_design/scripts/test.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
+| 2026-04-22 | S13-VERIFY | 已完成 | 顺序执行 `scripts/test.sh smoke`、`scripts/test.sh db`、`scripts/test.sh module`、`scripts/test.sh contract`、`ctest --test-dir build --output-on-failure`；已验证分层入口、`CTest` 标签筛选和 MySQL 共享资源锁，当前全量 `ctest` 为 13/13 全部通过 | [CMakeLists.txt](/home/ljh/project/soft_course_design/CMakeLists.txt) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-04-29 | S14 | 已完成 | 已新增高风险专项和安全负向测试，接入 `suite_risk`、`suite_stress`、`suite_security` 与 `scripts/test.sh risk/stress/security`；专项测试发现并修复出价金额三位小数校验缺陷 | [high_risk_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/stress/high_risk_flow_tests.cpp) | [测试报告.md](/home/ljh/project/soft_course_design/docs/测试报告.md) |
+| 2026-04-29 | S14-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/test.sh risk`、`ctest --test-dir build --output-on-failure`；`auction_high_risk_flow` 和 `auction_security_negative` 均通过，专项回归为 2/2 通过，全量 `ctest` 为 15/15 通过 | [test_high_risk.sh](/home/ljh/project/soft_course_design/scripts/test_high_risk.sh) | [测试计划与用例说明.md](/home/ljh/project/soft_course_design/docs/测试计划与用例说明.md) |
+| 2026-04-29 | S15 | 已完成 | 已新增 `scripts/deploy/` 部署演示脚本、`sql/demo_data.sql` 演示数据和 `docs/部署与答辩说明.md`；已调整 `config/nginx.conf` 为非特权演示端口 `18081` 并代理应用端口 `18080`；已同步环境配置说明和最终交付口径 | [init_demo_env.sh](/home/ljh/project/soft_course_design/scripts/deploy/init_demo_env.sh) | [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md) |
+| 2026-04-29 | S15-VERIFY | 已完成 | 顺序执行 `cmake -S . -B build`、`cmake --build build`、`scripts/deploy/init_demo_env.sh`、`scripts/deploy/verify_release.sh`，并启动 `scripts/deploy/run_demo_server.sh` 后访问 `curl http://127.0.0.1:18080/healthz`；演示库 `auction_demo` schema/seed 检查通过，高风险专项 2/2 通过，全量 `ctest` 15/15 通过，健康检查返回 `status=ok` | [verify_release.sh](/home/ljh/project/soft_course_design/scripts/deploy/verify_release.sh) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-04-12 | SCHEDULE | 已完成 | 按真实仓库状态重写 schedule，改为代码优先，并将仅文档完成的步骤重置为 `进行中` | 无 | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F16-SCHEDULE | 已完成 | 新增 Next.js 前端落地 schedule，明确先完成可见前端效果和 Mock 交互闭环，再逐步接入真实后端；详细归档浅色工业级 UI/UX、7 个物理页面、竞价回滚、WebSocket 降级和限流设计要求 | [frontend](/home/ljh/project/soft_course_design/frontend) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F16-0~F16-3 | 已完成 | 已创建 Next.js 14 前端工程、Tailwind 设计系统、React Query Provider、Mock API、7 个物理页面、竞价详情核心状态机、发布/支付/管理 Mock 交互闭环；`npm run typecheck` 与 `npm run build` 通过 | [frontend](/home/ljh/project/soft_course_design/frontend) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F16-VERIFY | 已完成 | 顺序执行 `cd frontend && npm install`、`npm run typecheck`、`npm run build`、`npm audit --json`；构建通过，`npm audit` 剩余 1 个 moderate 和 1 个 high，修复需升级到 Next 16，当前暂不跨主版本升级 | [package.json](/home/ljh/project/soft_course_design/frontend/package.json) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | PROGRESS-SYNC | 已完成 | 修正 F16 进度口径不一致：新会话固定恢复文本已更新为 `F17 未开始`，`F16-SCHEDULE` 代码位置已从待创建改为实际 `frontend/`，前端 Mock 文件名已对齐实际 `client.ts` 和 `mock-data.ts`；同时已强化 `cpp-auction-course-design` skill，要求每次实现、验证、handoff 或前端 readiness 状态变化都同步统一进度文件 | [frontend](/home/ljh/project/soft_course_design/frontend) | [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)、[frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F16-4 | 已完成 | 已补齐 `frontend/README.md`（安装/运行/构建/mock+live 模式说明）和 `frontend/API_READINESS.md`（12 个接口接入矩阵、后端控制器缺口、F17 接入顺序）；`npm run typecheck` 与 `npm run build` 通过，8 个 App Router 页面全部生成 | [README.md](/home/ljh/project/soft_course_design/frontend/README.md)、[API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F16-5 | 已完成 | 按用户要求升级前端到 Next.js `16.2.6`、React `19.2.6` 和 React 19 类型包；`npm run build` 固定为 `next build --webpack`，`npm run typecheck` 改为 `next typegen && tsc --noEmit`，并在 `next.config.mjs` 设置 `outputFileTracingRoot`；无 `.next` 状态下 `npm run typecheck` 与随后 `npm run build` 均通过；`npm audit --json` high/critical 为 0，剩余 2 个 moderate（Next 16 内部 postcss advisory，当前 npm force fix 会降级到 Next 9.3.3，不采用） | [package.json](/home/ljh/project/soft_course_design/frontend/package.json)、[next.config.mjs](/home/ljh/project/soft_course_design/frontend/next.config.mjs)、[package-lock.json](/home/ljh/project/soft_course_design/frontend/package-lock.json) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Auth | 已完成 | 已创建 Auth HTTP 控制器（`src/access/http/auth_http.h/.cpp`），注册 `/api/auth/register`、`/api/auth/login`、`/api/auth/logout`、`/api/auth/me` 四个路由；已接入 `application_bootstrap.cpp` 启动流程，创建 `InMemoryAuthSessionStore`、`AuthService`、`AuthMiddleware` 实例并注册路由；已补齐 Auth HTTP 本地 CORS/OPTIONS；已更新前端 `client.ts` 支持 password 参数、mock/live token 存储、`getMe()`、`logout()` 和后端错误 message 透传；已更新登录页传递 password 并处理错误；`cmake --build build`、非数据库冒烟 CTest、前端 `npm run typecheck` 与 `npm run build` 通过；当前本机全量 `ctest --test-dir build --output-on-failure` 在数据库用例启动临时 MySQL 时失败，错误日志为 `Unable to lock ./ibdata1 error: 11`，需清理或重建 `build/test_mysql` 后重跑数据库套件 | [auth_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auth_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Auction | 已完成 | 已创建 Auction HTTP 控制器（`src/access/http/auction_http.h/.cpp`），注册 `GET /api/auctions`（公开拍卖列表，支持 keyword/status/page 筛选）和 `GET /api/auctions/{id}`（公开拍卖详情）两个路由；已更新 `application_bootstrap.cpp` 实例化 `AuctionService` 并注册路由；已更新 `CMakeLists.txt` 添加 `auction_http.cpp`；已更新前端 `client.ts` 添加 `AuctionSummaryRaw`/`AuctionDetailRaw` 到 `AuctionItem` 的映射函数，live 模式下自动将后端响应转换为前端类型；已更新 `frontend/types/auction.ts` 新增后端原始响应类型；已更新 `API_READINESS.md` 标记 Auction list/detail 为已接入；`cmake --build build`、`npm run typecheck`、`npm run build` 和冒烟测试均通过 | [auction_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auction_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Auction-FIX | 已完成 | 修复 code review 发现的 Auction live 接入问题：`GET /api/auctions/{id}` 改为显式接收 Drogon 路径参数，避免详情接口误报 `auction id is required`；前端 live 图片增加空值占位和 `/uploads/...` 后端 base URL 归一化，并在 Next 图片配置中允许本地后端图片源；同步修正当前推荐下一步为 Bid；验证通过 `cmake --build build`、`scripts/test.sh smoke`、`cd frontend && npm run typecheck`、`cd frontend && npm run build` | [auction_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auction_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[next.config.mjs](/home/ljh/project/soft_course_design/frontend/next.config.mjs) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Bid | 已完成 | 已创建 Bid HTTP 控制器（`src/access/http/bid_http.h/.cpp`），注册 `GET /api/auctions/{id}/bids`（公开出价历史，支持分页）和 `POST /api/auctions/{id}/bids`（提交出价，需 Bearer Token）两个路由；已更新 `application_bootstrap.cpp` 实例化 `InMemoryAuctionEventGateway`、`NotificationService`、`InMemoryBidCacheStore`、`BidService` 并注册路由；已更新 `CMakeLists.txt` 添加 `bid_http.cpp`；已更新前端 `client.ts`：`getBids` 和 `placeBid` live 模式现正确映射后端 `BidHistoryResponseRaw`/`PlaceBidResultRaw` 响应为前端 `BidRecord` 类型，请求体使用 `request_id`/`bid_amount` 字段；已更新 `frontend/types/auction.ts` 新增 `BidHistoryEntryRaw`、`BidHistoryResponseRaw`、`PlaceBidResultRaw` 类型；已修复 `liveFetch` 错误消息格式以包含 HTTP 状态码，确保详情页 409/429 错误处理在 live 模式下正常工作；已更新 `API_READINESS.md` 标记 Bid list/place 为已接入；`cmake --build build`、`scripts/test.sh smoke`、`npm run typecheck`、`npm run build` 均通过 | [bid_http.cpp](/home/ljh/project/soft_course_design/src/access/http/bid_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Bid-FIX | 已完成 | 修复 code review 发现的 HTTP 数字参数解析缺陷：`bid_http.cpp` 的 `auction_id`、`page_no`、`page_size` 以及相邻 `auction_http.cpp` 的拍卖详情 id 和分页参数现在要求整段字符串均为合法数字，避免 `1abc` 被静默解析为 `1`；验证通过 `git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、`cd frontend && npm run typecheck`、`cd frontend && npm run build` | [bid_http.cpp](/home/ljh/project/soft_course_design/src/access/http/bid_http.cpp)、[auction_http.cpp](/home/ljh/project/soft_course_design/src/access/http/auction_http.cpp) | [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Publish | 已完成 | 已创建 Item HTTP 控制器（`src/access/http/item_http.h/.cpp`），注册 `POST /api/items`（创建草稿拍品，需 Bearer Token）、`PUT /api/items/{id}`（修改拍品，需 Bearer Token）和 `POST /api/items/{id}/submit-review`（提交审核，需 Bearer Token）三个路由；已更新 `application_bootstrap.cpp` 实例化 `ItemService` 并注册路由；已更新 `CMakeLists.txt` 添加 `item_http.cpp`；已更新前端 `client.ts` 新增 `createItem()` 和 `submitItemForReview()` 函数，mock/live 模式均支持；已更新 `frontend/types/auction.ts` 新增 `CreateItemRaw`、`UpdateItemRaw`、`SubmitReviewRaw` 类型；已更新发布页 `/auction/publish` 实现真实 API 提交流程（创建草稿 -> 提交审核）、加载状态和错误处理；已更新 `API_READINESS.md` 标记 Item create/update/submit-review 为已接入；`cmake --build build`、`scripts/test.sh smoke`、`npm run typecheck`、`npm run build` 均通过 | [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[publish/page.tsx](/home/ljh/project/soft_course_design/frontend/app/auction/publish/page.tsx) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Publish-FIX | 已完成 | 修复 code review 发现的 Publish live 闭环缺陷：新增 `POST /api/items/{id}/images` 图片 URL 元数据路由，前端发布页改为创建/复用草稿后先写入图片元数据再提交审核，并在提交失败重试时复用本地 `item_id` 与已写入图片 URL，避免重复创建草稿；新增 `auction_item_flow` 服务层回归断言，确认只有 `cover_image_url` 但无 `item_image` 时不能提交审核；已同步 API readiness、物品模块文档和前端计划；验证通过 `git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、`cd frontend && npm run typecheck`、`cd frontend && npm run build`、`ctest --test-dir build --output-on-failure -R auction_item_flow`；其中 `auction_item_flow` 初次因残留测试 MySQL `Unable to lock ./ibdata1 error: 11` 失败，停止残留 `mysqld --datadir=build/test_mysql/data` 进程后重跑通过 | [item_http.cpp](/home/ljh/project/soft_course_design/src/access/http/item_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[publish/page.tsx](/home/ljh/project/soft_course_design/frontend/app/auction/publish/page.tsx)、[item_flow_tests.cpp](/home/ljh/project/soft_course_design/tests/item/item_flow_tests.cpp) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[物品与审核模块说明.md](/home/ljh/project/soft_course_design/docs/物品与审核模块说明.md)、[frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md) |
+| 2026-05-27 | F17-Checkout | 已完成 | 已创建 Order HTTP 控制器（`src/access/http/order_http.h/.cpp`），注册 `GET /api/orders/{id}`（订单详情，需 Bearer Token）和 `POST /api/orders/{id}/pay`（发起支付，需 Bearer Token，请求体含 `pay_channel`）两个路由；已新增 `OrderRepository::FindOrderAggregateById` 查询订单+拍卖+物品聚合数据；已新增 `OrderService::GetOrderDetail` 验证用户身份并返回订单详情；已更新 `application_bootstrap.cpp` 实例化 `OrderService` 和 `PaymentService` 并注册路由；已更新 `CMakeLists.txt` 添加 `order_http.cpp`；已更新前端 `types/auction.ts` 新增 `OrderDetailRaw` 和 `PayOrderResultRaw` 类型；已更新前端 `client.ts`：`getOrder` live 模式正确映射后端 `OrderDetailRaw` 响应为前端 `OrderSummary` 类型，`payOrder` live 模式发送 `pay_channel` 请求体并映射 `PayOrderResultRaw` 响应；已更新 `API_READINESS.md` 标记 Order detail/pay 为已接入；code review 后修复 4 个缺陷：落锤价计算（final_amount 即落锤价，不应扣除服务费）、checkout 页面支付状态判断（区分 SUCCESS/WAITING_CALLBACK）、支付失败错误提示 UI、mock 模式返回 WAITING_CALLBACK 保持一致；验证通过 `cmake --build build`、`scripts/test.sh smoke`、`npm run typecheck`、`npm run build` | [order_http.cpp](/home/ljh/project/soft_course_design/src/access/http/order_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[checkout/page.tsx](/home/ljh/project/soft_course_design/frontend/app/checkout/[orderId]/page.tsx) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-27 | F17-Admin | 已完成 | 已创建 Admin HTTP 控制器（`src/access/http/admin_http.h/.cpp`），注册 4 个路由：`GET /api/admin/items/pending`（待审拍品列表，需 ADMIN）、`POST /api/admin/items/{id}/approve`（审核通过，需 ADMIN）、`POST /api/admin/items/{id}/reject`（审核驳回，需 ADMIN，请求体含 `reason`）、`GET /api/admin/statistics/daily`（日报统计，需 ADMIN，查询参数 `start_date`/`end_date`）；已更新 `application_bootstrap.cpp` 实例化 `ItemAuditService` 和 `StatisticsService` 并注册路由；已更新 `CMakeLists.txt` 添加 `admin_http.cpp`；已更新前端 `types/auction.ts` 新增 `PendingAuditItemRaw`、`AuditItemResultRaw`、`DailyStatisticsRaw` 类型；已更新前端 `client.ts`：`getAdminReviews` live 模式正确映射后端响应，新增 `approveItem`、`rejectItem`、`getAdminDailyStatistics` 函数；已更新 `API_READINESS.md` 标记 Admin 全部 4 个接口为已接入；验证通过 `cmake --build build`、`npm run typecheck`、`npm run build` | [admin_http.cpp](/home/ljh/project/soft_course_design/src/access/http/admin_http.cpp)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
+| 2026-05-28 | F17-Checkout-Admin-FIX | 已完成 | 修复 code review 发现的 Checkout/Admin live 闭环缺陷：支付页现在把用户选择的支付方式映射为 `MOCK_WECHAT`/`MOCK_ALIPAY` 并提交 `pay_channel`；订单展示总计对齐后端 `final_amount/pay_amount`，当前无服务费落库字段时管理费为 0；管理页批准/驳回现在调用真实 `approveItem`/`rejectItem`，接口成功后才移除待审行并展示失败错误；管理 KPI 现在读取 `getAdminDailyStatistics`，Mock 模式也返回统计数据；同步修正 API readiness 的 Admin Mock 状态 | [checkout/page.tsx](/home/ljh/project/soft_course_design/frontend/app/checkout/[orderId]/page.tsx)、[dashboard/page.tsx](/home/ljh/project/soft_course_design/frontend/app/admin/dashboard/page.tsx)、[client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)、[keys.ts](/home/ljh/project/soft_course_design/frontend/lib/query/keys.ts) | [API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)、[frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md) |
 
 ## 8. 后续更新规则
 
-每完成一个步骤，至少更新以下内容：
+后续每完成一步，都按以下规则更新本文档：
 
-- 本文件的当前进度、Step 状态表和当前任务。
-- 对应模块文档的“已实现/未实现”、接口、错误场景和验证入口。
-- `docs/测试计划与用例说明.md` 中的测试覆盖和执行方式。
-- 必要时更新 `docs/接口联调记录.md`、`docs/部署与答辩说明.md` 或 `docs/答辩演示操作手册.md`。
+1. 先核对该步是否已有实际代码进入仓库。
+2. 再核对该步是否已有最小可运行验证或测试结果。
+3. 满足后再将状态从 `进行中/未开始` 改为 `已完成`。
+4. 在“进度记录”中追加一条记录，写明实际代码路径和文档路径。
+5. 如果只新增或修改了文档，但代码未落地，则只能更新备注，不能将步骤改为 `已完成`。
+6. 若任务改变实现状态、验证状态、handoff、下一步或 F16/F17 前端 readiness，必须在同一轮更新 `docs/schedule.md`；F16/F17 还必须同步 `docs/frontend-next-schedule.md`。
 
-每次 handoff 保持精简，写清楚：
+## 9. 当前 Handoff 记录
+
+以下 handoff 记录基于当前已确认的真实进度填写，可直接作为下一轮 agent 接手时的上下文入口。
+
+## 模块 Handoff
+
+### 1. 基本信息
+- Step ID: F16（含 F16-0 到 F16-5）
+- 模块名称: Next.js 前端可视化骨架与 Mock 交互闭环
+- 当前状态: 已完成
+- 对应文档: `docs/frontend-next-schedule.md`
+- 对应代码目录: `frontend/`
+- 已有可复用基础目录: `frontend/app/` `frontend/components/` `frontend/lib/` `frontend/types/`
+
+### 2. 本次实际完成
+- 已完成功能:
+  - 已创建 `frontend/` Next.js + TypeScript + Tailwind 前端工程，不改 C++ CMake 构建链
+  - 已接入 React Query Provider、全局浅色工业级设计系统、Skeleton、Toast、导航和降级横幅
+  - 已实现 `/`、`/auth/login`、`/auction/hall`、`/auction/detail/[id]`、`/auction/publish`、`/checkout/[orderId]`、`/admin/dashboard` 七个 App Router 物理页面
+  - 已实现 Mock API adapter，覆盖拍卖列表、拍卖详情、出价历史、出价提交、登录、订单支付、管理审核数据
+  - 已实现竞价详情核心状态机：pending 出价行、成功刷新、`409 Conflict` 回滚、Shake、Toast、`429` 冷却遮罩和实时通道降级提示
+  - 已实现发布向导草稿保存、UUID 幂等令牌、支付方式选择与成功态、管理员审核抽屉和 Mock 审核行移除
+  - 已更新 `.gitignore`，排除 `frontend/node_modules/`、`frontend/.next/` 和 `frontend/tsconfig.tsbuildinfo`
+  - 已补齐 `frontend/README.md` 和 `frontend/API_READINESS.md`
+  - 已升级到 Next.js `16.2.6`、React `19.2.6` 和 React 19 类型包，修复原 Next 14 依赖链 high 风险
+- 实际修改文件:
+  - [frontend/package.json](/home/ljh/project/soft_course_design/frontend/package.json)
+  - [frontend/app/page.tsx](/home/ljh/project/soft_course_design/frontend/app/page.tsx)
+  - [frontend/app/auction/detail/[id]/page.tsx](/home/ljh/project/soft_course_design/frontend/app/auction/detail/[id]/page.tsx)
+  - [frontend/lib/api/client.ts](/home/ljh/project/soft_course_design/frontend/lib/api/client.ts)
+  - [frontend/lib/api/mock-data.ts](/home/ljh/project/soft_course_design/frontend/lib/api/mock-data.ts)
+  - [.gitignore](/home/ljh/project/soft_course_design/.gitignore)
+  - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+- 未完成功能:
+  - 浏览器视觉走查或截图验收（可选，非 F16 完成判定硬性要求）
+- 明确不在本步处理的内容:
+  - Drogon 控制器批量接入（F17）
+  - 真实 WebSocket 接入（F17）
+  - 真实 HTTP live 模式联调（F17）
+
+### 3. 关键设计决定
+- 决定 1: F16 默认使用 `NEXT_PUBLIC_API_MODE=mock`
+- 原因: 当前后端 v1.0 主要具备服务层和文档契约，真实 Drogon HTTP 控制器尚未批量接入，不能阻塞前端视觉闭环
+- 影响范围:
+  - 前端可独立运行和构建
+  - live 模式入口保留在 `frontend/lib/api/client.ts`，后续 F17 逐步替换 Mock
+
+- 决定 2: 竞价详情先用短轮询和显式降级横幅模拟实时通道
+- 原因: 真实 `/ws/auction/{id}` 仍待 F17 接入，前端必须先表达断连和价格不新鲜的安全状态
+- 影响范围:
+  - 大厅使用 5 秒短轮询思想
+  - 详情页保留 WebSocket 降级 UI，不把前端乐观价格当作权威事实
+
+- 决定 3: Next.js 版本保持 14 系列并升级到 `14.2.35`
+- 原因: `docs/frontend-next-schedule.md` 指定 Next.js 14；安装时 `14.2.18` 报 critical 漏洞，升级到 14 系列最新补丁后 critical 消除
+- 影响范围:
+  - `npm audit` 仍剩余 high/moderate，完全修复需升到 Next 16，留待用户确认是否跨主版本升级
+
+- 决定 4: 按用户要求升级到 Next.js `16.2.6` 与 React `19.2.6`，生产构建使用 webpack
+- 原因: Next 14 依赖链存在 high/moderate 风险；Next 16 默认 Turbopack 在当前 WSL2/Codex 沙箱中因创建进程/绑定端口受限失败，`next build --webpack` 可稳定完成生产构建
+- 影响范围:
+  - `frontend/package.json` 和 `package-lock.json` 已升级主依赖
+  - `frontend/next.config.mjs` 已设置 `outputFileTracingRoot`
+  - `npm audit` high/critical 已清零，仍剩余 2 个 moderate，等待 Next 后续补丁提供可用修复版本
+
+### 4. 验证结果
+- 执行命令:
+  - `cd frontend && npm install`
+  - `cd frontend && npm install next@14.2.35`
+  - `cd frontend && npm install next@^16 react@^19 react-dom@^19 @types/react@^19 @types/react-dom@^19`
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm audit --json`
+- 结果:
+  - 依赖安装成功并生成/更新 `frontend/package-lock.json`
+  - Next.js 已升级到 `16.2.6`，React 已升级到 `19.2.6`
+  - 无 `.next` 状态下 `npm run typecheck` 通过，先执行 `next typegen` 再执行 `tsc --noEmit`
+  - `npm run build` 通过，Next 16 webpack 构建生成 8 个 App Router 页面，其中 7 个为计划内业务页面
+  - `npm audit --json` high/critical 为 0，剩余 2 个 moderate
+- 未执行的测试:
+  - 后端 CTest
+  - 浏览器截图或 Playwright 视觉检查
+- 原因:
+  - 本次未修改后端代码
+  - 浏览器视觉走查尚未执行，当前 F16 完成判定以类型检查、生产构建和 Mock 交互闭环为准
+
+### 5. 当前风险/阻塞
+- 风险 1: 真实 HTTP 控制器仍未批量接入，live 模式页面会遇到 `API route not ready`
+- 风险 2: `npm audit` 剩余 2 个 moderate，来源为 Next 16 内部 `postcss 8.4.31` advisory；当前 npm force fix 会降级到 Next 9.3.3，不采用
+- 风险 3: 当前视觉只通过构建验证，尚未进行浏览器截图和移动端视口走查
+- 阻塞项:
+  - 无
+- 需要注意的坑:
+  - 在 Codex 沙箱中执行 `npm install` 可能因网络受限超时，需要沙箱外权限
+  - `node_modules/` 和 `.next/` 已加入 `.gitignore`，不要提交依赖和构建产物
+  - F17 开始接入 live 模式时，必须保留 Mock 模式，避免后端控制器缺口阻塞前端演示
+
+### 6. 下一步
+- 下一步 Step ID: F17-WebSocket
+- 下一步目标: 接入 WebSocket 实时价格推送，在 `src/access/http/` 或 `src/ws/` 创建 `/ws/auction/{id}` 端点，替换前端轮询降级
+- 建议先读文件:
+  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
+  - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
+  - [frontend/API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)
+  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
+  - [系统概要设计报告.md](/home/ljh/project/soft_course_design/docs/系统概要设计报告.md)
+  - `src/modules/order/order_service.h`
+
+## 10. 模块 Handoff 模板
+
+每完成一个模块，建议至少按以下模板补齐一次 handoff 记录，再进行 Codex 上下文压缩：
 
 ```md
 ## 模块 Handoff
 
-- Step ID:
-- 当前状态:
-- 已完成:
-- 修改文件:
-- 验证命令:
-- 验证结果:
-- 未覆盖风险:
-- 下一步:
-- 下一步必须先读:
+### 1. 基本信息
+- Step ID: SXX
+- 模块名称:
+- 当前状态: 已完成 / 进行中 / 阻塞
+- 对应文档: docs/xxx.md
+- 对应代码目录: src/xxx/ tests/xxx/
+
+### 2. 本次实际完成
+- 已完成功能:
+- 实际修改文件:
+  - path1
+  - path2
+- 未完成功能:
+- 明确不在本步处理的内容:
+
+### 3. 关键设计决定
+- 决定 1:
+- 原因:
+- 影响范围:
+
+- 决定 2:
+- 原因:
+- 影响范围:
+
+### 4. 验证结果
+- 执行命令:
+  - `cmake -S . -B build`
+  - `cmake --build build`
+  - `ctest --test-dir build --output-on-failure`
+- 结果:
+- 未执行的测试:
+- 原因:
+
+### 5. 当前风险/阻塞
+- 风险 1:
+- 风险 2:
+- 阻塞项:
+- 需要注意的坑:
+
+### 6. 下一步
+- 下一步 Step ID:
+- 下一步目标:
+- 建议先读文件:
+  - docs/schedule.md
+  - docs/xxx.md
+  - src/xxx/
 ```
 
-历史细节不要继续堆在本文件中；能从代码、测试和模块文档恢复的内容，不要重复粘贴。
+## 11. 压缩前检查清单
 
-## 9. 最近模块 Handoff
+每次完成一个模块并准备进行 Codex 上下文压缩前，建议先检查以下事项：
 
-- Step ID: S30
-- 当前状态: 已完成
-- 已完成: 复核 S30 必读上下文、部署与答辩说明、答辩操作手册、前端说明、测试计划、部署脚本、配置、演示 SQL 和 `/app` 静态资源；执行完整发布验证，确认 `/demo` 只读演示台、`/app` 真实业务工作台、真实 HTTP 基线、前端页面级验收、高风险专项和全量 CTest 均通过；同步更新最终 handoff 和交付边界。
-- 修改文件: `docs/schedule.md`、`docs/接口联调记录.md`、`docs/部署与答辩说明.md`、`docs/答辩演示操作手册.md`、`docs/前端演示模块说明.md`、`docs/测试计划与用例说明.md`、`docs/测试报告.md`。
-- 验证命令: `bash -n scripts/deploy/init_demo_env.sh`、`bash -n scripts/deploy/run_demo_server.sh`、`bash -n scripts/deploy/show_demo_walkthrough.sh`、`bash -n scripts/deploy/verify_release.sh`、`bash -n scripts/test.sh`、`bash -n scripts/test_ui.sh`、`scripts/deploy/verify_release.sh`。
-- 验证结果: 脚本语法检查通过；`scripts/deploy/verify_release.sh` 通过，已初始化 `auction_demo`，检查 `/healthz`、`/demo`、`/app`、`/assets/demo/app.css`、`/assets/demo/app.js`、`/assets/app/app.css`、`/assets/app/app.js` 和 `/api/demo/dashboard`，再执行 `scripts/test.sh frontend`、`scripts/test.sh ui`、`scripts/test.sh http`、`scripts/test.sh risk` 和全量 `ctest --test-dir build --output-on-failure`；最终 `ctest 18/18` 通过。
-- 未覆盖风险: 未新增浏览器驱动截图、真实点击流、前端性能压测或 200 并发在线验证；当前课程设计交付以静态页面合同、真实 HTTP 回归、高风险专项和全量 CTest 作为验收证据。当前支付仍为 mock 支付适配器，不连接真实第三方支付平台。
-- 下一步: 按需进行答辩复现、演示运行或提交材料；若用户后续要求新增功能或缺陷修复，先重新读取本文件和相关模块文档。
-- 下一步必须先读: `docs/schedule.md`、`docs/需求规格说明书.md`、`docs/系统概要设计报告.md`、`docs/部署与答辩说明.md`、`docs/答辩演示操作手册.md`、`docs/前端演示模块说明.md`、`docs/测试计划与用例说明.md`。
+```md
+- [ ] schedule.md 已更新状态
+- [ ] 模块文档已更新“已实现/未实现”
+- [ ] 验证命令和结果已记录
+- [ ] 下一步已写清楚
+- [ ] 关键决定已写进代码/文档，不只存在聊天里
+```
+
+## 12. 新会话固定恢复文本
+
+后续每次进入本项目的新一轮 agent 执行，开始前都应先读取并遵循下面这段固定文本：
+
+```text
+这是 /home/ljh/project/soft_course_design 项目。
+
+请先读取并对齐以下内容后再继续：
+1. docs/schedule.md
+2. docs/frontend-next-schedule.md
+3. docs/部署与答辩说明.md
+4. docs/环境配置说明.md
+5. docs/测试报告.md
+6. docs/测试计划与用例说明.md
+7. docs/接口联调记录.md
+8. docs/系统概要设计报告.md
+9. 若执行 F16/F17，读取 `frontend/` 目录；若执行后端验证，读取 scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
+
+当前正在做：F17 真实后端 HTTP 控制器逐步接入
+当前状态：S00-S15 已完成；F16 已完成（含 F16-0 到 F16-5）；F17 进行中，Auth 已接入，Auction list/detail 已接入，Bid 已接入，Publish 已接入，Checkout 已接入，Admin 已接入，下一步 WebSocket
+
+本次若需要继续：
+- 先读取 `docs/frontend-next-schedule.md` 和 `frontend/API_READINESS.md`，按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端
+- F17 已完成 Auth、Auction、Bid、Publish、Checkout、Admin 六组 HTTP 控制器接入
+- F16 已全部完成：前端 README、API readiness、7 个页面、Mock 交互闭环和 Next 16/React 19 安全升级均已落地
+- F17 才逐步接入真实 Drogon HTTP 与 WebSocket 接口，且必须保留 Mock 模式
+- 若只是交付或答辩复现，优先使用 `scripts/deploy/init_demo_env.sh`、`scripts/deploy/run_demo_server.sh`、`scripts/deploy/show_demo_walkthrough.sh` 和 `scripts/deploy/verify_release.sh`
+- 每次改变实现状态、验证状态、handoff、下一步或 F16/F17 前端 readiness，都同步更新 `docs/schedule.md`；F16/F17 还要同步 `docs/frontend-next-schedule.md` 和必要的 API readiness/测试记录
+
+注意约束：
+- 以实际代码落地为准，不以仅写文档算完成
+- 任何 sudo 先问我，不用sudo，所有操作你都可以直接执行
+- 始终用中文
+```
+
+历史 S15 恢复重点：
+
+```text
+S15 已完成。已落地 `scripts/deploy/`、`sql/demo_data.sql`、`docs/部署与答辩说明.md`，并调整 `config/nginx.conf` 为本地非特权演示端口 `18081` 代理应用端口 `18080`。
+
+最近一次验证：
+- `cmake -S . -B build`
+- `cmake --build build`
+- `scripts/deploy/init_demo_env.sh`
+- `scripts/deploy/verify_release.sh`
+- `scripts/deploy/run_demo_server.sh`
+- `curl http://127.0.0.1:18080/healthz`
+
+结果：演示库 `auction_demo` 初始化成功，高风险专项 2/2 通过，全量 CTest 15/15 通过，健康检查返回 `status=ok`。
+
+注意：若用户态 MySQL 初始化失败并提示 `Unable to lock ./ibdata1`，优先检查是否有残留 `mysqld` 占用 `build/test_mysql/data`。
+```
+
+说明如下：
+
+- 当当前步骤变化时，要把这里的模块文档和代码目录替换成新的真实目标
+- 若当前步骤尚未创建代码目录，也必须先读取 `docs/schedule.md` 和对应模块文档，再决定下一步

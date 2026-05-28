@@ -145,6 +145,21 @@ int main() {
     assert(created.item_id > 0);
     assert(created.item_status == "DRAFT");
 
+    const auto cover_only = item_service.CreateDraftItem(
+        seller_header,
+        {
+            .title = "仅封面拍品 " + unique_suffix,
+            .description = "用于验证提交审核必须存在图片元数据",
+            .category_id = 1,
+            .start_price = 66.0,
+            .cover_image_url = "/images/" + unique_suffix + "/cover-only.jpg",
+        }
+    );
+    ExpectInvalidArgument([&] {
+        const auto ignored = item_service.SubmitForAudit(seller_header, cover_only.item_id);
+        (void)ignored;
+    });
+
     ExpectItemError(ErrorCode::kItemOwnerMismatch, [&] {
         const auto ignored = item_service.GetItemDetail(other_header, created.item_id);
         (void)ignored;

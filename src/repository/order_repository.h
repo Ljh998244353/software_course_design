@@ -31,6 +31,15 @@ struct ExpiredOrderAggregate {
     std::string item_title;
 };
 
+struct OrderDetailAggregate {
+    modules::order::OrderRecord order;
+    std::uint64_t auction_id{0};
+    std::string auction_status;
+    std::uint64_t item_id{0};
+    std::string item_status;
+    std::string item_title;
+};
+
 struct CreateOrderParams {
     std::string order_no;
     std::uint64_t auction_id{0};
@@ -74,6 +83,9 @@ public:
         std::uint64_t auction_id
     ) const;
     [[nodiscard]] std::optional<modules::order::OrderRecord> FindOrderById(
+        std::uint64_t order_id
+    ) const;
+    [[nodiscard]] std::optional<OrderDetailAggregate> FindOrderAggregateById(
         std::uint64_t order_id
     ) const;
     [[nodiscard]] std::optional<modules::order::OrderRecord> FindOrderByIdForUpdate(

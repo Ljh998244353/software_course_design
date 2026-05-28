@@ -4,13 +4,30 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "access/http/business_http.h"
-#include "access/http/demo_http.h"
+#include "access/http/auction_http.h"
+#include "access/http/auth_http.h"
+#include "access/http/bid_http.h"
 #include "access/http/health_http.h"
+#include "access/http/item_http.h"
+#include "access/http/admin_http.h"
+#include "access/http/order_http.h"
 #include "application/database_health_service.h"
 #include "application/health_service.h"
 #include "common/config/config_loader.h"
 #include "common/logging/logger.h"
+#include "middleware/auth_middleware.h"
+#include "modules/auction/auction_service.h"
+#include "modules/auth/auth_service.h"
+#include "modules/auth/auth_session_store.h"
+#include "modules/bid/bid_cache_store.h"
+#include "modules/bid/bid_service.h"
+#include "modules/item/item_service.h"
+#include "modules/notification/notification_service.h"
+#include "modules/audit/item_audit_service.h"
+#include "modules/order/order_service.h"
+#include "modules/payment/payment_service.h"
+#include "modules/statistics/statistics_service.h"
+#include "ws/auction_event_gateway.h"
 
 #if AUCTION_HAS_DROGON
 #include <drogon/drogon.h>
@@ -65,8 +82,35 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
 
 #if AUCTION_HAS_DROGON
     access::http::RegisterHealthHttpRoutes(app_config, kProjectRoot, config_path);
-    access::http::RegisterDemoHttpRoutes(app_config, kProjectRoot);
-    access::http::RegisterBusinessHttpRoutes(app_config, kProjectRoot);
+
+    // NOTE: session_store, auth_service, auth_middleware are stack-local here.
+    // They outlive all Drogon handler lambdas because drogon::app().run() blocks
+    // until the server shuts down, and these objects are destroyed after run() returns.
+    modules::auth::InMemoryAuthSessionStore session_store;
+    modules::auth::AuthService auth_service(app_config, kProjectRoot, session_store);
+    middleware::AuthMiddleware auth_middleware(auth_service);
+    access::http::RegisterAuthHttpRoutes(auth_service, auth_middleware);
+
+    modules::auction::AuctionService auction_service(app_config, kProjectRoot, auth_middleware);
+    access::http::RegisterAuctionHttpRoutes(auction_service);
+
+    ws::InMemoryAuctionEventGateway event_gateway;
+    modules::notification::NotificationService notification_service(app_config, kProjectRoot, event_gateway);
+    modules::bid::InMemoryBidCacheStore bid_cache_store;
+    modules::bid::BidService bid_service(app_config, kProjectRoot, auth_middleware, notification_service, bid_cache_store);
+    access::http::RegisterBidHttpRoutes(bid_service);
+
+    modules::item::ItemService item_service(app_config, kProjectRoot, auth_middleware);
+    access::http::RegisterItemHttpRoutes(item_service);
+
+    modules::order::OrderService order_service(app_config, kProjectRoot, auth_middleware, notification_service);
+    modules::payment::PaymentService payment_service(app_config, kProjectRoot, auth_middleware, notification_service);
+    access::http::RegisterOrderHttpRoutes(order_service, payment_service);
+
+    modules::audit::ItemAuditService audit_service(app_config, kProjectRoot, auth_middleware);
+    modules::statistics::StatisticsService statistics_service(app_config, kProjectRoot, auth_middleware);
+    access::http::RegisterAdminHttpRoutes(audit_service, statistics_service);
+
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);
     logging::Logger::Instance().Info(
