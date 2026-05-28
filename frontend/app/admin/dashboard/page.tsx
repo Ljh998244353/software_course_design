@@ -1,26 +1,46 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart3, Check, ChevronRight, ClipboardCheck, Command, Gavel, ShieldAlert, X } from "lucide-react";
+import { AlertCircle, BarChart3, Check, ChevronRight, ClipboardCheck, Command, Gavel, Loader2, ShieldAlert, X } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAdminReviews } from "@/lib/api/client";
+import { approveItem, getAdminDailyStatistics, getAdminReviews, rejectItem } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
 import { formatPrice, formatTime } from "@/lib/utils/format";
 import type { AdminReviewItem } from "@/types/auction";
 
 export default function AdminDashboardPage() {
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<AdminReviewItem | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
+  const [rejectReason, setRejectReason] = useState("不符合平台审核要求");
+  const today = new Date().toISOString().slice(0, 10);
   const { data = [], isLoading } = useQuery({ queryKey: queryKeys.adminReviews, queryFn: getAdminReviews });
+  const { data: dailyStatistics = [] } = useQuery({
+    queryKey: queryKeys.adminDailyStatistics(today, today),
+    queryFn: () => getAdminDailyStatistics(today, today),
+  });
   const rows = data.filter((row) => !removed.includes(row.id));
+  const todayStats = dailyStatistics[0];
+  const approveMutation = useMutation({
+    mutationFn: approveItem,
+    onSuccess: (_result, id) => finishAudit(id),
+  });
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => rejectItem(id, reason),
+    onSuccess: (_result, variables) => finishAudit(variables.id),
+  });
+  const auditError = approveMutation.error?.message ?? rejectMutation.error?.message;
+  const isAuditing = approveMutation.isPending || rejectMutation.isPending;
 
-  function approve(id: string) {
+  function finishAudit(id: string) {
     setRemoved((current) => [...current, id]);
     setSelected(null);
+    setRejectReason("不符合平台审核要求");
+    void queryClient.invalidateQueries({ queryKey: queryKeys.adminReviews });
   }
 
   return (
@@ -54,9 +74,9 @@ export default function AdminDashboardPage() {
 
         <div className="mb-6 grid gap-4 md:grid-cols-4">
           <Kpi icon={<ClipboardCheck className="h-5 w-5" />} label="待审核" value={String(rows.length)} />
-          <Kpi icon={<Gavel className="h-5 w-5" />} label="进行中拍卖" value="12" />
-          <Kpi icon={<BarChart3 className="h-5 w-5" />} label="今日成交额" value="¥18,420" />
-          <Kpi icon={<ShieldAlert className="h-5 w-5" />} label="风险事件" value="2" />
+          <Kpi icon={<Gavel className="h-5 w-5" />} label="今日成交" value={String(todayStats?.sold_count ?? 0)} />
+          <Kpi icon={<BarChart3 className="h-5 w-5" />} label="今日成交额" value={formatPrice(todayStats?.gmv_amount ?? 0)} />
+          <Kpi icon={<ShieldAlert className="h-5 w-5" />} label="今日流拍" value={String(todayStats?.unsold_count ?? 0)} />
         </div>
 
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
@@ -125,14 +145,33 @@ export default function AdminDashboardPage() {
               <Info label="OCR/关键词" value={selected.risk === "HIGH" ? "限量、未拆封、转卖风险" : "未发现明显违规词"} />
               <Info label="建议" value={selected.risk === "HIGH" ? "建议人工复核来源证明" : "可批准进入拍卖配置"} />
             </div>
+            <label className="mt-5 block text-sm font-bold text-slate-700" htmlFor="reject-reason">
+              驳回原因
+            </label>
+            <textarea
+              id="reject-reason"
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              className="mt-2 min-h-20 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            />
+            {auditError ? (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{auditError}</span>
+              </div>
+            ) : null}
             <div className="mt-8 grid grid-cols-2 gap-3">
-              <Button variant="danger" onClick={() => approve(selected.id)}>
-                <X className="h-4 w-4" />
-                驳回
+              <Button
+                variant="danger"
+                disabled={isAuditing}
+                onClick={() => rejectMutation.mutate({ id: selected.id, reason: rejectReason })}
+              >
+                {rejectMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                {rejectMutation.isPending ? "驳回中" : "驳回"}
               </Button>
-              <Button onClick={() => approve(selected.id)}>
-                <Check className="h-4 w-4" />
-                批准
+              <Button disabled={isAuditing} onClick={() => approveMutation.mutate(selected.id)}>
+                {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {approveMutation.isPending ? "批准中" : "批准"}
               </Button>
             </div>
           </motion.aside>

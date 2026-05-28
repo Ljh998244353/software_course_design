@@ -4,13 +4,19 @@ import type {
   AuctionDetailRaw,
   AuctionItem,
   AuctionSummaryRaw,
+  AuditItemResultRaw,
   BidHistoryEntryRaw,
   BidHistoryResponseRaw,
   BidRecord,
   CreateItemRaw,
+  DailyStatisticsRaw,
   ItemImageRaw,
   LoginResponse,
+  OrderDetailRaw,
   OrderSummary,
+  PayOrderResultRaw,
+  PaymentChannel,
+  PendingAuditItemRaw,
   PlaceBidResultRaw,
   SubmitReviewRaw,
   UserProfile,
@@ -83,6 +89,31 @@ function mapPlaceBidResult(raw: PlaceBidResultRaw): BidRecord {
     amount: raw.bid_amount,
     createdAt: raw.server_time,
     status: raw.bid_status === "WINNING" ? "SUCCESS" : "OUTBID",
+  };
+}
+
+function mapPendingAuditItem(raw: PendingAuditItemRaw): AdminReviewItem {
+  return {
+    id: String(raw.item_id),
+    title: raw.title,
+    seller: raw.seller_nickname || raw.seller_username,
+    category: String(raw.category_id),
+    risk: "LOW",
+    submittedAt: raw.created_at,
+    price: raw.start_price,
+  };
+}
+
+function mapOrderDetail(raw: OrderDetailRaw): OrderSummary {
+  const hammerPrice = raw.final_amount;
+  return {
+    id: String(raw.order_id),
+    auctionTitle: raw.item_title,
+    hammerPrice,
+    serviceFee: 0,
+    total: hammerPrice,
+    seller: "",
+    deadline: raw.pay_deadline_at,
   };
 }
 
@@ -247,26 +278,76 @@ export async function logout(): Promise<void> {
 
 export async function getOrder(orderId: string): Promise<OrderSummary> {
   if (apiMode() === "live") {
-    return liveFetch<OrderSummary>(`/api/orders/${orderId}`);
+    const raw = await liveFetch<OrderDetailRaw>(`/api/orders/${orderId}`);
+    return mapOrderDetail(raw);
   }
   await delay(200);
   return { ...mockOrder, id: orderId };
 }
 
-export async function payOrder(orderId: string) {
+export async function payOrder(orderId: string, payChannel: PaymentChannel) {
   if (apiMode() === "live") {
-    return liveFetch<{ status: string }>(`/api/orders/${orderId}/pay`, { method: "POST" });
+    const raw = await liveFetch<PayOrderResultRaw>(`/api/orders/${orderId}/pay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pay_channel: payChannel }),
+    });
+    return { status: raw.pay_status };
   }
   await delay(900);
-  return { status: "SUCCESS" };
+  return { status: "WAITING_CALLBACK" };
 }
 
 export async function getAdminReviews(): Promise<AdminReviewItem[]> {
   if (apiMode() === "live") {
-    return liveFetch<AdminReviewItem[]>("/api/admin/items/pending");
+    const raw = await liveFetch<PendingAuditItemRaw[]>("/api/admin/items/pending");
+    return raw.map(mapPendingAuditItem);
   }
   await delay(260);
   return mockReviewItems;
+}
+
+export async function approveItem(itemId: string): Promise<AuditItemResultRaw> {
+  if (apiMode() === "live") {
+    return liveFetch<AuditItemResultRaw>(`/api/admin/items/${itemId}/approve`, {
+      method: "POST",
+    });
+  }
+  await delay(300);
+  return { item_id: Number(itemId), old_status: "PENDING_AUDIT", new_status: "APPROVED", audit_result: "APPROVED", audited_at: new Date().toISOString() };
+}
+
+export async function rejectItem(itemId: string, reason?: string): Promise<AuditItemResultRaw> {
+  if (apiMode() === "live") {
+    return liveFetch<AuditItemResultRaw>(`/api/admin/items/${itemId}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason ?? "" }),
+    });
+  }
+  await delay(300);
+  return { item_id: Number(itemId), old_status: "PENDING_AUDIT", new_status: "REJECTED", audit_result: "REJECTED", audited_at: new Date().toISOString() };
+}
+
+export async function getAdminDailyStatistics(startDate?: string, endDate?: string): Promise<DailyStatisticsRaw[]> {
+  if (apiMode() === "live") {
+    const params = new URLSearchParams();
+    if (startDate) params.set("start_date", startDate);
+    if (endDate) params.set("end_date", endDate);
+    const qs = params.toString();
+    return liveFetch<DailyStatisticsRaw[]>(`/api/admin/statistics/daily${qs ? `?${qs}` : ""}`);
+  }
+  await delay(200);
+  return [{
+    stat_id: 1,
+    stat_date: startDate ?? new Date().toISOString().slice(0, 10),
+    auction_count: 18,
+    sold_count: 7,
+    unsold_count: 2,
+    bid_count: 126,
+    gmv_amount: 18420,
+    created_at: new Date().toISOString(),
+  }];
 }
 
 export async function createItem(params: {

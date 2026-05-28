@@ -9,6 +9,8 @@
 #include "access/http/bid_http.h"
 #include "access/http/health_http.h"
 #include "access/http/item_http.h"
+#include "access/http/admin_http.h"
+#include "access/http/order_http.h"
 #include "application/database_health_service.h"
 #include "application/health_service.h"
 #include "common/config/config_loader.h"
@@ -21,6 +23,10 @@
 #include "modules/bid/bid_service.h"
 #include "modules/item/item_service.h"
 #include "modules/notification/notification_service.h"
+#include "modules/audit/item_audit_service.h"
+#include "modules/order/order_service.h"
+#include "modules/payment/payment_service.h"
+#include "modules/statistics/statistics_service.h"
 #include "ws/auction_event_gateway.h"
 
 #if AUCTION_HAS_DROGON
@@ -96,6 +102,14 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
 
     modules::item::ItemService item_service(app_config, kProjectRoot, auth_middleware);
     access::http::RegisterItemHttpRoutes(item_service);
+
+    modules::order::OrderService order_service(app_config, kProjectRoot, auth_middleware, notification_service);
+    modules::payment::PaymentService payment_service(app_config, kProjectRoot, auth_middleware, notification_service);
+    access::http::RegisterOrderHttpRoutes(order_service, payment_service);
+
+    modules::audit::ItemAuditService audit_service(app_config, kProjectRoot, auth_middleware);
+    modules::statistics::StatisticsService statistics_service(app_config, kProjectRoot, auth_middleware);
+    access::http::RegisterAdminHttpRoutes(audit_service, statistics_service);
 
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);

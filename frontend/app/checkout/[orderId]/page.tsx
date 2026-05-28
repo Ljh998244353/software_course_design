@@ -2,30 +2,49 @@
 
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check, CheckCircle2, CreditCard, Loader2, WalletCards } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, CreditCard, Loader2, WalletCards } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getOrder, payOrder } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
 import { formatPrice, formatTime } from "@/lib/utils/format";
+import type { PaymentChannel } from "@/types/auction";
+
+const paymentMethods: Array<{ id: PaymentChannel; label: string; icon: typeof CreditCard }> = [
+  { id: "MOCK_WECHAT", label: "校园一卡通", icon: CreditCard },
+  { id: "MOCK_ALIPAY", label: "微信/支付宝模拟钱包", icon: WalletCards },
+];
 
 export default function CheckoutPage() {
   const params = useParams<{ orderId: string }>();
-  const [method, setMethod] = useState("campus");
+  const [method, setMethod] = useState<PaymentChannel>("MOCK_WECHAT");
   const orderQuery = useQuery({ queryKey: queryKeys.order(params.orderId), queryFn: () => getOrder(params.orderId) });
-  const mutation = useMutation({ mutationFn: () => payOrder(params.orderId) });
+  const mutation = useMutation({
+    mutationFn: () => payOrder(params.orderId, method),
+  });
   const order = orderQuery.data;
+  const paymentStatus = mutation.data?.status;
+  const isPaymentConfirmed = mutation.isSuccess && paymentStatus === "SUCCESS";
+  const isPaymentPending = mutation.isSuccess && paymentStatus !== "SUCCESS";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-6 shadow-modal">
-        {mutation.isSuccess ? (
+        {isPaymentConfirmed ? (
           <div className="py-14 text-center">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-9 w-9" />
             </div>
             <h1 className="text-3xl font-black text-slate-950">支付成功</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">订单已进入履约阶段，后端 live 模式将等待支付回调确认。</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">订单已进入履约阶段。</p>
+          </div>
+        ) : isPaymentPending ? (
+          <div className="py-14 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+              <Loader2 className="h-9 w-9 animate-spin" />
+            </div>
+            <h1 className="text-3xl font-black text-slate-950">支付处理中</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">支付已发起，等待回调确认。请稍后刷新页面查看支付结果。</p>
           </div>
         ) : (
           <>
@@ -41,10 +60,7 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {[
-                { id: "campus", label: "校园一卡通", icon: CreditCard },
-                { id: "wallet", label: "微信/支付宝模拟钱包", icon: WalletCards }
-              ].map(({ id, label, icon: Icon }) => (
+              {paymentMethods.map(({ id, label, icon: Icon }) => (
                 <button key={id} onClick={() => setMethod(id)} className={`auction-transition relative rounded-lg border p-4 text-left ${method === id ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:border-indigo-300"}`}>
                   <Icon className="mb-3 h-5 w-5 text-indigo-600" />
                   <p className="font-black text-slate-950">{label}</p>
@@ -52,6 +68,12 @@ export default function CheckoutPage() {
                 </button>
               ))}
             </div>
+            {mutation.isError ? (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{mutation.error?.message ?? "支付失败，请重试"}</span>
+              </div>
+            ) : null}
             <Button className="mt-6 w-full" disabled={!order || mutation.isPending} onClick={() => mutation.mutate()}>
               {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {mutation.isPending ? "支付处理中" : "确认支付"}

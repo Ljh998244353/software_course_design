@@ -683,6 +683,33 @@ OrderTransitionResult OrderService::ConfirmReceipt(
     }
 }
 
+repository::OrderDetailAggregate OrderService::GetOrderDetail(
+    const std::string_view authorization_header,
+    const std::uint64_t order_id
+) {
+    const auto auth_context = auth_middleware_->RequireAnyRole(
+        authorization_header,
+        {modules::auth::kRoleUser}
+    );
+
+    auto connection = CreateConnection();
+    auto repository = MakeRepository(connection);
+
+    const auto aggregate = repository.FindOrderAggregateById(order_id);
+    if (!aggregate.has_value()) {
+        ThrowOrderError(common::errors::ErrorCode::kOrderNotFound, "order not found");
+    }
+    if (aggregate->order.buyer_id != auth_context.user_id &&
+        aggregate->order.seller_id != auth_context.user_id) {
+        ThrowOrderError(
+            common::errors::ErrorCode::kOrderOwnerMismatch,
+            "user does not have access to this order"
+        );
+    }
+
+    return *aggregate;
+}
+
 common::db::MysqlConnection OrderService::CreateConnection() const {
     return common::db::MysqlConnection(mysql_config_, project_root_);
 }

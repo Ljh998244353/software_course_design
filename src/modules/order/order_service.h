@@ -8,6 +8,7 @@
 #include "middleware/auth_middleware.h"
 #include "modules/notification/notification_service.h"
 #include "modules/order/order_types.h"
+#include "repository/order_repository.h"
 
 namespace auction::modules::order {
 
@@ -27,6 +28,11 @@ public:
         std::uint64_t order_id
     );
     [[nodiscard]] OrderTransitionResult ConfirmReceipt(
+        std::string_view authorization_header,
+        std::uint64_t order_id
+    );
+
+    [[nodiscard]] repository::OrderDetailAggregate GetOrderDetail(
         std::string_view authorization_header,
         std::uint64_t order_id
     );

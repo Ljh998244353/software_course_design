@@ -119,8 +119,8 @@ export const mockOrder: OrderSummary = {
   id: "ORD-20260527-1001",
   auctionTitle: "索尼 WH-1000XM5 降噪耳机",
   hammerPrice: 860,
-  serviceFee: 12,
-  total: 872,
+  serviceFee: 0,
+  total: 860,
   seller: "seller_demo",
   deadline: future(1440)
 };

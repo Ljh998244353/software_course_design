@@ -81,6 +81,8 @@ set(AUCTION_CORE_SOURCES
     src/access/http/bid_http.cpp
     src/access/http/health_http.cpp
     src/access/http/item_http.cpp
+    src/access/http/order_http.cpp
+    src/access/http/admin_http.cpp
     src/application/database_health_service.cpp
     src/application/health_service.cpp
     src/common/config/config_loader.cpp

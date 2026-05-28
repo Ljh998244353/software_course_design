@@ -41,6 +41,8 @@ export type OrderSummary = {
   deadline: string;
 };
 
+export type PaymentChannel = "MOCK_ALIPAY" | "MOCK_WECHAT";
+
 export type AdminReviewItem = {
   id: string;
   title: string;
@@ -134,5 +136,62 @@ export type ItemImageRaw = {
   image_url: string;
   sort_no: number;
   is_cover: boolean;
+  created_at: string;
+};
+
+export type OrderDetailRaw = {
+  order_id: number;
+  order_no: string;
+  auction_id: number;
+  item_title: string;
+  buyer_id: number;
+  seller_id: number;
+  final_amount: number;
+  order_status: string;
+  pay_deadline_at: string;
+  paid_at: string;
+  created_at: string;
+};
+
+export type PayOrderResultRaw = {
+  payment_id: number;
+  order_id: number;
+  order_no: string;
+  payment_no: string;
+  pay_channel: string;
+  pay_amount: number;
+  pay_status: string;
+  pay_url: string;
+  expire_at: string;
+  reused_existing: boolean;
+};
+
+export type PendingAuditItemRaw = {
+  item_id: number;
+  seller_id: number;
+  seller_username: string;
+  seller_nickname: string;
+  category_id: number;
+  title: string;
+  start_price: number;
+  created_at: string;
+};
+
+export type AuditItemResultRaw = {
+  item_id: number;
+  old_status: string;
+  new_status: string;
+  audit_result: string;
+  audited_at: string;
+};
+
+export type DailyStatisticsRaw = {
+  stat_id: number;
+  stat_date: string;
+  auction_count: number;
+  sold_count: number;
+  unsold_count: number;
+  bid_count: number;
+  gmv_amount: number;
   created_at: string;
 };

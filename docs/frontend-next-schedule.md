@@ -378,9 +378,17 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 3. Bid：`POST /api/auctions/{id}/bids`、`GET /api/auctions/{id}/bids`。 ✅ 已完成
 4. Publish：`POST /api/items`、图片元数据、提交审核。 ✅ 已完成
-5. Checkout：订单查询、支付发起。
-6. Admin：统计、待审、运维数据。
+5. Checkout：`GET /api/orders/{id}`、`POST /api/orders/{id}/pay`。 ✅ 已完成
+6. Admin：统计、待审、运维数据。 ✅ 已完成
 7. WebSocket：`/ws/auction/{id}`。
+
+#### F17 Checkout/Admin Code Review 修复
+
+- 修复 Checkout live 支付渠道被忽略的问题：前端支付方式现在映射为 `MOCK_WECHAT` / `MOCK_ALIPAY` 并随 `pay_channel` 提交。
+- 修复 Checkout 金额展示与后端支付金额不一致的问题：前端总计对齐后端 `final_amount/pay_amount`，当前无单独服务费落库字段时管理费显示为 0。
+- 修复 Admin 审核按钮只本地移除行的问题：批准/驳回现在调用 `approveItem` / `rejectItem`，接口成功后才更新列表，并展示审核失败错误。
+- 修复 Admin 统计接口“已接入但页面未使用”的问题：管理页 KPI 现在查询 `GET /api/admin/statistics/daily`，Mock 模式也返回可展示统计数据。
+- 验证：`git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck`、前端 `npm run build` 均通过。
 
 完成判定：
 
@@ -466,5 +474,5 @@ ctest --test-dir build --output-on-failure
 - 未覆盖风险:
   - 尚未接入真实 Drogon HTTP 控制器和 WebSocket
   - `npm audit` 剩余 2 个 moderate，等待 Next.js 后续补丁释放可用修复版本
-- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。Auth/Auction/Bid/Publish 已完成，下一步 Checkout。
+- 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。Auth/Auction/Bid/Publish/Checkout/Admin 已完成，下一步 WebSocket。
 - 下一步必须先读: `docs/schedule.md`、`docs/frontend-next-schedule.md`、`frontend/API_READINESS.md`、`docs/接口联调记录.md`。
