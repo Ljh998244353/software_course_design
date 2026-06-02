@@ -128,3 +128,9 @@ scripts/deploy/verify_release.sh
 ## 支付说明
 
 当前支付链路使用内部测试支付通道，不连接真实第三方支付网关；但支付发起、回调验签、金额校验、幂等处理和审计日志均按正式业务链路实现。
+
+## 用户手册
+
+完整的按角色使用教程见：
+
+- [用户使用手册](/home/ljh/project/soft_course_design/docs/用户文档.md)
