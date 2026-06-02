@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, Check, CheckCircle2, CreditCard, Loader2, WalletCards } from "lucide-react";

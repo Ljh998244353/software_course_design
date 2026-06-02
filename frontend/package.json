@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "release-check": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.16",

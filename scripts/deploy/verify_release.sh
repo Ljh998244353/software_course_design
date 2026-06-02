@@ -2,10 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DEMO_CONFIG_PATH="${ROOT_DIR}/build/demo_config/app.demo.json"
-DEMO_SERVER_HOST="${AUCTION_DEMO_SERVER_HOST:-127.0.0.1}"
-DEMO_SERVER_PORT="${AUCTION_DEMO_SERVER_PORT:-18080}"
-SERVER_LOG="${ROOT_DIR}/build/demo_config/verify_release_server.log"
+TEST_SERVER_HOST="${AUCTION_RELEASE_SERVER_HOST:-127.0.0.1}"
+TEST_SERVER_PORT="${AUCTION_RELEASE_SERVER_PORT:-18080}"
+SERVER_LOG="${ROOT_DIR}/build/release_verify_server.log"
 SERVER_PID=""
 
 cleanup() {
@@ -15,22 +14,22 @@ cleanup() {
     fi
 }
 
-wait_for_demo_server() {
+wait_for_server() {
     for _ in {1..20}; do
         if ! kill -0 "${SERVER_PID}" >/dev/null 2>&1; then
-            echo "demo server exited before readiness" >&2
+            echo "server exited before readiness" >&2
             if [[ -f "${SERVER_LOG}" ]]; then
                 tail -n 120 "${SERVER_LOG}" >&2
             fi
             return 1
         fi
-        if curl -fsS "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/healthz" >/dev/null 2>&1; then
+        if curl -fsS "http://${TEST_SERVER_HOST}:${TEST_SERVER_PORT}/healthz" >/dev/null 2>&1; then
             return 0
         fi
         sleep 1
     done
 
-    echo "demo server did not become ready" >&2
+    echo "server did not become ready" >&2
     if [[ -f "${SERVER_LOG}" ]]; then
         tail -n 120 "${SERVER_LOG}" >&2
     fi
@@ -48,45 +47,35 @@ expect_http_200() {
     fi
 }
 
-verify_browser_entries() {
-    mkdir -p "${ROOT_DIR}/build/demo_config"
-    : >"${SERVER_LOG}"
+write_release_config() {
+    local source_config="${ROOT_DIR}/config/app.example.json"
+    local target_config="${ROOT_DIR}/build/release_verify_app.json"
+    mkdir -p "${ROOT_DIR}/build"
+    sed \
+        -e "s/\"host\": \"127.0.0.1\"/\"host\": \"${TEST_SERVER_HOST//\//\\/}\"/" \
+        -e "0,/\"port\": [0-9]*/s//\"port\": ${TEST_SERVER_PORT}/" \
+        "${source_config}" >"${target_config}"
+    echo "${target_config}"
+}
 
-    AUCTION_APP_CONFIG="${DEMO_CONFIG_PATH}" "${ROOT_DIR}/build/bin/auction_app" \
+verify_server_entries() {
+    : >"${SERVER_LOG}"
+    local test_config_path
+    test_config_path="$(write_release_config)"
+
+    AUCTION_APP_CONFIG="${test_config_path}" "${ROOT_DIR}/build/bin/auction_app" \
         >"${SERVER_LOG}" 2>&1 &
     SERVER_PID=$!
 
-    wait_for_demo_server
+    wait_for_server
 
     expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/healthz" \
-        "${ROOT_DIR}/build/demo_config/verify_healthz.json"
+        "http://${TEST_SERVER_HOST}:${TEST_SERVER_PORT}/healthz" \
+        "${ROOT_DIR}/build/verify_healthz.json"
     expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/demo" \
-        "${ROOT_DIR}/build/demo_config/verify_demo.html"
-    expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/app" \
-        "${ROOT_DIR}/build/demo_config/verify_app.html"
-    expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/assets/demo/app.css" \
-        "${ROOT_DIR}/build/demo_config/verify_demo.css"
-    expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/assets/demo/app.js" \
-        "${ROOT_DIR}/build/demo_config/verify_demo.js"
-    expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/assets/app/app.css" \
-        "${ROOT_DIR}/build/demo_config/verify_app.css"
-    expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/assets/app/app.js" \
-        "${ROOT_DIR}/build/demo_config/verify_app.js"
-    expect_http_200 \
-        "http://${DEMO_SERVER_HOST}:${DEMO_SERVER_PORT}/api/demo/dashboard" \
-        "${ROOT_DIR}/build/demo_config/verify_dashboard.json"
-
-    grep -q "在线拍卖平台演示台" "${ROOT_DIR}/build/demo_config/verify_demo.html"
-    grep -q "在线拍卖平台业务工作台" "${ROOT_DIR}/build/demo_config/verify_app.html"
-    grep -q '"view"' "${ROOT_DIR}/build/demo_config/verify_dashboard.json"
-    grep -q 'demo_dashboard' "${ROOT_DIR}/build/demo_config/verify_dashboard.json"
+        "http://${TEST_SERVER_HOST}:${TEST_SERVER_PORT}/api/auctions" \
+        "${ROOT_DIR}/build/verify_auctions.json"
+    grep -q '"code"' "${ROOT_DIR}/build/verify_auctions.json"
 
     cleanup
     SERVER_PID=""
@@ -94,10 +83,12 @@ verify_browser_entries() {
 
 trap cleanup EXIT
 
-"${ROOT_DIR}/scripts/deploy/init_demo_env.sh"
-verify_browser_entries
+cd "${ROOT_DIR}/frontend"
+npm run release-check
+cd "${ROOT_DIR}"
+
+verify_server_entries
 "${ROOT_DIR}/scripts/test.sh" frontend
-"${ROOT_DIR}/scripts/test.sh" ui
 "${ROOT_DIR}/scripts/test.sh" http
 "${ROOT_DIR}/scripts/test.sh" risk
 ctest --test-dir "${ROOT_DIR}/build" --output-on-failure

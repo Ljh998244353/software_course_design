@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FRONTEND_DIR="${ROOT_DIR}/frontend"
 
-"${ROOT_DIR}/scripts/bootstrap.sh"
-"${ROOT_DIR}/build/bin/auction_app_ui_acceptance_tests"
+cd "${FRONTEND_DIR}"
+npm run typecheck

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +12,7 @@ import { OfflineBanner } from "@/components/layout/offline-banner";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
+import { useAuth } from "@/lib/auth-context";
 import { getAuction, getBids, placeBid } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
 import { useAuctionWebSocket } from "@/lib/realtime/use-auction-ws";
@@ -22,6 +25,7 @@ export default function AuctionDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [amount, setAmount] = useState("");
   const [pendingBid, setPendingBid] = useState<BidRecord | null>(null);
   const [toast, setToast] = useState("");
@@ -65,7 +69,7 @@ export default function AuctionDetailPage() {
       const pending: BidRecord = {
         id: `PENDING-${Date.now()}`,
         auctionId: id,
-        bidder: "buyer_demo",
+        bidder: user?.nickname || user?.username || "当前用户",
         amount: bidAmount,
         createdAt: new Date().toISOString(),
         status: "PENDING",

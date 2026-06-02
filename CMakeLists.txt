@@ -200,6 +200,7 @@ if(BUILD_TESTING)
     add_test(NAME auction_check_config COMMAND auction_app --check-config)
     add_test(NAME auction_database_smoke COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_db.sh)
     add_test(NAME auction_integration_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_integration.sh)
+    add_test(NAME auction_http_contract COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_http.sh)
     add_test(NAME auction_auth_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auth.sh)
     add_test(NAME auction_item_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_item.sh)
     add_test(NAME auction_auction_flow COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_auction.sh)
@@ -220,6 +221,7 @@ if(BUILD_TESTING)
     set_tests_properties(
         auction_database_smoke
         auction_integration_flow
+        auction_http_contract
         auction_auth_flow
         auction_item_flow
         auction_auction_flow
@@ -245,6 +247,10 @@ if(BUILD_TESTING)
     set_tests_properties(
         auction_integration_flow
         PROPERTIES LABELS "suite_integration;suite_contract;requires_mysql"
+    )
+    set_tests_properties(
+        auction_http_contract
+        PROPERTIES LABELS "suite_http;suite_contract;requires_mysql"
     )
     set_tests_properties(
         auction_auth_flow

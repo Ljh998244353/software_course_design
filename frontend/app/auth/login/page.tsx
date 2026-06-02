@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gavel, Loader2, ShieldCheck } from "lucide-react";
@@ -10,8 +12,8 @@ import { Toast } from "@/components/ui/toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("buyer_demo");
-  const [password, setPassword] = useState("Buyer@123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
   const { refresh } = useAuth();
@@ -44,7 +46,7 @@ export default function LoginPage() {
         <div className="relative max-w-md">
           <p className="text-sm font-bold text-indigo-700">TRUSTED CAMPUS EXCHANGE</p>
           <h1 className="mt-4 text-4xl font-black leading-tight text-slate-950">把每一次出价都放进可验证的交易轨道</h1>
-          <p className="mt-5 leading-8 text-slate-600">Mock 账号可直接进入大厅，后续 live 模式会接入 Drogon 认证接口。</p>
+          <p className="mt-5 leading-8 text-slate-600">登录后可直接进入真实拍卖大厅，所有关键状态以服务端权威结果为准。</p>
         </div>
       </section>
       <section className="flex items-center justify-center px-4 py-12">
@@ -54,7 +56,7 @@ export default function LoginPage() {
               <ShieldCheck className="h-6 w-6" />
             </div>
             <h2 className="text-3xl font-black text-slate-950">登录 / 注册</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">使用演示账号进入前端 Mock 闭环。</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">使用真实账号进入正式业务工作台。</p>
           </div>
           <label className="mb-2 block text-sm font-bold text-slate-700">用户名</label>
           <input value={username} onChange={(event) => setUsername(event.target.value)} className="mb-5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />

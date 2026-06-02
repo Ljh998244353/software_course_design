@@ -7,11 +7,15 @@ DATADIR="${MYSQL_ROOT_DIR}/data"
 SOCKET_FILE="${MYSQL_ROOT_DIR}/mysql-runtime.sock"
 PID_FILE="${MYSQL_ROOT_DIR}/mysql-runtime.pid"
 LOG_FILE="${MYSQL_ROOT_DIR}/error.log"
+LOCK_FILE="${MYSQL_ROOT_DIR}/setup.lock"
 DB_NAME="${AUCTION_DB_NAME:-auction_system}"
 DB_USER="${AUCTION_DB_USER:-auction_user}"
 DB_PASSWORD="${AUCTION_DB_PASSWORD:-change_me}"
 
 mkdir -p "${MYSQL_ROOT_DIR}"
+
+exec 9>"${LOCK_FILE}"
+flock 9
 
 if [[ ! -d "${DATADIR}/mysql" ]]; then
     mysqld \

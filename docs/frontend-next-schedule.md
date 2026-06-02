@@ -149,30 +149,30 @@
 ### 7.1 环境变量
 
 ```env
-NEXT_PUBLIC_API_MODE=mock
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18080
 NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 ```
 
-### 7.2 模式定义
+### 7.2 当前接入策略
 
-- `mock`：默认，所有页面通过 `frontend/lib/api/client.ts` 调用 `frontend/lib/api/mock-data.ts` 中的 typed mock 数据，确保不依赖尚未补齐的 HTTP 控制器即可看到完整前端效果。
-- `live`：调用真实后端文档契约接口；如果后端返回 404/网络错误，应显示“API route not ready”。
+- 当前前端已固定走真实后端 API，不再保留 `mock-data.ts` 或前端 Mock 主路径。
+- 支付环节仅保留正式测试支付模型，用于演示完整下单与回调链路，但产品入口、页面文案和接口流转均按真实系统组织。
+- WebSocket 为详情页实时价格主通道；连接失败时前端自动降级为轮询，不再区分 mock/live 两套页面数据源。
 
 ### 7.3 首批对齐接口
 
 | 接口 | 前端使用处 | 当前策略 |
 |---|---|---|
-| `POST /api/auth/login` | `/auth/login` | Mock 优先，live 保留 |
-| `GET /api/auth/me` | 全局会话恢复 | Mock 优先，live 保留 |
-| `GET /api/auctions` | `/`、`/auction/hall` | Mock 优先，live 保留 |
-| `GET /api/auctions/{id}` | `/auction/detail/[id]` | Mock 优先，live 保留 |
-| `GET /api/auctions/{id}/bids` | 出价历史墙 | Mock 优先，live 保留 |
-| `POST /api/auctions/{id}/bids` | `PLACE BID` | Mock 优先，必须模拟 409/429 |
-| `/ws/auction/{id}` | 详情实时价格 | Mock/轮询优先，live 保留 |
-| `POST /api/items` | `/auction/publish` | Mock 优先，live 保留 |
-| `POST /api/orders/{id}/pay` | `/checkout/[orderId]` | Mock 优先，live 保留 |
-| `GET /api/admin/statistics/daily` | `/admin/dashboard` | Mock 优先，live 保留 |
+| `POST /api/auth/login` | `/auth/login` | 已接入真实后端 |
+| `GET /api/auth/me` | 全局会话恢复 | 已接入真实后端 |
+| `GET /api/auctions` | `/`、`/auction/hall` | 已接入真实后端 |
+| `GET /api/auctions/{id}` | `/auction/detail/[id]` | 已接入真实后端 |
+| `GET /api/auctions/{id}/bids` | 出价历史墙 | 已接入真实后端 |
+| `POST /api/auctions/{id}/bids` | `PLACE BID` | 已接入真实后端 |
+| `/ws/auction/{id}` | 详情实时价格 | 已接入真实 WebSocket，失败时自动轮询降级 |
+| `POST /api/items` | `/auction/publish` | 已接入真实后端 |
+| `POST /api/orders/{id}/pay` | `/checkout/[orderId]` | 已接入真实测试支付模型 |
+| `GET /api/admin/statistics/daily` | `/admin/dashboard` | 已接入真实后端 |
 
 ## 8. 阶段计划
 
@@ -180,7 +180,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 状态：已完成。
 
-目标：创建 `frontend/` Next.js 工程、Tailwind 设计系统、Provider、全局布局、Mock API 基础和可运行首页。
+目标：创建 `frontend/` Next.js 工程、Tailwind 设计系统、Provider、全局布局和可运行首页。
 
 完成判定：
 
@@ -193,14 +193,14 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 - 已创建 `frontend/package.json`、`next.config.mjs`、`tsconfig.json`、`tailwind.config.ts`、`postcss.config.mjs` 和 `.env.example`。
 - 已创建 `frontend/app/layout.tsx`、`frontend/app/providers.tsx`、`frontend/app/globals.css`，接入 React Query Provider 和浅色工业级设计系统。
-- 已创建 `frontend/lib/api/client.ts`、`mock-data.ts`、`types/auction.ts`，默认 Mock 模式可运行，live 模式保留真实接口调用入口。
+- 已创建 `frontend/lib/api/client.ts`、`types/auction.ts`，当前仓库已在后续产品化收尾中删除前端 Mock 数据主路径并固定走真实后端接口。
 - 后续已按安全修复要求升级到 Next.js `16.2.6`、React `19.2.6` 和对应 React 19 类型包；生产构建脚本固定为 `next build --webpack`，规避当前 WSL2/Codex 沙箱下 Turbopack 进程/端口限制。
 
 ### F16-1：7 个物理页面视觉骨架
 
 状态：已完成。
 
-目标：完成 7 个路由页面的视觉结构，能通过 Mock 数据跳转浏览。
+目标：完成 7 个路由页面的视觉结构，能通过真实页面路由跳转浏览。
 
 完成判定：
 
@@ -213,17 +213,17 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 
 - 已落地 `/`、`/auth/login`、`/auction/hall`、`/auction/detail/[id]`、`/auction/publish`、`/checkout/[orderId]`、`/admin/dashboard` 七个物理页面。
 - 已新增导航、降级横幅、拍卖卡片、按钮、Toast、Skeleton 等基础组件。
-- 首页、登录、大厅、详情、发布、支付、管理页均使用 Mock 数据并可通过路由跳转访问。
+- 首页、登录、大厅、详情、发布、支付、管理页均已具备真实产品页面结构，并可通过路由跳转访问。
 
 ### F16-2：竞价详情核心状态机
 
 状态：已完成。
 
-目标：实现详情页 React Query 数据流、乐观 pending 出价、409 回滚、429 限流、WebSocket 降级 UI。
+目标：实现详情页 React Query 数据流、乐观 pending 出价、409 回滚、429 限流和 WebSocket 降级 UI。
 
 完成判定：
 
-- Mock adapter 可稳定模拟成功出价、409、429、WebSocket close。
+- 真实接口和实时通道下可稳定处理成功出价、409、429 与 WebSocket close。
 - 出价 pending 行、成功态、回滚撤销、Shake、Toast、冷却遮罩可见。
 - 断连横幅和轮询状态可见。
 - 核心状态逻辑有最小测试或可复现实验步骤。
@@ -231,8 +231,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 实际完成：
 
 - 详情页已使用 React Query 读取拍卖详情和出价历史，并以 4 秒短轮询模拟实时刷新。
-- `placeBid` Mock 已支持成功、`409 Conflict` 和 `429 Too Many Requests` 分支；金额可被 13 整除时模拟 409，可被 17 整除时模拟 429。
-- 页面已实现 pending 出价行、成功刷新、409 回滚 Toast 与 Shake、429 冷却遮罩和倒计时、实时通道降级提示。
+- 前端详情页已接入真实 `placeBid`、出价历史和 `/ws/auction/{id}`；页面已实现 pending 出价行、成功刷新、409 回滚 Toast 与 Shake、429 冷却遮罩和倒计时、实时通道降级提示。
 
 ### F16-3：发布、支付、管理交互闭环
 

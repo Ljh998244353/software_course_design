@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { ChangeEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, ImagePlus, Loader2, Save, Send, UploadCloud } from "lucide-react";

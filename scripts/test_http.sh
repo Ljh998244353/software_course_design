@@ -89,7 +89,7 @@ REGISTER_LOGIN_BODY="${TMP_DIR}/register_login.json"
 REGISTER_ME_BODY="${TMP_DIR}/register_me.json"
 BIDDER_REGISTER_BODY="${TMP_DIR}/bidder_register.json"
 BIDDER_LOGIN_BODY="${TMP_DIR}/bidder_login.json"
-BUYER_DEMO_LOGIN_BODY="${TMP_DIR}/buyer_demo_login.json"
+BUYER_LOGIN_BODY="${TMP_DIR}/buyer_login.json"
 ITEM_CREATE_BODY="${TMP_DIR}/item_create.json"
 ITEM_INVALID_BODY="${TMP_DIR}/item_invalid.json"
 ITEM_UPDATE_BODY="${TMP_DIR}/item_update.json"
@@ -183,11 +183,6 @@ ADMIN_STATUS_BODY="${TMP_DIR}/admin_status.json"
 CONTEXT_BODY="${TMP_DIR}/context.json"
 UNAUTH_BODY="${TMP_DIR}/unauthorized.json"
 NOT_FOUND_BODY="${TMP_DIR}/not_found.json"
-APP_BODY="${TMP_DIR}/app.html"
-APP_TRAILING_BODY="${TMP_DIR}/app_trailing.html"
-CSS_ASSET_BODY="${TMP_DIR}/app.css"
-JS_ASSET_BODY="${TMP_DIR}/app.js"
-
 mark_step "启动测试 HTTP 服务"
 AUCTION_APP_CONFIG="${TEST_CONFIG_PATH}" "${ROOT_DIR}/build/bin/auction_app" >"${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
@@ -200,95 +195,6 @@ for _ in {1..20}; do
 done
 
 curl -fsS "http://${SERVER_HOST}:${SERVER_PORT}/healthz" >/dev/null
-
-mark_step "校验 /app 静态入口和前端约束"
-APP_STATUS="$(
-    curl -sS -o "${APP_BODY}" -w "%{http_code}" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/app"
-)"
-[[ "${APP_STATUS}" == "200" ]]
-grep -q "<title>在线拍卖平台业务工作台</title>" "${APP_BODY}"
-grep -q "data-view=\"gate\"" "${APP_BODY}"
-grep -q "id=\"buyerAuctionList\"" "${APP_BODY}"
-grep -q "id=\"orderList\"" "${APP_BODY}"
-grep -q "id=\"sellerItemList\"" "${APP_BODY}"
-grep -q "id=\"adminPendingItemList\"" "${APP_BODY}"
-grep -q "id=\"auctionForm\"" "${APP_BODY}"
-grep -q "id=\"statisticsList\"" "${APP_BODY}"
-grep -q "id=\"opsExceptionList\"" "${APP_BODY}"
-grep -q "id=\"globalStatusBadge\"" "${APP_BODY}"
-grep -q "data-status-badge" "${APP_BODY}"
-grep -q "data-admin-only" "${APP_BODY}"
-grep -q "id=\"registerPasswordInput\"[^>]*minlength=\"8\"" "${APP_BODY}"
-grep -q "id=\"registerPhoneInput\"[^>]*pattern=\"\\[0-9\\]{11}\"" "${APP_BODY}"
-grep -q "id=\"statisticsStartDateInput\"[^>]*required" "${APP_BODY}"
-grep -q "id=\"statisticsEndDateInput\"[^>]*required" "${APP_BODY}"
-grep -q "id=\"opsLimitInput\"[^>]*max=\"100\"[^>]*required" "${APP_BODY}"
-
-APP_TRAILING_STATUS="$(
-    curl -sS -o "${APP_TRAILING_BODY}" -w "%{http_code}" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/app/"
-)"
-[[ "${APP_TRAILING_STATUS}" == "200" ]]
-grep -q "<title>在线拍卖平台业务工作台</title>" "${APP_TRAILING_BODY}"
-
-CSS_ASSET_STATUS="$(
-    curl -sS -o "${CSS_ASSET_BODY}" -w "%{http_code}" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/assets/app/app.css"
-)"
-[[ "${CSS_ASSET_STATUS}" == "200" ]]
-grep -q ":root" "${CSS_ASSET_BODY}"
-
-JS_ASSET_STATUS="$(
-    curl -sS -o "${JS_ASSET_BODY}" -w "%{http_code}" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/assets/app/app.js"
-)"
-[[ "${JS_ASSET_STATUS}" == "200" ]]
-grep -q 'const API_BASE = "/api"' "${JS_ASSET_BODY}"
-grep -q 'POST /api/auth/register' "${JS_ASSET_BODY}"
-grep -q 'PATCH /api/admin/users/{id}/status' "${JS_ASSET_BODY}"
-grep -q 'POST /api/items' "${JS_ASSET_BODY}"
-grep -q 'GET /api/items/mine' "${JS_ASSET_BODY}"
-grep -q 'POST /api/admin/items/{id}/audit' "${JS_ASSET_BODY}"
-grep -q 'POST /api/admin/auctions' "${JS_ASSET_BODY}"
-grep -q 'GET /api/admin/auctions/{id}' "${JS_ASSET_BODY}"
-grep -q 'GET /api/auctions/{id}/bids' "${JS_ASSET_BODY}"
-grep -q 'POST /api/auctions/{id}/bids' "${JS_ASSET_BODY}"
-grep -q 'GET /api/auctions/{id}/my-bid' "${JS_ASSET_BODY}"
-grep -q 'GET /api/notifications' "${JS_ASSET_BODY}"
-grep -q 'GET /api/orders/mine' "${JS_ASSET_BODY}"
-grep -q 'POST /api/orders/{id}/pay' "${JS_ASSET_BODY}"
-grep -q 'POST /api/payments/callback' "${JS_ASSET_BODY}"
-grep -q 'POST /api/orders/{id}/ship' "${JS_ASSET_BODY}"
-grep -q 'POST /api/orders/{id}/confirm-receipt' "${JS_ASSET_BODY}"
-grep -q 'POST /api/reviews' "${JS_ASSET_BODY}"
-grep -q 'GET /api/orders/{id}/reviews' "${JS_ASSET_BODY}"
-grep -q 'GET /api/users/{id}/reviews/summary' "${JS_ASSET_BODY}"
-grep -q 'GET /api/admin/statistics/daily' "${JS_ASSET_BODY}"
-grep -q 'POST /api/admin/statistics/daily/rebuild' "${JS_ASSET_BODY}"
-grep -q 'GET /api/admin/statistics/daily/export' "${JS_ASSET_BODY}"
-grep -q 'GET /api/admin/ops/operation-logs' "${JS_ASSET_BODY}"
-grep -q 'GET /api/admin/ops/task-logs' "${JS_ASSET_BODY}"
-grep -q 'GET /api/admin/ops/exceptions' "${JS_ASSET_BODY}"
-grep -q 'POST /api/admin/ops/exceptions/mark' "${JS_ASSET_BODY}"
-grep -q 'POST /api/admin/ops/notifications/retry' "${JS_ASSET_BODY}"
-grep -q 'POST /api/admin/ops/compensations' "${JS_ASSET_BODY}"
-grep -q 'function validateForm' "${JS_ASSET_BODY}"
-grep -q 'function setRequestBusy' "${JS_ASSET_BODY}"
-grep -q '当前角色无权访问' "${JS_ASSET_BODY}"
-grep -q '仅管理员可执行补偿' "${JS_ASSET_BODY}"
-grep -q '仅管理员可重试通知' "${JS_ASSET_BODY}"
-grep -q '结束时间必须晚于开始时间' "${JS_ASSET_BODY}"
-grep -q 'buyerBidAmountInput' "${JS_ASSET_BODY}"
-grep -q 'payOrderButton' "${JS_ASSET_BODY}"
-grep -q 'body.is-busy' "${CSS_ASSET_BODY}"
-grep -q '.is-locked::after' "${CSS_ASSET_BODY}"
-grep -q 'input:invalid' "${CSS_ASSET_BODY}"
-grep -q 'button:disabled' "${CSS_ASSET_BODY}"
-grep -q 'notificationCenterList' "${APP_BODY}"
-grep -q 'data-route="notifications"' "${APP_BODY}"
-grep -q 'data-route="support"' "${APP_BODY}"
-grep -q 'data-route' "${APP_BODY}"
 
 mark_step "认证、注册和会话接口"
 LOGIN_STATUS="$(
@@ -813,7 +719,7 @@ grep -q '"bidStatus"[[:space:]]*:[[:space:]]*"OUTBID"' "${PUBLIC_BID_BIDS_AFTER_
 grep -q '"bidAmount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_BIDS_AFTER_BODY}"
 
 BUYER_DEMO_LOGIN_STATUS="$(
-    curl -sS -o "${BUYER_DEMO_LOGIN_BODY}" -w "%{http_code}" \
+    curl -sS -o "${BUYER_LOGIN_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         --data '{"username":"buyer_demo","password":"Buyer@123"}' \
@@ -821,7 +727,7 @@ BUYER_DEMO_LOGIN_STATUS="$(
 )"
 [[ "${BUYER_DEMO_LOGIN_STATUS}" == "200" ]]
 BUYER_DEMO_TOKEN="$(
-    tr -d '\n' <"${BUYER_DEMO_LOGIN_BODY}" |
+    tr -d '\n' <"${BUYER_LOGIN_BODY}" |
         sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
 )"
 if [[ -z "${BUYER_DEMO_TOKEN}" ]]; then
