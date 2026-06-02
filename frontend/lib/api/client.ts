@@ -1,8 +1,11 @@
 import { mockAuctions, mockBids, mockOrder, mockReviewItems } from "@/lib/api/mock-data";
 import type {
   AdminReviewItem,
+  AdminAuctionListRaw,
+  AdminAuctionSummaryRaw,
   AuctionDetailRaw,
   AuctionItem,
+  AuctionListQuery,
   AuctionSummaryRaw,
   AuditItemResultRaw,
   BidHistoryEntryRaw,
@@ -42,22 +45,32 @@ function normalizeAuctionImageUrl(imageUrl: string): string {
 
 // Fields not yet provided by the live API are marked with TODO.
 function mapAuctionItem(raw: AuctionSummaryRaw): AuctionItem {
+  const tags = (() => {
+    try {
+      const parsed = JSON.parse(raw.tags_json || "[]");
+      return Array.isArray(parsed) ? parsed.filter((tag): tag is string => typeof tag === "string") : [];
+    } catch {
+      return [];
+    }
+  })();
   return {
     id: String(raw.auction_id),
     title: raw.title,
-    category: "", // TODO: not provided by live API
+    category: raw.category_name,
     imageUrl: normalizeAuctionImageUrl(raw.cover_image_url),
     currentPrice: raw.current_price,
-    startPrice: 0, // TODO: not provided by list API
-    minIncrement: 0, // TODO: not provided by list API
+    startPrice: raw.start_price,
+    minIncrement: raw.bid_step,
     endTime: raw.end_time,
     status: raw.status as AuctionItem["status"],
-    highestBidder: "", // TODO: not provided by list API
-    seller: { name: "", rating: 0, deals: 0 }, // TODO: not provided by live API
-    watchers: 0, // TODO: not provided by live API
-    location: "", // TODO: not provided by live API
-    tags: [], // TODO: not provided by live API
-    description: "", // TODO: not provided by live API
+    highestBidder: "",
+    seller: { name: raw.seller_username, rating: raw.seller_rating, deals: raw.seller_deals },
+    watchers: raw.watcher_count,
+    location: raw.location,
+    tags,
+    description: raw.description,
+    tradeMode: raw.trade_mode,
+    sellerUsername: raw.seller_username,
   };
 }
 
@@ -101,6 +114,30 @@ function mapPendingAuditItem(raw: PendingAuditItemRaw): AdminReviewItem {
     risk: "LOW",
     submittedAt: raw.created_at,
     price: raw.start_price,
+    location: "",
+    tradeMode: "",
+  };
+}
+
+function mapAdminAuctionSummary(raw: AdminAuctionSummaryRaw): AuctionItem {
+  return {
+    id: String(raw.auctionId),
+    title: raw.title,
+    category: "拍卖",
+    imageUrl: normalizeAuctionImageUrl(raw.coverImageUrl),
+    currentPrice: raw.currentPrice,
+    startPrice: raw.startPrice,
+    minIncrement: raw.bidStep,
+    endTime: raw.endTime,
+    status: raw.status as AuctionItem["status"],
+    highestBidder: raw.highestBidderId ? String(raw.highestBidderId) : "",
+    seller: { name: `卖家#${raw.sellerId}`, rating: 0, deals: 0 },
+    watchers: 0,
+    location: "",
+    tags: [],
+    description: "",
+    tradeMode: "",
+    sellerUsername: `seller_${raw.sellerId}`,
   };
 }
 
@@ -171,13 +208,39 @@ async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-export async function getAuctions(): Promise<AuctionItem[]> {
+export async function getAuctions(query: AuctionListQuery = {}): Promise<AuctionItem[]> {
   if (apiMode() === "live") {
-    const raw = await liveFetch<AuctionSummaryRaw[]>("/api/auctions");
+    const params = new URLSearchParams();
+    if (query.keyword) params.set("keyword", query.keyword);
+    if (query.status) params.set("status", query.status);
+    if (query.category) params.set("category", query.category);
+    if (typeof query.priceMin === "number") params.set("price_min", String(query.priceMin));
+    if (typeof query.priceMax === "number") params.set("price_max", String(query.priceMax));
+    if (typeof query.sellerRating === "number") params.set("seller_rating", String(query.sellerRating));
+    if (typeof query.sellerHasDeals === "boolean") params.set("seller_has_deals", query.sellerHasDeals ? "true" : "false");
+    if (query.tradeMode) params.set("trade_mode", query.tradeMode);
+    if (query.pageNo) params.set("page_no", String(query.pageNo));
+    if (query.pageSize) params.set("page_size", String(query.pageSize));
+    const raw = await liveFetch<AuctionSummaryRaw[]>(`/api/auctions${params.toString() ? `?${params.toString()}` : ""}`);
     return raw.map(mapAuctionItem);
   }
   await delay(220);
-  return mockAuctions;
+  return mockAuctions.filter((auction) => {
+    if (query.keyword) {
+      const kw = query.keyword.toLowerCase();
+      if (!`${auction.title} ${auction.description} ${auction.category} ${auction.seller.name}`.toLowerCase().includes(kw)) {
+        return false;
+      }
+    }
+    if (query.category && auction.category !== query.category) return false;
+    if (typeof query.priceMin === "number" && auction.currentPrice < query.priceMin) return false;
+    if (typeof query.priceMax === "number" && auction.currentPrice > query.priceMax) return false;
+    if (typeof query.sellerRating === "number" && auction.seller.rating < query.sellerRating) return false;
+    if (query.sellerHasDeals && auction.seller.deals <= 0) return false;
+    if (query.tradeMode && auction.tradeMode !== query.tradeMode) return false;
+    if (query.status && auction.status !== query.status) return false;
+    return true;
+  });
 }
 
 export async function getAuction(id: string): Promise<AuctionItem> {
@@ -307,6 +370,16 @@ export async function getAdminReviews(): Promise<AdminReviewItem[]> {
   return mockReviewItems;
 }
 
+export async function getAdminAuctions(status?: string): Promise<AuctionItem[]> {
+  if (apiMode() === "live") {
+    const query = status && status !== "ALL" ? `?status=${encodeURIComponent(status)}` : "";
+    const raw = await liveFetch<AdminAuctionListRaw>(`/api/admin/auctions${query}`);
+    return raw.list.map(mapAdminAuctionSummary);
+  }
+  await delay(220);
+  return mockAuctions.filter((auction) => (status && status !== "ALL" ? auction.status === status : true));
+}
+
 export async function approveItem(itemId: string): Promise<AuditItemResultRaw> {
   if (apiMode() === "live") {
     return liveFetch<AuditItemResultRaw>(`/api/admin/items/${itemId}/approve`, {
@@ -355,7 +428,14 @@ export async function createItem(params: {
   description: string;
   category_id: number;
   start_price: number;
+  trade_mode: string;
+  location: string;
+  tags_json: string[] | string;
+  suggested_bid_step: number;
+  suggested_anti_sniping_window_seconds: number;
+  suggested_extend_seconds: number;
   cover_image_url: string;
+  request_id?: string;
 }): Promise<CreateItemRaw> {
   if (apiMode() === "live") {
     return liveFetch<CreateItemRaw>("/api/items", {

@@ -4,12 +4,20 @@ namespace auction::common::http {
 
 HttpServiceContext::HttpServiceContext(
     const config::AppConfig& config,
-    std::filesystem::path project_root
+    std::filesystem::path project_root,
+    std::shared_ptr<ws::AuctionEventGateway> event_gateway
 ) : config_(config),
     project_root_(std::move(project_root)),
+    event_gateway_(std::move(event_gateway)),
     auth_service_(config_, project_root_, auth_session_store_),
     auth_middleware_(auth_service_),
-    notification_service_(config_, project_root_, event_gateway_),
+    notification_service_(
+        config_,
+        project_root_,
+        *(
+            event_gateway_ ? event_gateway_ : (event_gateway_ = std::make_shared<ws::InMemoryAuctionEventGateway>())
+        )
+    ),
     item_service_(config_, project_root_, auth_middleware_),
     item_audit_service_(config_, project_root_, auth_middleware_),
     auction_service_(config_, project_root_, auth_middleware_),

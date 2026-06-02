@@ -1,5 +1,14 @@
 # 在线拍卖平台 Agent 执行 Schedule
 
+## 新会话最小恢复卡片
+
+- 当前主 Step: `F17-Full-Frontend-Closure`
+- 当前唯一活动任务: 收尾前端虚标功能补全后的后端验证与文档同步
+- 最近一次已完成验证命令: `cd frontend && npm run typecheck`、`cd frontend && npm run build`
+- 当前阻塞/风险: 本机 `cmake -S . -B build` 因环境缺少 `crypt` 库失败；后端全量构建待在具备该系统库的环境复验
+- 下一步唯一动作: 在可用 C++ 依赖环境中重跑 `cmake -S . -B build && cmake --build build && scripts/test.sh smoke`
+- 优先阅读文件: `docs/schedule.md`、`frontend/lib/api/client.ts`、`src/common/runtime/application_bootstrap.cpp`
+
 ## 1. 文档目的
 
 本文档用于把本项目拆解成可逐步交给 agent 执行的实际开发任务，并作为统一进度记录入口。

@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <sstream>
+#include <json/json.h>
 
 #include "common/db/mysql_connection.h"
 #include "common/errors/error_code.h"
@@ -78,8 +79,21 @@ void ValidateCreateRequest(const CreateItemRequest& request) {
     if (request.start_price <= 0.0) {
         throw std::invalid_argument("start_price must be positive");
     }
+    if (request.suggested_bid_step < 0.0) {
+        throw std::invalid_argument("suggested_bid_step must be non-negative");
+    }
+    if (request.suggested_anti_sniping_window_seconds < 0 ||
+        request.suggested_extend_seconds < 0) {
+        throw std::invalid_argument("suggested anti-sniping config must be non-negative");
+    }
     ValidateTitle(TrimWhitespace(request.title));
     ValidateDescription(TrimWhitespace(request.description));
+    if (TrimWhitespace(request.trade_mode).empty()) {
+        throw std::invalid_argument("trade_mode must not be empty");
+    }
+    if (TrimWhitespace(request.location).empty()) {
+        throw std::invalid_argument("location must not be empty");
+    }
     ValidateCoverImageUrl(TrimWhitespace(request.cover_image_url));
 }
 
@@ -103,9 +117,56 @@ void ValidateUpdateRequest(const UpdateItemRequest& request) {
     if (request.start_price.has_value() && *request.start_price <= 0.0) {
         throw std::invalid_argument("start_price must be positive");
     }
+    if (request.trade_mode.has_value() && TrimWhitespace(*request.trade_mode).empty()) {
+        throw std::invalid_argument("trade_mode must not be empty");
+    }
+    if (request.location.has_value() && TrimWhitespace(*request.location).empty()) {
+        throw std::invalid_argument("location must not be empty");
+    }
+    if (request.suggested_bid_step.has_value() && *request.suggested_bid_step < 0.0) {
+        throw std::invalid_argument("suggested_bid_step must be non-negative");
+    }
+    if (request.suggested_anti_sniping_window_seconds.has_value() &&
+        *request.suggested_anti_sniping_window_seconds < 0) {
+        throw std::invalid_argument("suggested_anti_sniping_window_seconds must be non-negative");
+    }
+    if (request.suggested_extend_seconds.has_value() &&
+        *request.suggested_extend_seconds < 0) {
+        throw std::invalid_argument("suggested_extend_seconds must be non-negative");
+    }
     if (request.cover_image_url.has_value()) {
         ValidateCoverImageUrl(TrimWhitespace(*request.cover_image_url));
     }
+}
+
+std::string NormalizeTagsJson(const std::string& tags_json) {
+    const auto trimmed = TrimWhitespace(tags_json);
+    if (trimmed.empty()) {
+        return "[]";
+    }
+
+    Json::CharReaderBuilder builder;
+    Json::Value root;
+    std::string errors;
+    std::istringstream stream(trimmed);
+    if (!Json::parseFromStream(builder, stream, &root, &errors) || !root.isArray()) {
+        throw std::invalid_argument("tags_json must be a JSON array");
+    }
+
+    Json::Value normalized(Json::arrayValue);
+    for (const auto& entry : root) {
+        if (!entry.isString()) {
+            throw std::invalid_argument("tags_json entries must be strings");
+        }
+        const auto tag = TrimWhitespace(entry.asString());
+        if (!tag.empty()) {
+            normalized.append(tag);
+        }
+    }
+
+    Json::StreamWriterBuilder writer;
+    writer["indentation"] = "";
+    return Json::writeString(writer, normalized);
 }
 
 void ValidateAddImageRequest(const AddItemImageRequest& request) {
@@ -178,6 +239,12 @@ CreateItemResult ItemService::CreateDraftItem(
         .title = TrimWhitespace(request.title),
         .description = TrimWhitespace(request.description),
         .start_price = FormatAmount(request.start_price),
+        .trade_mode = TrimWhitespace(request.trade_mode),
+        .location = TrimWhitespace(request.location),
+        .tags_json = NormalizeTagsJson(request.tags_json),
+        .suggested_bid_step = FormatAmount(request.suggested_bid_step),
+        .suggested_anti_sniping_window_seconds = request.suggested_anti_sniping_window_seconds,
+        .suggested_extend_seconds = request.suggested_extend_seconds,
         .cover_image_url = TrimWhitespace(request.cover_image_url),
     });
 
@@ -215,6 +282,22 @@ UpdateItemResult ItemService::UpdateItem(
                                                       : item.description,
         .start_price = request.start_price.has_value() ? FormatAmount(*request.start_price)
                                                        : FormatAmount(item.start_price),
+        .trade_mode = request.trade_mode.has_value() ? TrimWhitespace(*request.trade_mode)
+                                                     : item.trade_mode,
+        .location = request.location.has_value() ? TrimWhitespace(*request.location)
+                                                 : item.location,
+        .tags_json = request.tags_json.has_value() ? NormalizeTagsJson(*request.tags_json)
+                                                   : item.tags_json,
+        .suggested_bid_step = request.suggested_bid_step.has_value()
+                                  ? FormatAmount(*request.suggested_bid_step)
+                                  : FormatAmount(item.suggested_bid_step),
+        .suggested_anti_sniping_window_seconds =
+            request.suggested_anti_sniping_window_seconds.value_or(
+                item.suggested_anti_sniping_window_seconds
+            ),
+        .suggested_extend_seconds = request.suggested_extend_seconds.value_or(
+            item.suggested_extend_seconds
+        ),
         .cover_image_url = request.cover_image_url.has_value() ? TrimWhitespace(*request.cover_image_url)
                                                                : item.cover_image_url,
         .item_status = item.item_status == kItemStatusRejected ? std::string(kItemStatusDraft)

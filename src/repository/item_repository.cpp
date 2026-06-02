@@ -113,11 +113,17 @@ modules::item::ItemRecord BuildItemRecord(MYSQL_ROW row) {
         .title = ReadRowString(row, 3),
         .description = ReadRowString(row, 4),
         .start_price = ReadRowDouble(row, 5),
-        .item_status = ReadRowString(row, 6),
-        .reject_reason = ReadRowString(row, 7),
-        .cover_image_url = ReadRowString(row, 8),
-        .created_at = ReadRowString(row, 9),
-        .updated_at = ReadRowString(row, 10),
+        .trade_mode = ReadRowString(row, 6),
+        .location = ReadRowString(row, 7),
+        .tags_json = ReadRowString(row, 8),
+        .suggested_bid_step = ReadRowDouble(row, 9),
+        .suggested_anti_sniping_window_seconds = ReadRowInt(row, 10),
+        .suggested_extend_seconds = ReadRowInt(row, 11),
+        .item_status = ReadRowString(row, 12),
+        .reject_reason = ReadRowString(row, 13),
+        .cover_image_url = ReadRowString(row, 14),
+        .created_at = ReadRowString(row, 15),
+        .updated_at = ReadRowString(row, 16),
     };
 }
 
@@ -128,11 +134,17 @@ modules::item::ItemSummary BuildItemSummary(MYSQL_ROW row) {
         .category_id = ReadRowUint64(row, 2),
         .title = ReadRowString(row, 3),
         .start_price = ReadRowDouble(row, 4),
-        .item_status = ReadRowString(row, 5),
-        .reject_reason = ReadRowString(row, 6),
-        .cover_image_url = ReadRowString(row, 7),
-        .created_at = ReadRowString(row, 8),
-        .updated_at = ReadRowString(row, 9),
+        .trade_mode = ReadRowString(row, 5),
+        .location = ReadRowString(row, 6),
+        .tags_json = ReadRowString(row, 7),
+        .suggested_bid_step = ReadRowDouble(row, 8),
+        .suggested_anti_sniping_window_seconds = ReadRowInt(row, 9),
+        .suggested_extend_seconds = ReadRowInt(row, 10),
+        .item_status = ReadRowString(row, 11),
+        .reject_reason = ReadRowString(row, 12),
+        .cover_image_url = ReadRowString(row, 13),
+        .created_at = ReadRowString(row, 14),
+        .updated_at = ReadRowString(row, 15),
     };
 }
 
@@ -145,7 +157,9 @@ modules::item::PendingAuditItemSummary BuildPendingAuditItemSummary(MYSQL_ROW ro
         .category_id = ReadRowUint64(row, 4),
         .title = ReadRowString(row, 5),
         .start_price = ReadRowDouble(row, 6),
-        .created_at = ReadRowString(row, 7),
+        .trade_mode = ReadRowString(row, 7),
+        .location = ReadRowString(row, 8),
+        .created_at = ReadRowString(row, 9),
     };
 }
 
@@ -264,8 +278,11 @@ std::optional<modules::item::ItemAuditLogRecord> FindSingleAuditLogBySql(
 
 std::string BuildItemSelectSql(const std::string& where_clause) {
     return "SELECT item_id, seller_id, COALESCE(category_id, 0), title, description, "
-           "CAST(start_price AS CHAR), item_status, COALESCE(reject_reason, ''), "
-           "COALESCE(cover_image_url, ''), CAST(created_at AS CHAR), CAST(updated_at AS CHAR) "
+           "CAST(start_price AS CHAR), trade_mode, COALESCE(location, ''), "
+           "COALESCE(tags_json, '[]'), CAST(suggested_bid_step AS CHAR), "
+           "suggested_anti_sniping_window_seconds, suggested_extend_seconds, item_status, "
+           "COALESCE(reject_reason, ''), COALESCE(cover_image_url, ''), CAST(created_at AS CHAR), "
+           "CAST(updated_at AS CHAR) "
            "FROM item " +
            where_clause;
 }
@@ -289,31 +306,65 @@ std::optional<modules::item::ItemRecord> ItemRepository::FindItemById(const std:
 modules::item::ItemRecord ItemRepository::CreateItem(const CreateItemParams& params) const {
     PreparedStatement statement(
         connection().native_handle(),
-        "INSERT INTO item (seller_id, category_id, title, description, start_price, item_status, "
-        "cover_image_url) VALUES (?, ?, ?, ?, ?, 'DRAFT', ?)"
+        "INSERT INTO item (seller_id, category_id, title, description, start_price, trade_mode, "
+        "location, tags_json, suggested_bid_step, suggested_anti_sniping_window_seconds, "
+        "suggested_extend_seconds, item_status, cover_image_url) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?)"
     );
 
     auto seller_id = params.seller_id;
     auto category_id = params.category_id;
     auto start_price = params.start_price;
+    auto suggested_bid_step = params.suggested_bid_step;
+    auto suggested_anti_sniping_window_seconds = params.suggested_anti_sniping_window_seconds;
+    auto suggested_extend_seconds = params.suggested_extend_seconds;
     unsigned long title_length = 0;
     unsigned long description_length = 0;
     unsigned long start_price_length = 0;
+    unsigned long trade_mode_length = 0;
+    unsigned long location_length = 0;
+    unsigned long tags_json_length = 0;
+    unsigned long suggested_bid_step_length = 0;
     unsigned long cover_image_url_length = 0;
     bool seller_id_is_null = false;
     bool category_id_is_null = false;
     bool title_is_null = false;
     bool description_is_null = false;
     bool start_price_is_null = false;
+    bool trade_mode_is_null = false;
+    bool location_is_null = false;
+    bool tags_json_is_null = false;
+    bool suggested_bid_step_is_null = false;
+    bool suggested_anti_sniping_window_seconds_is_null = false;
+    bool suggested_extend_seconds_is_null = false;
     bool cover_image_url_is_null = false;
-    MYSQL_BIND params_bind[6]{};
+    MYSQL_BIND params_bind[12]{};
     BindUint64Param(params_bind[0], seller_id, seller_id_is_null);
     BindUint64Param(params_bind[1], category_id, category_id_is_null);
     BindStringParam(params_bind[2], params.title, title_length, title_is_null);
     BindStringParam(params_bind[3], params.description, description_length, description_is_null);
     BindStringParam(params_bind[4], start_price, start_price_length, start_price_is_null);
+    BindStringParam(params_bind[5], params.trade_mode, trade_mode_length, trade_mode_is_null);
+    BindStringParam(params_bind[6], params.location, location_length, location_is_null);
+    BindStringParam(params_bind[7], params.tags_json, tags_json_length, tags_json_is_null);
+    BindStringParam(
+        params_bind[8],
+        suggested_bid_step,
+        suggested_bid_step_length,
+        suggested_bid_step_is_null
+    );
+    BindIntParam(
+        params_bind[9],
+        suggested_anti_sniping_window_seconds,
+        suggested_anti_sniping_window_seconds_is_null
+    );
+    BindIntParam(
+        params_bind[10],
+        suggested_extend_seconds,
+        suggested_extend_seconds_is_null
+    );
     BindNullableStringParam(
-        params_bind[5],
+        params_bind[11],
         params.cover_image_url,
         cover_image_url_length,
         cover_image_url_is_null
@@ -332,6 +383,8 @@ modules::item::ItemRecord ItemRepository::UpdateItem(const UpdateItemParams& par
     PreparedStatement statement(
         connection().native_handle(),
         "UPDATE item SET category_id = ?, title = ?, description = ?, start_price = ?, "
+        "trade_mode = ?, location = ?, tags_json = ?, suggested_bid_step = ?, "
+        "suggested_anti_sniping_window_seconds = ?, suggested_extend_seconds = ?, "
         "cover_image_url = ?, item_status = ?, reject_reason = ?, "
         "updated_at = CURRENT_TIMESTAMP(3) WHERE item_id = ?"
     );
@@ -339,9 +392,15 @@ modules::item::ItemRecord ItemRepository::UpdateItem(const UpdateItemParams& par
     auto category_id = params.category_id;
     auto item_id = params.item_id;
     auto start_price = params.start_price;
+    auto suggested_anti_sniping_window_seconds = params.suggested_anti_sniping_window_seconds;
+    auto suggested_extend_seconds = params.suggested_extend_seconds;
     unsigned long title_length = 0;
     unsigned long description_length = 0;
     unsigned long start_price_length = 0;
+    unsigned long trade_mode_length = 0;
+    unsigned long location_length = 0;
+    unsigned long tags_json_length = 0;
+    unsigned long suggested_bid_step_length = 0;
     unsigned long cover_image_url_length = 0;
     unsigned long item_status_length = 0;
     unsigned long reject_reason_length = 0;
@@ -349,29 +408,54 @@ modules::item::ItemRecord ItemRepository::UpdateItem(const UpdateItemParams& par
     bool title_is_null = false;
     bool description_is_null = false;
     bool start_price_is_null = false;
+    bool trade_mode_is_null = false;
+    bool location_is_null = false;
+    bool tags_json_is_null = false;
+    bool suggested_bid_step_is_null = false;
+    bool suggested_anti_sniping_window_seconds_is_null = false;
+    bool suggested_extend_seconds_is_null = false;
     bool cover_image_url_is_null = false;
     bool item_status_is_null = false;
     bool reject_reason_is_null = false;
     bool item_id_is_null = false;
-    MYSQL_BIND params_bind[8]{};
+    MYSQL_BIND params_bind[14]{};
     BindUint64Param(params_bind[0], category_id, category_id_is_null);
     BindStringParam(params_bind[1], params.title, title_length, title_is_null);
     BindStringParam(params_bind[2], params.description, description_length, description_is_null);
     BindStringParam(params_bind[3], start_price, start_price_length, start_price_is_null);
+    BindStringParam(params_bind[4], params.trade_mode, trade_mode_length, trade_mode_is_null);
+    BindStringParam(params_bind[5], params.location, location_length, location_is_null);
+    BindStringParam(params_bind[6], params.tags_json, tags_json_length, tags_json_is_null);
+    BindStringParam(
+        params_bind[7],
+        params.suggested_bid_step,
+        suggested_bid_step_length,
+        suggested_bid_step_is_null
+    );
+    BindIntParam(
+        params_bind[8],
+        suggested_anti_sniping_window_seconds,
+        suggested_anti_sniping_window_seconds_is_null
+    );
+    BindIntParam(
+        params_bind[9],
+        suggested_extend_seconds,
+        suggested_extend_seconds_is_null
+    );
     BindNullableStringParam(
-        params_bind[4],
+        params_bind[10],
         params.cover_image_url,
         cover_image_url_length,
         cover_image_url_is_null
     );
-    BindStringParam(params_bind[5], params.item_status, item_status_length, item_status_is_null);
+    BindStringParam(params_bind[11], params.item_status, item_status_length, item_status_is_null);
     BindNullableStringParam(
-        params_bind[6],
+        params_bind[12],
         params.reject_reason,
         reject_reason_length,
         reject_reason_is_null
     );
-    BindUint64Param(params_bind[7], item_id, item_id_is_null);
+    BindUint64Param(params_bind[13], item_id, item_id_is_null);
     statement.BindParams(params_bind);
     statement.Execute();
 
@@ -388,8 +472,10 @@ std::vector<modules::item::ItemSummary> ItemRepository::ListItemsBySeller(
 ) const {
     std::string sql =
         "SELECT item_id, seller_id, COALESCE(category_id, 0), title, CAST(start_price AS CHAR), "
-        "item_status, COALESCE(reject_reason, ''), COALESCE(cover_image_url, ''), "
-        "CAST(created_at AS CHAR), CAST(updated_at AS CHAR) "
+        "trade_mode, COALESCE(location, ''), COALESCE(tags_json, '[]'), "
+        "CAST(suggested_bid_step AS CHAR), suggested_anti_sniping_window_seconds, "
+        "suggested_extend_seconds, item_status, COALESCE(reject_reason, ''), "
+        "COALESCE(cover_image_url, ''), CAST(created_at AS CHAR), CAST(updated_at AS CHAR) "
         "FROM item WHERE seller_id = " +
         std::to_string(seller_id);
     if (item_status.has_value()) {
@@ -411,7 +497,7 @@ std::vector<modules::item::PendingAuditItemSummary> ItemRepository::ListPendingA
         connection(),
         "SELECT i.item_id, i.seller_id, u.username, COALESCE(u.nickname, ''), "
         "COALESCE(i.category_id, 0), i.title, CAST(i.start_price AS CHAR), "
-        "CAST(i.created_at AS CHAR) "
+        "i.trade_mode, COALESCE(i.location, ''), CAST(i.created_at AS CHAR) "
         "FROM item i "
         "JOIN user_account u ON u.user_id = i.seller_id "
         "WHERE i.item_status = 'PENDING_AUDIT' "

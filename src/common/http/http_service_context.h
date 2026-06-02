@@ -25,7 +25,8 @@ class HttpServiceContext {
 public:
     HttpServiceContext(
         const config::AppConfig& config,
-        std::filesystem::path project_root
+        std::filesystem::path project_root,
+        std::shared_ptr<ws::AuctionEventGateway> event_gateway = nullptr
     );
 
     [[nodiscard]] modules::auth::AuthService& auth_service();
@@ -45,7 +46,7 @@ private:
     config::AppConfig config_;
     std::filesystem::path project_root_;
     modules::auth::InMemoryAuthSessionStore auth_session_store_;
-    ws::InMemoryAuctionEventGateway event_gateway_;
+    std::shared_ptr<ws::AuctionEventGateway> event_gateway_;
     modules::bid::InMemoryBidCacheStore bid_cache_store_;
     modules::auth::AuthService auth_service_;
     middleware::AuthMiddleware auth_middleware_;

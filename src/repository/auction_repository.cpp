@@ -150,11 +150,22 @@ modules::auction::PublicAuctionSummary BuildPublicAuctionSummary(MYSQL_ROW row) 
         .auction_id = ReadRowUint64(row, 0),
         .item_id = ReadRowUint64(row, 1),
         .title = ReadRowString(row, 2),
-        .cover_image_url = ReadRowString(row, 3),
-        .status = ReadRowString(row, 4),
-        .current_price = ReadRowDouble(row, 5),
-        .start_time = ReadRowString(row, 6),
-        .end_time = ReadRowString(row, 7),
+        .category_name = ReadRowString(row, 3),
+        .cover_image_url = ReadRowString(row, 4),
+        .status = ReadRowString(row, 5),
+        .start_price = ReadRowDouble(row, 6),
+        .current_price = ReadRowDouble(row, 7),
+        .bid_step = ReadRowDouble(row, 8),
+        .seller_username = ReadRowString(row, 9),
+        .seller_rating = ReadRowDouble(row, 10),
+        .seller_deals = ReadRowInt(row, 11),
+        .watcher_count = ReadRowInt(row, 12),
+        .trade_mode = ReadRowString(row, 13),
+        .location = ReadRowString(row, 14),
+        .tags_json = ReadRowString(row, 15),
+        .description = ReadRowString(row, 16),
+        .start_time = ReadRowString(row, 17),
+        .end_time = ReadRowString(row, 18),
     };
 }
 
@@ -270,16 +281,48 @@ std::string BuildAdminAuctionListSql(const modules::auction::AdminAuctionQuery& 
 
 std::string BuildPublicAuctionListSql(const modules::auction::PublicAuctionQuery& query, AuctionRepository& repository) {
     std::string sql =
-        "SELECT a.auction_id, a.item_id, i.title, COALESCE(i.cover_image_url, ''), a.status, "
-        "CAST(a.current_price AS CHAR), CAST(a.start_time AS CHAR), CAST(a.end_time AS CHAR) "
+        "SELECT a.auction_id, a.item_id, i.title, COALESCE(c.category_name, ''), "
+        "COALESCE(i.cover_image_url, ''), a.status, CAST(a.start_price AS CHAR), "
+        "CAST(a.current_price AS CHAR), CAST(a.bid_step AS CHAR), seller.username, "
+        "COALESCE(AVG(r.rating), 0), COUNT(r.review_id), 0, i.trade_mode, "
+        "COALESCE(i.location, ''), COALESCE(i.tags_json, '[]'), i.description, "
+        "CAST(a.start_time AS CHAR), CAST(a.end_time AS CHAR) "
         "FROM auction a INNER JOIN item i ON i.item_id = a.item_id "
+        "LEFT JOIN item_category c ON c.category_id = i.category_id "
+        "INNER JOIN user_account seller ON seller.user_id = a.seller_id "
+        "LEFT JOIN review r ON r.reviewee_id = a.seller_id "
         "WHERE a.status <> 'CANCELLED'";
 
     if (query.status.has_value()) {
         sql += " AND a.status = '" + repository.EscapeString(*query.status) + "'";
     }
     if (query.keyword.has_value() && !query.keyword->empty()) {
-        sql += " AND i.title LIKE '%" + repository.EscapeString(*query.keyword) + "%'";
+        const auto keyword = repository.EscapeString(*query.keyword);
+        sql += " AND (i.title LIKE '%" + keyword + "%' OR i.description LIKE '%" + keyword +
+               "%' OR seller.username LIKE '%" + keyword + "%' OR c.category_name LIKE '%" + keyword + "%')";
+    }
+    if (query.category.has_value() && !query.category->empty()) {
+        sql += " AND c.category_name = '" + repository.EscapeString(*query.category) + "'";
+    }
+    if (query.price_min.has_value()) {
+        sql += " AND a.current_price >= " + std::to_string(*query.price_min);
+    }
+    if (query.price_max.has_value()) {
+        sql += " AND a.current_price <= " + std::to_string(*query.price_max);
+    }
+    if (query.trade_mode.has_value() && !query.trade_mode->empty()) {
+        sql += " AND i.trade_mode = '" + repository.EscapeString(*query.trade_mode) + "'";
+    }
+    sql += " GROUP BY a.auction_id, a.item_id, i.title, c.category_name, i.cover_image_url, a.status, "
+           "a.start_price, a.current_price, a.bid_step, seller.username, i.trade_mode, i.location, "
+           "i.tags_json, i.description, a.start_time, a.end_time";
+    if (query.seller_rating_min.has_value()) {
+        sql += " HAVING COALESCE(AVG(r.rating), 0) >= " + std::to_string(*query.seller_rating_min);
+        if (query.seller_has_deals.value_or(false)) {
+            sql += " AND COUNT(r.review_id) > 0";
+        }
+    } else if (query.seller_has_deals.value_or(false)) {
+        sql += " HAVING COUNT(r.review_id) > 0";
     }
 
     const int offset = (query.page_no - 1) * query.page_size;
@@ -619,15 +662,26 @@ std::optional<modules::auction::PublicAuctionDetail> AuctionRepository::FindPubl
 ) const {
     const auto result = ExecuteQuery(
         connection(),
-        "SELECT a.auction_id, a.item_id, i.title, COALESCE(i.cover_image_url, ''), a.status, "
-        "CAST(a.start_price AS CHAR), CAST(a.current_price AS CHAR), CAST(a.bid_step AS CHAR), "
-        "CAST(a.start_time AS CHAR), CAST(a.end_time AS CHAR), a.anti_sniping_window_seconds, "
-        "a.extend_seconds, COALESCE(highest.username, '') "
+        "SELECT a.auction_id, a.item_id, i.title, COALESCE(c.category_name, ''), "
+        "COALESCE(i.cover_image_url, ''), a.status, CAST(a.start_price AS CHAR), "
+        "CAST(a.current_price AS CHAR), CAST(a.bid_step AS CHAR), seller.username, "
+        "COALESCE(AVG(r.rating), 0), COUNT(r.review_id), 0, i.trade_mode, COALESCE(i.location, ''), "
+        "COALESCE(i.tags_json, '[]'), i.description, CAST(a.start_time AS CHAR), "
+        "CAST(a.end_time AS CHAR), a.anti_sniping_window_seconds, a.extend_seconds, "
+        "COALESCE(highest.username, '') "
         "FROM auction a "
         "INNER JOIN item i ON i.item_id = a.item_id "
+        "LEFT JOIN item_category c ON c.category_id = i.category_id "
+        "INNER JOIN user_account seller ON seller.user_id = a.seller_id "
+        "LEFT JOIN review r ON r.reviewee_id = a.seller_id "
         "LEFT JOIN user_account highest ON highest.user_id = a.highest_bidder_id "
         "WHERE a.auction_id = " +
-            std::to_string(auction_id) + " AND a.status <> 'CANCELLED' LIMIT 1"
+            std::to_string(auction_id) +
+            " AND a.status <> 'CANCELLED' "
+            "GROUP BY a.auction_id, a.item_id, i.title, c.category_name, i.cover_image_url, "
+            "a.status, a.start_price, a.current_price, a.bid_step, seller.username, i.trade_mode, "
+            "i.location, i.tags_json, i.description, a.start_time, a.end_time, "
+            "a.anti_sniping_window_seconds, a.extend_seconds, highest.username LIMIT 1"
     );
 
     if (MYSQL_ROW row = mysql_fetch_row(result.get()); row != nullptr) {
@@ -635,16 +689,25 @@ std::optional<modules::auction::PublicAuctionDetail> AuctionRepository::FindPubl
             .auction_id = ReadRowUint64(row, 0),
             .item_id = ReadRowUint64(row, 1),
             .title = ReadRowString(row, 2),
-            .cover_image_url = ReadRowString(row, 3),
-            .status = ReadRowString(row, 4),
-            .start_price = ReadRowDouble(row, 5),
-            .current_price = ReadRowDouble(row, 6),
-            .bid_step = ReadRowDouble(row, 7),
-            .start_time = ReadRowString(row, 8),
-            .end_time = ReadRowString(row, 9),
-            .anti_sniping_window_seconds = ReadRowInt(row, 10),
-            .extend_seconds = ReadRowInt(row, 11),
-            .highest_bidder_masked = ReadRowString(row, 12),
+            .category_name = ReadRowString(row, 3),
+            .cover_image_url = ReadRowString(row, 4),
+            .status = ReadRowString(row, 5),
+            .start_price = ReadRowDouble(row, 6),
+            .current_price = ReadRowDouble(row, 7),
+            .bid_step = ReadRowDouble(row, 8),
+            .seller_username = ReadRowString(row, 9),
+            .seller_rating = ReadRowDouble(row, 10),
+            .seller_deals = ReadRowInt(row, 11),
+            .watcher_count = ReadRowInt(row, 12),
+            .trade_mode = ReadRowString(row, 13),
+            .location = ReadRowString(row, 14),
+            .tags_json = ReadRowString(row, 15),
+            .description = ReadRowString(row, 16),
+            .start_time = ReadRowString(row, 17),
+            .end_time = ReadRowString(row, 18),
+            .anti_sniping_window_seconds = ReadRowInt(row, 19),
+            .extend_seconds = ReadRowInt(row, 20),
+            .highest_bidder_masked = ReadRowString(row, 21),
         };
     }
 

@@ -84,7 +84,7 @@ export function useAuctionWebSocket({
         setState("connected");
         reconnectAttemptsRef.current = 0;
 
-        const token = localStorage.getItem("auction_token");
+        const token = localStorage.getItem("auth_token");
         if (token) {
           ws.send(
             JSON.stringify({

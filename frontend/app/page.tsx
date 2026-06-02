@@ -6,7 +6,7 @@ import { ArrowRight, BadgeCheck, Clock3, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default async function HomePage() {
-  const auctions = await getAuctions();
+  const auctions = await getAuctions({ pageSize: 8 });
   const featured = auctions[1] ?? auctions[0];
 
   return (
@@ -66,9 +66,13 @@ export default async function HomePage() {
         <section className="border-y border-slate-200 bg-white/72">
           <div className="mx-auto flex max-w-7xl gap-3 overflow-x-auto px-4 py-4 sm:px-6 lg:px-8">
             {["数码3C", "运动装备", "图书教材", "生活闲置"].map((category) => (
-              <button key={category} className="auction-transition whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">
+              <Link
+                key={category}
+                href={`/auction/hall?category=${encodeURIComponent(category)}`}
+                className="auction-transition whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+              >
                 {category}
-              </button>
+              </Link>
             ))}
           </div>
         </section>

@@ -20,6 +20,8 @@ export type AuctionItem = {
   location: string;
   tags: string[];
   description: string;
+  tradeMode: string;
+  sellerUsername?: string;
 };
 
 export type BidRecord = {
@@ -51,6 +53,21 @@ export type AdminReviewItem = {
   risk: "LOW" | "MEDIUM" | "HIGH";
   submittedAt: string;
   price: number;
+  location?: string;
+  tradeMode?: string;
+};
+
+export type AuctionListQuery = {
+  keyword?: string;
+  status?: string;
+  category?: string;
+  priceMin?: number;
+  priceMax?: number;
+  sellerRating?: number;
+  sellerHasDeals?: boolean;
+  tradeMode?: string;
+  pageNo?: number;
+  pageSize?: number;
 };
 
 export type UserProfile = {
@@ -71,16 +88,25 @@ export type AuctionSummaryRaw = {
   auction_id: number;
   item_id: number;
   title: string;
+  category_name: string;
   cover_image_url: string;
   status: string;
+  start_price: number;
   current_price: number;
+  bid_step: number;
+  seller_username: string;
+  seller_rating: number;
+  seller_deals: number;
+  watcher_count: number;
+  trade_mode: string;
+  location: string;
+  tags_json: string;
+  description: string;
   start_time: string;
   end_time: string;
 };
 
 export type AuctionDetailRaw = AuctionSummaryRaw & {
-  start_price: number;
-  bid_step: number;
   anti_sniping_window_seconds: number;
   extend_seconds: number;
   highest_bidder_masked: string;
@@ -194,4 +220,27 @@ export type DailyStatisticsRaw = {
   bid_count: number;
   gmv_amount: number;
   created_at: string;
+};
+
+export type AdminAuctionSummaryRaw = {
+  auctionId: number;
+  itemId: number;
+  sellerId: number;
+  title: string;
+  coverImageUrl: string;
+  status: string;
+  startPrice: number;
+  currentPrice: number;
+  bidStep: number;
+  highestBidderId: number | null;
+  startTime: string;
+  endTime: string;
+  updatedAt: string;
+};
+
+export type AdminAuctionListRaw = {
+  list: AdminAuctionSummaryRaw[];
+  total: number;
+  pageNo: number;
+  pageSize: number;
 };

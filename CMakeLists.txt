@@ -76,7 +76,10 @@ else()
 endif()
 
 set(AUCTION_CORE_SOURCES
+    src/access/http/auction_admin_http.cpp
     src/access/http/auction_http.cpp
+    src/access/http/auction_public_http.cpp
+    src/access/http/auction_ws.cpp
     src/access/http/auth_http.cpp
     src/access/http/bid_http.cpp
     src/access/http/health_http.cpp
@@ -88,6 +91,8 @@ set(AUCTION_CORE_SOURCES
     src/common/config/config_loader.cpp
     src/common/db/mysql_connection.cpp
     src/common/errors/error_code.cpp
+    src/common/http/http_service_context.cpp
+    src/common/http/http_utils.cpp
     src/common/logging/logger.cpp
     src/common/runtime/application_bootstrap.cpp
     src/jobs/auction_scheduler.cpp

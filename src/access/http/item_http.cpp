@@ -177,6 +177,13 @@ void RegisterItemHttpRoutes(
                 req.description = body->get("description", "").asString();
                 req.category_id = body->get("category_id", 0).asUInt64();
                 req.start_price = body->get("start_price", 0.0).asDouble();
+                req.trade_mode = body->get("trade_mode", "MEETUP").asString();
+                req.location = body->get("location", "").asString();
+                req.tags_json = body->isMember("tags_json") ? Json::writeString(Json::StreamWriterBuilder{}, (*body)["tags_json"]) : "[]";
+                req.suggested_bid_step = body->get("suggested_bid_step", 0.0).asDouble();
+                req.suggested_anti_sniping_window_seconds =
+                    body->get("suggested_anti_sniping_window_seconds", 0).asInt();
+                req.suggested_extend_seconds = body->get("suggested_extend_seconds", 0).asInt();
                 req.cover_image_url = body->get("cover_image_url", "").asString();
 
                 const auto result = item_service.CreateDraftItem(auth_header, req);
@@ -239,6 +246,23 @@ void RegisterItemHttpRoutes(
                 if (body->isMember("description")) req.description = (*body)["description"].asString();
                 if (body->isMember("category_id")) req.category_id = (*body)["category_id"].asUInt64();
                 if (body->isMember("start_price")) req.start_price = (*body)["start_price"].asDouble();
+                if (body->isMember("trade_mode")) req.trade_mode = (*body)["trade_mode"].asString();
+                if (body->isMember("location")) req.location = (*body)["location"].asString();
+                if (body->isMember("tags_json")) {
+                    Json::StreamWriterBuilder builder;
+                    builder["indentation"] = "";
+                    req.tags_json = Json::writeString(builder, (*body)["tags_json"]);
+                }
+                if (body->isMember("suggested_bid_step")) {
+                    req.suggested_bid_step = (*body)["suggested_bid_step"].asDouble();
+                }
+                if (body->isMember("suggested_anti_sniping_window_seconds")) {
+                    req.suggested_anti_sniping_window_seconds =
+                        (*body)["suggested_anti_sniping_window_seconds"].asInt();
+                }
+                if (body->isMember("suggested_extend_seconds")) {
+                    req.suggested_extend_seconds = (*body)["suggested_extend_seconds"].asInt();
+                }
                 if (body->isMember("cover_image_url")) req.cover_image_url = (*body)["cover_image_url"].asString();
 
                 const auto result = item_service.UpdateItem(auth_header, item_id, req);

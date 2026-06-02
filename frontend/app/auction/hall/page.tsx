@@ -1,7 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, BellRing, SlidersHorizontal } from "lucide-react";
+import { Activity, BellRing, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { AuctionCard } from "@/components/auction/auction-card";
 import { SiteNav } from "@/components/layout/site-nav";
 import { OfflineBanner } from "@/components/layout/offline-banner";
@@ -9,49 +11,152 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getAuctions } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
 import { formatPrice } from "@/lib/utils/format";
+import type { AuctionListQuery } from "@/types/auction";
+
+const categories = ["数码3C", "运动装备", "图书教材", "生活闲置"];
+const tradeModes = [
+  { label: "校园当面交易", value: "MEETUP" },
+  { label: "自提", value: "SELF_PICKUP" },
+  { label: "可邮寄", value: "SHIPPING" },
+];
 
 export default function AuctionHallPage() {
+  return (
+    <Suspense fallback={<HallFallback />}>
+      <AuctionHallContent />
+    </Suspense>
+  );
+}
+
+function AuctionHallContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const query: AuctionListQuery = {
+    keyword: searchParams.get("keyword") || undefined,
+    category: searchParams.get("category") || undefined,
+    status: searchParams.get("status") || "RUNNING",
+    priceMin: searchParams.get("price_min") ? Number(searchParams.get("price_min")) : undefined,
+    priceMax: searchParams.get("price_max") ? Number(searchParams.get("price_max")) : undefined,
+    sellerRating: searchParams.get("seller_rating") ? Number(searchParams.get("seller_rating")) : undefined,
+    sellerHasDeals: searchParams.get("seller_has_deals") === "true" ? true : undefined,
+    tradeMode: searchParams.get("trade_mode") || undefined,
+    pageNo: 1,
+    pageSize: 24,
+  };
+
   const { data: auctions = [], isLoading } = useQuery({
-    queryKey: queryKeys.auctions,
-    queryFn: getAuctions,
-    refetchInterval: 5000
+    queryKey: queryKeys.auctions(query),
+    queryFn: () => getAuctions(query),
+    refetchInterval: 5000,
   });
+
+  function updateParam(key: string, value?: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!value) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }
+
+  function resetFilters() {
+    router.replace(pathname);
+  }
 
   return (
     <>
       <SiteNav />
-      <OfflineBanner text="大厅使用 5 秒短轮询刷新，详情页才建立单拍卖实时通道。" />
+      <OfflineBanner text="大厅使用 5 秒短轮询刷新，详情页优先使用 WebSocket 实时通道。" />
       <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[260px_1fr] lg:px-8">
         <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-          <div className="mb-5 flex items-center gap-2">
-            <SlidersHorizontal className="h-5 w-5 text-indigo-600" />
-            <h2 className="text-base font-black text-slate-950">筛选</h2>
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5 text-indigo-600" />
+              <h2 className="text-base font-black text-slate-950">筛选</h2>
+            </div>
+            <button onClick={resetFilters} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-indigo-700">
+              <RotateCcw className="h-3.5 w-3.5" />
+              重置
+            </button>
           </div>
           <div className="space-y-5 text-sm">
             <div>
+              <p className="mb-3 font-bold text-slate-700">分类</p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => updateParam("category", query.category === category ? undefined : category)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold ${query.category === category ? "bg-indigo-50 text-indigo-700" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <p className="mb-3 font-bold text-slate-700">价格区间</p>
               <div className="grid grid-cols-2 gap-2">
-                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" placeholder="最低" />
-                <input className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" placeholder="最高" />
+                <input
+                  defaultValue={query.priceMin ?? ""}
+                  onBlur={(event) => updateParam("price_min", event.target.value.trim() || undefined)}
+                  className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500"
+                  placeholder="最低"
+                />
+                <input
+                  defaultValue={query.priceMax ?? ""}
+                  onBlur={(event) => updateParam("price_max", event.target.value.trim() || undefined)}
+                  className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500"
+                  placeholder="最高"
+                />
               </div>
             </div>
             <div>
               <p className="mb-3 font-bold text-slate-700">卖家信用</p>
-              {["4.8 以上", "4.5 以上", "有成交记录"].map((item) => (
-                <label key={item} className="mb-2 flex items-center gap-2 text-slate-600">
-                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-                  {item}
+              <div className="space-y-2">
+                {[
+                  { label: "4.8 以上", value: "4.8" },
+                  { label: "4.5 以上", value: "4.5" },
+                ].map((item) => (
+                  <label key={item.value} className="flex items-center gap-2 text-slate-600">
+                    <input
+                      type="radio"
+                      checked={String(query.sellerRating ?? "") === item.value}
+                      onChange={() => updateParam("seller_rating", item.value)}
+                      className="h-4 w-4 border-slate-300 text-indigo-600"
+                    />
+                    {item.label}
+                  </label>
+                ))}
+                <label className="flex items-center gap-2 text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(query.sellerHasDeals)}
+                    onChange={(event) => updateParam("seller_has_deals", event.target.checked ? "true" : undefined)}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                  />
+                  有成交记录
                 </label>
-              ))}
+              </div>
             </div>
             <div>
               <p className="mb-3 font-bold text-slate-700">交易方式</p>
-              {["校园自提", "当面验货", "可邮寄"].map((item) => (
-                <label key={item} className="mb-2 flex items-center gap-2 text-slate-600">
-                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-                  {item}
-                </label>
-              ))}
+              <div className="space-y-2">
+                {tradeModes.map((item) => (
+                  <label key={item.value} className="flex items-center gap-2 text-slate-600">
+                    <input
+                      type="radio"
+                      checked={query.tradeMode === item.value}
+                      onChange={() => updateParam("trade_mode", item.value)}
+                      className="h-4 w-4 border-slate-300 text-indigo-600"
+                    />
+                    {item.label}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         </aside>
@@ -61,6 +166,7 @@ export default function AuctionHallPage() {
             <div>
               <p className="text-sm font-bold text-indigo-600">AUCTION HALL</p>
               <h1 className="text-2xl font-black text-slate-950">拍卖大厅</h1>
+              <p className="mt-1 text-sm text-slate-500">当前结果 {auctions.length} 条</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-950 px-4 py-3 text-white">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -88,6 +194,21 @@ export default function AuctionHallPage() {
             </div>
           )}
         </section>
+      </main>
+    </>
+  );
+}
+
+function HallFallback() {
+  return (
+    <>
+      <SiteNav />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-[360px]" />
+          ))}
+        </div>
       </main>
     </>
   );

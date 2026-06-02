@@ -73,11 +73,11 @@
 |---|---|---|
 | 公共门户首页 | `/` | 游客入口、搜索、分类、拍品网格、品牌视觉主焦区 |
 | 认证中心 | `/auth/login` | 登录/注册一体化视觉骨架、Mock 登录、Toast 和跳转 |
-| 拍卖大厅 | `/auction/hall` | 登录后主阵地、筛选、实时拍品矩阵、短轮询结构 |
-| 竞价详情 | `/auction/detail/[id]` | 核心实时竞价页、WebSocket/轮询、乐观出价和回滚 |
-| 拍品发布 | `/auction/publish` | 卖家分步发布向导、草稿保存、幂等 Token |
+| 拍卖大厅 | `/auction/hall` | 登录后主阵地、URL 驱动搜索筛选、实时拍品矩阵、短轮询结构 |
+| 竞价详情 | `/auction/detail/[id]` | 核心实时竞价页、WebSocket/轮询、真实 Tabs、乐观出价和回滚 |
+| 拍品发布 | `/auction/publish` | 卖家分步发布向导、草稿保存、幂等 Token、建议竞价配置 |
 | 订单支付 | `/checkout/[orderId]` | 封闭式支付页、支付方式选择、交易确认反馈 |
-| 管理大盘 | `/admin/dashboard` | 管理员审核、KPI、运维终端、滑出式审核抽屉 |
+| 管理大盘 | `/admin/dashboard` | 管理员审核、KPI、拍卖监控、统计报表、只读运维面板 |
 
 ## 6. 页面设计要求
 
@@ -103,7 +103,7 @@
 - 左侧 260px 过滤面板：价格区间、卖家信用分、交易方式。
 - 右侧 3 列实时拍品卡片矩阵。
 - 右上角 Mini Live Ticker 展示最新竞价/落锤动态。
-- React Query 使用 5 秒级短轮询思想，避免大厅对大量拍品建立巨量 WebSocket。
+- React Query 使用 5 秒级短轮询思想，避免大厅对大量拍品建立巨量 WebSocket；筛选条件写入 URL 查询参数并可刷新恢复。
 - Hover 超过 150ms 时预取详情数据。
 
 ### 6.4 `/auction/detail/[id]` 竞价详情
@@ -120,7 +120,7 @@
 
 ### 6.5 `/auction/publish` 拍品发布
 
-- 分步式 Wizard：`01 描述拍品 -> 02 上传实拍 -> 03 制定竞价契约 -> 04 检查并上架`。
+- 分步式 Wizard：`01 描述拍品 -> 02 上传实拍 -> 03 建议竞价配置 -> 04 检查并提交审核`。
 - 拖拽上传池使用虚线边框，Drag Over 时变 Indigo。
 - 图片以 120x120 卡片展示；第一张显示“封面首图”。
 - 首轮可以先做图片 URL/占位上传，不接真实二进制上传。
@@ -293,9 +293,9 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - `npm run build` 通过，Next.js `16.2.6 (webpack)` 生成 8 个 App Router 页面，其中 7 个为计划内业务页面。
 - `npm audit --json` 执行成功，high/critical 为 0，剩余 2 个 moderate，来源为 Next.js `16.2.6` 内部依赖 `postcss 8.4.31` 的 advisory；当前 npm 给出的 force fix 会降级到异常的 Next `9.3.3`，不采用。
 
-### F17：真实后端 HTTP 控制器逐步接入
+### F17：真实后端 HTTP 与 WebSocket 接入及虚标功能补全
 
-状态：进行中。
+状态：已完成主要闭环，剩余以回归和体验打磨为主。
 
 目标：按页面优先级逐步把 Mock API 替换为真实 Drogon HTTP 接口。
 
@@ -380,7 +380,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 4. Publish：`POST /api/items`、图片元数据、提交审核。 ✅ 已完成
 5. Checkout：`GET /api/orders/{id}`、`POST /api/orders/{id}/pay`。 ✅ 已完成
 6. Admin：统计、待审、运维数据。 ✅ 已完成
-7. WebSocket：`/ws/auction/{id}`。
+7. WebSocket：`/ws/auction/{id}`。 ✅ 已完成
 
 #### F17 Checkout/Admin Code Review 修复
 

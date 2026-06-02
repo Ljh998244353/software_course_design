@@ -8,13 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 import { addItemImage, createItem, submitItemForReview } from "@/lib/api/client";
 
-const steps = ["描述拍品", "上传实拍", "制定竞价契约", "检查并上架"];
+const steps = ["描述拍品", "上传实拍", "建议竞价配置", "检查并提交审核"];
 const draftStorageKey = "auction-publish-draft";
 
 type PublishDraft = {
   title?: string;
   description?: string;
   price?: string;
+  categoryId?: string;
+  tradeMode?: string;
+  location?: string;
+  tags?: string;
+  suggestedBidStep?: string;
+  antiSnipingWindow?: string;
+  extendSeconds?: string;
   images?: string[];
   createdItemId?: string;
   addedImageUrls?: string[];
@@ -25,6 +32,13 @@ export default function PublishPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("300");
+  const [categoryId, setCategoryId] = useState("1");
+  const [tradeMode, setTradeMode] = useState("MEETUP");
+  const [location, setLocation] = useState("犀浦校区");
+  const [tags, setTags] = useState("99新,可当面验货");
+  const [suggestedBidStep, setSuggestedBidStep] = useState("20");
+  const [antiSnipingWindow, setAntiSnipingWindow] = useState("300");
+  const [extendSeconds, setExtendSeconds] = useState("180");
   const [images, setImages] = useState<string[]>([]);
   const [toast, setToast] = useState("");
   const [toastTone, setToastTone] = useState<"success" | "danger">("success");
@@ -42,6 +56,13 @@ export default function PublishPage() {
       setTitle(draft.title ?? "");
       setDescription(draft.description ?? "");
       setPrice(draft.price ?? "300");
+      setCategoryId(draft.categoryId ?? "1");
+      setTradeMode(draft.tradeMode ?? "MEETUP");
+      setLocation(draft.location ?? "犀浦校区");
+      setTags(draft.tags ?? "99新,可当面验货");
+      setSuggestedBidStep(draft.suggestedBidStep ?? "20");
+      setAntiSnipingWindow(draft.antiSnipingWindow ?? "300");
+      setExtendSeconds(draft.extendSeconds ?? "180");
       setImages(draft.images ?? []);
       setCreatedItemId(draft.createdItemId ?? null);
       setAddedImageUrls(draft.addedImageUrls ?? []);
@@ -49,9 +70,25 @@ export default function PublishPage() {
   }, []);
 
   function saveDraft(next?: Partial<PublishDraft>) {
-    const payload = { title, description, price, images, createdItemId, addedImageUrls, ...next };
+    const payload = {
+      title,
+      description,
+      price,
+      categoryId,
+      tradeMode,
+      location,
+      tags,
+      suggestedBidStep,
+      antiSnipingWindow,
+      extendSeconds,
+      images,
+      createdItemId,
+      addedImageUrls,
+      ...next,
+    };
     localStorage.setItem(draftStorageKey, JSON.stringify(payload));
     setToast("草稿已自动保存");
+    setToastTone("success");
   }
 
   function rememberCreatedItem(itemId: string) {
@@ -60,13 +97,12 @@ export default function PublishPage() {
   }
 
   function addImage(event: ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value;
-    if (!value) {
-      return;
-    }
+    const value = event.target.value.trim();
+    if (!value) return;
     const next = [...images, value];
     setImages(next);
     saveDraft({ images: next });
+    event.target.value = "";
   }
 
   async function submit() {
@@ -83,19 +119,24 @@ export default function PublishPage() {
         const created = await createItem({
           title,
           description,
-          category_id: 1,
+          category_id: Number(categoryId),
           start_price: parseFloat(price) || 0,
+          trade_mode: tradeMode,
+          location,
+          tags_json: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+          suggested_bid_step: parseFloat(suggestedBidStep) || 0,
+          suggested_anti_sniping_window_seconds: parseInt(antiSnipingWindow, 10) || 0,
+          suggested_extend_seconds: parseInt(extendSeconds, 10) || 0,
           cover_image_url: images[0] ?? "",
-        });
+          request_id: idempotencyKey,
+        } as never);
         itemId = String(created.item_id);
         rememberCreatedItem(itemId);
       }
 
       let nextAddedImageUrls = [...addedImageUrls];
       for (const [index, image] of images.entries()) {
-        if (nextAddedImageUrls.includes(image)) {
-          continue;
-        }
+        if (nextAddedImageUrls.includes(image)) continue;
         await addItemImage(itemId, {
           image_url: image,
           sort_no: index + 1,
@@ -114,8 +155,7 @@ export default function PublishPage() {
       setCreatedItemId(null);
       setAddedImageUrls([]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "提交失败";
-      setToast(message);
+      setToast(err instanceof Error ? err.message : "提交失败");
       setToastTone("danger");
     } finally {
       setSubmitting(false);
@@ -130,7 +170,7 @@ export default function PublishPage() {
         <div className="mb-6 rounded-lg border border-slate-200 bg-white p-6 shadow-card">
           <p className="text-sm font-bold text-indigo-600">PUBLISH WIZARD</p>
           <h1 className="mt-1 text-3xl font-black text-slate-950">拍品发布</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">首轮使用图片 URL 提交，系统会保存草稿、图片元数据并进入审核队列。</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">本页提交的是拍品与建议竞价配置，审核通过后由管理端创建正式拍卖。</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
@@ -149,12 +189,15 @@ export default function PublishPage() {
 
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
             {step === 0 ? (
-              <div className="space-y-5">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="拍品标题">
                   <input value={title} onBlur={() => saveDraft()} onChange={(event) => setTitle(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" placeholder="例如：iPad Air 5 64G 蓝色" />
                 </Field>
+                <Field label="分类 ID">
+                  <input value={categoryId} onBlur={() => saveDraft()} onChange={(event) => setCategoryId(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" />
+                </Field>
                 <Field label="拍品描述">
-                  <textarea value={description} onBlur={() => saveDraft()} onChange={(event) => setDescription(event.target.value)} className="min-h-36 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" placeholder="描述成色、配件、交易方式和注意事项" />
+                  <textarea value={description} onBlur={() => saveDraft()} onChange={(event) => setDescription(event.target.value)} className="min-h-36 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:col-span-2" placeholder="描述成色、配件、交易方式和注意事项" />
                 </Field>
               </div>
             ) : null}
@@ -164,7 +207,7 @@ export default function PublishPage() {
                 <div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/40">
                   <UploadCloud className="mx-auto mb-3 h-10 w-10 text-indigo-600" />
                   <p className="font-black text-slate-950">粘贴图片 URL 作为首轮占位上传</p>
-                  <input onBlur={() => saveDraft()} onChange={addImage} className="mx-auto mt-5 h-11 w-full max-w-xl rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500" placeholder="https://images.unsplash.com/..." />
+                  <input onChange={addImage} className="mx-auto mt-5 h-11 w-full max-w-xl rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500" placeholder="https://images.unsplash.com/..." />
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-4">
                   {images.map((image, index) => (
@@ -186,19 +229,27 @@ export default function PublishPage() {
                 <Field label="起拍价">
                   <input value={price} onBlur={() => saveDraft()} onChange={(event) => setPrice(event.target.value)} className="tabular h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" />
                 </Field>
-                <Field label="最小加价幅度">
-                  <input className="tabular h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" defaultValue="20" />
+                <Field label="建议最小加价幅度">
+                  <input value={suggestedBidStep} onBlur={() => saveDraft()} onChange={(event) => setSuggestedBidStep(event.target.value)} className="tabular h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" />
                 </Field>
-                <Field label="延时保护">
-                  <select className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500">
-                    <option>最后 5 分钟内出价顺延 3 分钟</option>
-                  </select>
+                <Field label="建议延时保护窗口（秒）">
+                  <input value={antiSnipingWindow} onBlur={() => saveDraft()} onChange={(event) => setAntiSnipingWindow(event.target.value)} className="tabular h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" />
+                </Field>
+                <Field label="建议顺延秒数">
+                  <input value={extendSeconds} onBlur={() => saveDraft()} onChange={(event) => setExtendSeconds(event.target.value)} className="tabular h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" />
                 </Field>
                 <Field label="交易方式">
-                  <select className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500">
-                    <option>校园当面交易</option>
-                    <option>自提</option>
+                  <select value={tradeMode} onChange={(event) => setTradeMode(event.target.value)} onBlur={() => saveDraft()} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500">
+                    <option value="MEETUP">校园当面交易</option>
+                    <option value="SELF_PICKUP">自提</option>
+                    <option value="SHIPPING">可邮寄</option>
                   </select>
+                </Field>
+                <Field label="交付地点">
+                  <input value={location} onBlur={() => saveDraft()} onChange={(event) => setLocation(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500" />
+                </Field>
+                <Field label="标签（逗号分隔）">
+                  <input value={tags} onBlur={() => saveDraft()} onChange={(event) => setTags(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500 sm:col-span-2" />
                 </Field>
               </div>
             ) : null}
@@ -209,7 +260,10 @@ export default function PublishPage() {
                   ["标题", title || "未填写"],
                   ["描述", description || "未填写"],
                   ["起拍价", `¥${price}`],
-                  ["图片数量", `${images.length} 张`]
+                  ["交易方式", tradeMode],
+                  ["交付地点", location || "未填写"],
+                  ["建议加价幅度", `¥${suggestedBidStep}`],
+                  ["图片数量", `${images.length} 张`],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                     <span className="font-bold text-slate-600">{label}</span>
@@ -218,9 +272,7 @@ export default function PublishPage() {
                 ))}
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
                   <CheckCircle2 className="h-5 w-5" />
-                  {submittedItemId
-                    ? `拍品 #${submittedItemId} 已提交审核`
-                    : "提交后进入管理员审核队列"}
+                  {submittedItemId ? `拍品 #${submittedItemId} 已提交审核` : "提交后进入管理员审核队列，由管理端创建正式拍卖"}
                 </div>
               </div>
             ) : null}

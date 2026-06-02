@@ -105,9 +105,20 @@ Json::Value PublicAuctionSummaryToJson(const modules::auction::PublicAuctionSumm
     json["auction_id"] = static_cast<Json::UInt64>(s.auction_id);
     json["item_id"] = static_cast<Json::UInt64>(s.item_id);
     json["title"] = s.title;
+    json["category_name"] = s.category_name;
     json["cover_image_url"] = s.cover_image_url;
     json["status"] = s.status;
+    json["start_price"] = s.start_price;
     json["current_price"] = s.current_price;
+    json["bid_step"] = s.bid_step;
+    json["seller_username"] = s.seller_username;
+    json["seller_rating"] = s.seller_rating;
+    json["seller_deals"] = s.seller_deals;
+    json["watcher_count"] = s.watcher_count;
+    json["trade_mode"] = s.trade_mode;
+    json["location"] = s.location;
+    json["tags_json"] = s.tags_json;
+    json["description"] = s.description;
     json["start_time"] = s.start_time;
     json["end_time"] = s.end_time;
     return json;
@@ -118,11 +129,20 @@ Json::Value PublicAuctionDetailToJson(const modules::auction::PublicAuctionDetai
     json["auction_id"] = static_cast<Json::UInt64>(d.auction_id);
     json["item_id"] = static_cast<Json::UInt64>(d.item_id);
     json["title"] = d.title;
+    json["category_name"] = d.category_name;
     json["cover_image_url"] = d.cover_image_url;
     json["status"] = d.status;
     json["start_price"] = d.start_price;
     json["current_price"] = d.current_price;
     json["bid_step"] = d.bid_step;
+    json["seller_username"] = d.seller_username;
+    json["seller_rating"] = d.seller_rating;
+    json["seller_deals"] = d.seller_deals;
+    json["watcher_count"] = d.watcher_count;
+    json["trade_mode"] = d.trade_mode;
+    json["location"] = d.location;
+    json["tags_json"] = d.tags_json;
+    json["description"] = d.description;
     json["start_time"] = d.start_time;
     json["end_time"] = d.end_time;
     json["anti_sniping_window_seconds"] = d.anti_sniping_window_seconds;
@@ -150,11 +170,26 @@ void RegisterAuctionHttpRoutes(
                 modules::auction::PublicAuctionQuery query;
                 const auto& keyword = request->getParameter("keyword");
                 const auto& status = request->getParameter("status");
+                const auto& category = request->getParameter("category");
+                const auto& price_min = request->getParameter("price_min");
+                const auto& price_max = request->getParameter("price_max");
+                const auto& seller_rating = request->getParameter("seller_rating");
+                const auto& seller_has_deals = request->getParameter("seller_has_deals");
+                const auto& trade_mode = request->getParameter("trade_mode");
                 const auto& page_no = request->getParameter("page_no");
                 const auto& page_size = request->getParameter("page_size");
 
                 if (!keyword.empty()) query.keyword = keyword;
                 if (!status.empty()) query.status = status;
+                if (!category.empty()) query.category = category;
+                if (!price_min.empty()) query.price_min = std::stod(price_min);
+                if (!price_max.empty()) query.price_max = std::stod(price_max);
+                if (!seller_rating.empty()) query.seller_rating_min = std::stod(seller_rating);
+                if (!seller_has_deals.empty()) {
+                    query.seller_has_deals =
+                        seller_has_deals == "1" || seller_has_deals == "true";
+                }
+                if (!trade_mode.empty()) query.trade_mode = trade_mode;
                 if (!page_no.empty()) query.page_no = ClampPageNo(SafeParseInt(page_no, "page_no"));
                 if (!page_size.empty()) query.page_size = ClampPageSize(SafeParseInt(page_size, "page_size"));
 

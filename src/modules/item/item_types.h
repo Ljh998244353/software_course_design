@@ -50,6 +50,12 @@ struct ItemRecord {
     std::string title;
     std::string description;
     double start_price{0.0};
+    std::string trade_mode;
+    std::string location;
+    std::string tags_json;
+    double suggested_bid_step{0.0};
+    int suggested_anti_sniping_window_seconds{0};
+    int suggested_extend_seconds{0};
     std::string item_status;
     std::string reject_reason;
     std::string cover_image_url;
@@ -81,6 +87,12 @@ struct CreateItemRequest {
     std::string description;
     std::uint64_t category_id{0};
     double start_price{0.0};
+    std::string trade_mode;
+    std::string location;
+    std::string tags_json;
+    double suggested_bid_step{0.0};
+    int suggested_anti_sniping_window_seconds{0};
+    int suggested_extend_seconds{0};
     std::string cover_image_url;
 };
 
@@ -89,6 +101,12 @@ struct UpdateItemRequest {
     std::optional<std::string> description;
     std::optional<std::uint64_t> category_id;
     std::optional<double> start_price;
+    std::optional<std::string> trade_mode;
+    std::optional<std::string> location;
+    std::optional<std::string> tags_json;
+    std::optional<double> suggested_bid_step;
+    std::optional<int> suggested_anti_sniping_window_seconds;
+    std::optional<int> suggested_extend_seconds;
     std::optional<std::string> cover_image_url;
 };
 
@@ -129,6 +147,12 @@ struct ItemSummary {
     std::uint64_t category_id{0};
     std::string title;
     double start_price{0.0};
+    std::string trade_mode;
+    std::string location;
+    std::string tags_json;
+    double suggested_bid_step{0.0};
+    int suggested_anti_sniping_window_seconds{0};
+    int suggested_extend_seconds{0};
     std::string item_status;
     std::string reject_reason;
     std::string cover_image_url;
@@ -150,6 +174,8 @@ struct PendingAuditItemSummary {
     std::uint64_t category_id{0};
     std::string title;
     double start_price{0.0};
+    std::string trade_mode;
+    std::string location;
     std::string created_at;
 };
 

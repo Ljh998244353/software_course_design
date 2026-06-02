@@ -12,7 +12,7 @@
 | `/api/auctions/{id}` | GET | `/auction/detail/[id]` | 已实现 | 已接入 | `src/access/http/auction_http.cpp` |
 | `/api/auctions/{id}/bids` | GET | 出价历史墙 | 已实现 | 已接入 | `src/access/http/bid_http.cpp` |
 | `/api/auctions/{id}/bids` | POST | `PLACE BID` | 已实现（含 409/429） | 已接入 | `src/access/http/bid_http.cpp` |
-| `/ws/auction/{id}` | WS | 详情实时价格 | 未实现（轮询降级） | 待接入 | 待创建 |
+| `/ws/auction/{id}` | WS | 详情实时价格 | 已实现（自动降级轮询） | 已接入 | `src/access/http/auction_ws.cpp` |
 | `/api/items` | POST | `/auction/publish` | 已实现 | 已接入 | `src/access/http/item_http.cpp` |
 | `/api/items/{id}/images` | POST | `/auction/publish` | 已实现 | 已接入 | `src/access/http/item_http.cpp` |
 | `/api/items/{id}/submit-review` | POST | `/auction/publish` | 已实现 | 已接入 | `src/access/http/item_http.cpp` |
@@ -58,8 +58,8 @@
 - `POST /api/admin/items/{id}/reject` - 审核驳回 ✅
 - `GET /api/admin/statistics/daily` - 日报统计 ✅
 
-### WebSocket
-- `/ws/auction/{id}` - 拍卖实时价格推送
+### WebSocket（已接入）
+- `/ws/auction/{id}` - 拍卖实时价格推送 ✅
 
 ## F17 接入顺序建议
 
@@ -69,10 +69,10 @@
 4. **Publish** - 拍品发布和审核
 5. **Checkout** - 订单查询和支付 ✅
 6. **Admin** - 管理后台数据 ✅
-7. **WebSocket** - 实时价格推送，替换轮询降级
+7. **WebSocket** - 实时价格推送，替换轮询降级 ✅
 
 ## 当前状态
 
 - **Mock 模式**: 完整可用，7 个页面均可通过 mock 数据正常交互；登录态会写入本地 token，导航会话恢复可用
-- **Live 模式**: Auth 登录、会话恢复、登出和注册已接入真实 Drogon 控制器；Auction 列表和详情已接入真实 Drogon 控制器；Bid 出价和历史已接入真实 Drogon 控制器；Publish（拍品创建、图片元数据、修改、提交审核）已接入真实 Drogon 控制器；Checkout（订单详情、发起支付）已接入真实 Drogon 控制器；Admin（待审列表、审核通过/驳回、日报统计）已接入真实 Drogon 控制器；WebSocket 仍等待 F17 后续接入
-- **WebSocket**: 前端已有降级 UI（Amber 横幅 + 轮询），等待 F17 接入真实通道
+- **Live 模式**: Auth、Auction、Bid、Publish、Checkout、Admin 和 WebSocket 已接入真实 Drogon 控制器；首页/大厅搜索筛选、详情页实时价格、发布建议配置、管理台工作区切换均可在 live 模式运行
+- **WebSocket**: 前端优先使用真实 `/ws/auction/{id}`，连接失败时自动降级到轮询

@@ -19,7 +19,9 @@ export const mockAuctions: AuctionItem[] = [
     watchers: 143,
     location: "犀浦校区",
     tags: ["99新", "带发票", "可当面验机"],
-    description: "通勤和自习室常用降噪耳机，电池健康稳定，外壳轻微使用痕迹。"
+    description: "通勤和自习室常用降噪耳机，电池健康稳定，外壳轻微使用痕迹。",
+    tradeMode: "MEETUP",
+    sellerUsername: "seller_demo"
   },
   {
     id: "AUC-1002",
@@ -36,7 +38,9 @@ export const mockAuctions: AuctionItem[] = [
     watchers: 219,
     location: "九里校区",
     tags: ["套机", "适合Vlog", "临近截标"],
-    description: "含机身、15-45 镜头、电池、充电器和 64G 卡，适合课程拍摄。"
+    description: "含机身、15-45 镜头、电池、充电器和 64G 卡，适合课程拍摄。",
+    tradeMode: "MEETUP",
+    sellerUsername: "film_room"
   },
   {
     id: "AUC-1003",
@@ -53,7 +57,9 @@ export const mockAuctions: AuctionItem[] = [
     watchers: 87,
     location: "唐山路宿舍区",
     tags: ["保养完成", "可试骑"],
-    description: "M 码车架，刚做过刹车和变速调校，适合日常通勤。"
+    description: "M 码车架，刚做过刹车和变速调校，适合日常通勤。",
+    tradeMode: "SELF_PICKUP",
+    sellerUsername: "rider_x"
   },
   {
     id: "AUC-1004",
@@ -70,7 +76,9 @@ export const mockAuctions: AuctionItem[] = [
     watchers: 53,
     location: "图书馆北门",
     tags: ["笔记完整", "课程设计参考"],
-    description: "包含软件工程导论、大象 UML 等课程常用资料，附课堂整理笔记。"
+    description: "包含软件工程导论、大象 UML 等课程常用资料，附课堂整理笔记。",
+    tradeMode: "MEETUP",
+    sellerUsername: "senior_2026"
   },
   {
     id: "AUC-1005",
@@ -87,7 +95,9 @@ export const mockAuctions: AuctionItem[] = [
     watchers: 74,
     location: "创新港",
     tags: ["自提", "稳定承重"],
-    description: "桌面有轻微划痕，电机升降正常，适合宿舍或实验室工位。"
+    description: "桌面有轻微划痕，电机升降正常，适合宿舍或实验室工位。",
+    tradeMode: "SELF_PICKUP",
+    sellerUsername: "studio_mate"
   },
   {
     id: "AUC-1006",
@@ -104,7 +114,9 @@ export const mockAuctions: AuctionItem[] = [
     watchers: 301,
     location: "犀浦校区",
     tags: ["小于5分钟", "带壳膜", "高热度"],
-    description: "屏幕无划痕，主要用于阅读论文和手写笔记，不含 Apple Pencil。"
+    description: "屏幕无划痕，主要用于阅读论文和手写笔记，不含 Apple Pencil。",
+    tradeMode: "MEETUP",
+    sellerUsername: "design_lab"
   }
 ];
 
@@ -126,7 +138,7 @@ export const mockOrder: OrderSummary = {
 };
 
 export const mockReviewItems: AdminReviewItem[] = [
-  { id: "ITM-9101", title: "MacBook Air M2 16G", seller: "seller_demo", category: "数码3C", risk: "LOW", submittedAt: past(20), price: 5200 },
-  { id: "ITM-9102", title: "实验室闲置路由器套装", seller: "network_lab", category: "生活闲置", risk: "MEDIUM", submittedAt: past(44), price: 180 },
-  { id: "ITM-9103", title: "限量球鞋未拆封", seller: "sneaker_x", category: "运动装备", risk: "HIGH", submittedAt: past(63), price: 900 }
+  { id: "ITM-9101", title: "MacBook Air M2 16G", seller: "seller_demo", category: "数码3C", risk: "LOW", submittedAt: past(20), price: 5200, location: "犀浦校区", tradeMode: "MEETUP" },
+  { id: "ITM-9102", title: "实验室闲置路由器套装", seller: "network_lab", category: "生活闲置", risk: "MEDIUM", submittedAt: past(44), price: 180, location: "九里校区", tradeMode: "SELF_PICKUP" },
+  { id: "ITM-9103", title: "限量球鞋未拆封", seller: "sneaker_x", category: "运动装备", risk: "HIGH", submittedAt: past(63), price: 900, location: "创新港", tradeMode: "MEETUP" }
 ];

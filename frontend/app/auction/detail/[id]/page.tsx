@@ -5,15 +5,18 @@ import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { FormEvent, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, History, Loader2, Radio, ShieldCheck, Zap } from "lucide-react";
+import { AlertTriangle, Clock3, History, Loader2, Radio, ShieldCheck, Star, Zap } from "lucide-react";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 import { getAuction, getBids, placeBid } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
+import { useAuctionWebSocket } from "@/lib/realtime/use-auction-ws";
 import { countdownLabel, formatPrice, formatTime } from "@/lib/utils/format";
 import type { BidRecord } from "@/types/auction";
+
+const tabs = ["描述", "参数", "卖家评价"] as const;
 
 export default function AuctionDetailPage() {
   const params = useParams<{ id: string }>();
@@ -25,12 +28,36 @@ export default function AuctionDetailPage() {
   const [toastTone, setToastTone] = useState<"success" | "danger" | "info">("success");
   const [cooldown, setCooldown] = useState(0);
   const [shake, setShake] = useState(false);
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("描述");
 
   const auctionQuery = useQuery({ queryKey: queryKeys.auction(id), queryFn: () => getAuction(id) });
-  const bidsQuery = useQuery({ queryKey: queryKeys.bids(id), queryFn: () => getBids(id), refetchInterval: 4000 });
+  const bidsQuery = useQuery({
+    queryKey: queryKeys.bids(id),
+    queryFn: () => getBids(id),
+    refetchInterval: 4000,
+  });
   const auction = auctionQuery.data;
   const bids = bidsQuery.data ?? [];
   const nextBid = useMemo(() => (auction ? auction.currentPrice + auction.minIncrement : 0), [auction]);
+
+  const ws = useAuctionWebSocket({
+    auctionId: id,
+    enabled: true,
+    onPriceUpdate: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auction(id) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.bids(id) });
+    },
+    onAuctionExtended: async () => {
+      setToast("拍卖触发延时保护，结束时间已顺延");
+      setToastTone("info");
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auction(id) });
+    },
+    onOutbid: async () => {
+      setToast("你已被其他用户超价");
+      setToastTone("danger");
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auction(id) });
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: (bidAmount: number) => placeBid(id, bidAmount),
@@ -41,7 +68,7 @@ export default function AuctionDetailPage() {
         bidder: "buyer_demo",
         amount: bidAmount,
         createdAt: new Date().toISOString(),
-        status: "PENDING"
+        status: "PENDING",
       };
       setPendingBid(pending);
       setToast("出价已进入 pending，等待权威确认");
@@ -75,14 +102,14 @@ export default function AuctionDetailPage() {
           });
         }, 1000);
       } else {
-        setToast("API route not ready 或网络异常");
+        setToast(message);
       }
-    }
+    },
   });
 
   function submitBid(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!auction || cooldown > 0) {
+    if (!auction || cooldown > 0 || auction.status !== "RUNNING") {
       return;
     }
     mutation.mutate(Number(amount || nextBid));
@@ -97,10 +124,12 @@ export default function AuctionDetailPage() {
     );
   }
 
+  const connectionLabel = ws.isConnected ? "实时通道已连接" : ws.isFallback ? "实时通道降级为轮询" : "正在建立实时连接";
+
   return (
     <>
       <SiteNav />
-      <OfflineBanner />
+      {!ws.isConnected ? <OfflineBanner text="实时通道不可用时自动回退到短轮询，价格以数据库权威结果为准。" /> : null}
       <Toast message={toast} tone={toastTone} />
       <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8">
         <section className="space-y-5">
@@ -109,21 +138,45 @@ export default function AuctionDetailPage() {
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
             <div className="mb-4 flex gap-2 border-b border-slate-200 pb-4 text-sm font-bold text-slate-600">
-              {["描述", "参数", "卖家评价"].map((tab, index) => (
-                <button key={tab} className={`rounded-lg px-3 py-2 ${index === 0 ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-50"}`}>
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-lg px-3 py-2 ${activeTab === tab ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-50"}`}
+                >
                   {tab}
                 </button>
               ))}
             </div>
             <h1 className="text-2xl font-black text-slate-950">{auction.title}</h1>
-            <p className="mt-3 leading-8 text-slate-600">{auction.description}</p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              {auction.tags.map((tag) => (
-                <span key={tag} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
-                  {tag}
-                </span>
-              ))}
-            </div>
+            {activeTab === "描述" ? (
+              <>
+                <p className="mt-3 leading-8 text-slate-600">{auction.description}</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  {auction.tags.map((tag) => (
+                    <span key={tag} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            {activeTab === "参数" ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <DetailMeta label="分类" value={auction.category} />
+                <DetailMeta label="交易方式" value={auction.tradeMode || "校园当面交易"} />
+                <DetailMeta label="交付地点" value={auction.location} />
+                <DetailMeta label="最小加价" value={formatPrice(auction.minIncrement)} />
+              </div>
+            ) : null}
+            {activeTab === "卖家评价" ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <DetailMeta label="卖家账号" value={auction.seller.name} />
+                <DetailMeta label="平均评分" value={`${auction.seller.rating.toFixed(1)} / 5`} />
+                <DetailMeta label="成交记录" value={`${auction.seller.deals} 笔`} />
+                <DetailMeta label="关注人数" value={`${auction.watchers} 人`} />
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -141,24 +194,29 @@ export default function AuctionDetailPage() {
 
           <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-              <Radio className="h-4 w-4 text-amber-600" />
-              实时通道断开，当前以短轮询刷新
+              <Radio className={`h-4 w-4 ${ws.isConnected ? "text-emerald-600" : "text-amber-600"}`} />
+              {connectionLabel}
             </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">为避免过期价格，出价前请确认右侧权威价格。</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">卖家 {auction.seller.name} · {auction.location}</p>
+          </div>
+
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <Star className="h-4 w-4 text-amber-500" />
+            卖家评分 {auction.seller.rating.toFixed(1)} · 成交 {auction.seller.deals} 笔
           </div>
 
           <form onSubmit={submitBid} className="space-y-4">
             <div className="grid grid-cols-3 gap-2">
-              {[nextBid, nextBid + 50, nextBid + 100].map((value) => (
+              {[nextBid, nextBid + auction.minIncrement, nextBid + auction.minIncrement * 2].map((value) => (
                 <button key={value} type="button" onClick={() => setAmount(String(value))} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">
                   +{formatPrice(value - auction.currentPrice)}
                 </button>
               ))}
             </div>
             <input value={amount} onChange={(event) => setAmount(event.target.value)} className="tabular h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-lg font-bold outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" placeholder={String(nextBid)} inputMode="numeric" />
-            <Button className="w-full" disabled={mutation.isPending || cooldown > 0}>
+            <Button className="w-full" disabled={mutation.isPending || cooldown > 0 || auction.status !== "RUNNING"}>
               {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              {cooldown > 0 ? `冷却 ${cooldown}s` : "PLACE BID"}
+              {cooldown > 0 ? `冷却 ${cooldown}s` : auction.status === "RUNNING" ? "PLACE BID" : "拍卖不可出价"}
             </Button>
           </form>
 
@@ -196,6 +254,15 @@ export default function AuctionDetailPage() {
         </aside>
       </main>
     </>
+  );
+}
+
+function DetailMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-xs font-bold text-slate-500">{label}</p>
+      <p className="mt-1 font-bold text-slate-950">{value}</p>
+    </div>
   );
 }
 

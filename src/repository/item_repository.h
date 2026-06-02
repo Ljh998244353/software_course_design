@@ -16,6 +16,12 @@ struct CreateItemParams {
     std::string title;
     std::string description;
     std::string start_price;
+    std::string trade_mode;
+    std::string location;
+    std::string tags_json;
+    std::string suggested_bid_step;
+    int suggested_anti_sniping_window_seconds{0};
+    int suggested_extend_seconds{0};
     std::string cover_image_url;
 };
 
@@ -25,6 +31,12 @@ struct UpdateItemParams {
     std::string title;
     std::string description;
     std::string start_price;
+    std::string trade_mode;
+    std::string location;
+    std::string tags_json;
+    std::string suggested_bid_step;
+    int suggested_anti_sniping_window_seconds{0};
+    int suggested_extend_seconds{0};
     std::string cover_image_url;
     std::string item_status;
     std::string reject_reason;
