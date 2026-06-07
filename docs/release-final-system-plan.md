@@ -71,8 +71,8 @@
   - `start.sh` 现在先做 `--check-config` / `--check-db`，失败时自动尝试 `scripts/db/setup_local_mysql.sh`
   - fallback 运行配置现在正确写入应用账号 `auction_user/change_me`，不再误用 root 管理账号
   - fallback 失败时会输出最近 MySQL 错误日志路径，并明确识别“当前环境禁止 mysqld 监听 socket/TCP”的限制
-- 当前剩余事项：
-  - 需要在本机正常 shell 中实际执行 `./start.sh --config config/app.local.json`，确认在非沙箱环境可真正完成自动拉库后启动
+- 已完成最终验收：
+  - 已在本机正常 shell 中实际执行 `./start.sh --config config/app.local.json`，确认可自动拉起本地 MySQL 并完成前后端启动
 
 ### R3 单一真实入口收敛
 
@@ -144,9 +144,8 @@
 - 已完成代码修复：
   - `scripts/deploy/verify_release.sh` 现已改为自动初始化本地测试 MySQL，并通过 `scripts/db/write_test_config.sh` 生成真实测试配置
   - 发布门禁不再直接使用 `config/app.example.json` 作为后端运行配置
-- 当前剩余事项：
-  - 受当前 Codex 沙箱禁止 mysqld 监听影响，只完成了 `bash -n` 级静态验证
-  - 需要在本机正常 shell 中实际执行 `scripts/deploy/verify_release.sh` 完成最终验收
+- 已完成最终验收：
+  - 已在本机正常 shell 中实际执行 `scripts/deploy/verify_release.sh`，发布门禁全链路通过
 
 ### R7 文档与 handoff 收口
 
@@ -208,8 +207,8 @@
 
 ## 8. 当前执行位置
 
-- 当前阶段：`R3 / R7`
-- 当前状态：`进行中`
+- 当前阶段：`R7`
+- 当前状态：`已完成`
 - 最近通过的验证命令：
   - `bash -n start.sh`
   - `bash -n scripts/db/setup_local_mysql.sh`
@@ -221,10 +220,10 @@
   - `ctest --test-dir build --output-on-failure`
   - `cd frontend && npm run typecheck`
   - `cd frontend && npm run build`
+  - `./start.sh --config config/app.local.json`
+  - `scripts/deploy/verify_release.sh`
 - 下一步唯一动作：
-  - 继续清理残余文档中的旧 `demo` 当前态口径
-  - 在本机正常 shell 中执行 `./start.sh --config config/app.local.json`
-  - 随后执行 `scripts/deploy/verify_release.sh`
+  - 后续仅按新增需求维护，不再进行“最终修复计划”范围内的收口工作
 - 当前风险：
-  - 当前 Codex 沙箱禁止 `mysqld` 绑定 Unix socket 和 TCP 端口，因此无法在沙箱内完成 MySQL fallback 成功启动验证
+  - 已修复一个真实启动阻塞：若 `build/CMakeCache.txt` 缓存了 `/mnt/c/.../*.exe` 的 Windows clang，WSL 下执行 `start.sh` 会误用 MSVC STL 头并编译失败；当前 `start.sh` 已固定优先 Linux 编译器并自动重置受污染的 CMake cache
   - 旧 `demo` 口径已从主测试入口、主发布文档和恢复入口中退出；当前剩余命中大多属于明确标注的历史交付说明

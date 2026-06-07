@@ -159,7 +159,8 @@ modules::item::PendingAuditItemSummary BuildPendingAuditItemSummary(MYSQL_ROW ro
         .start_price = ReadRowDouble(row, 6),
         .trade_mode = ReadRowString(row, 7),
         .location = ReadRowString(row, 8),
-        .created_at = ReadRowString(row, 9),
+        .cover_image_url = ReadRowString(row, 9),
+        .created_at = ReadRowString(row, 10),
     };
 }
 
@@ -497,7 +498,7 @@ std::vector<modules::item::PendingAuditItemSummary> ItemRepository::ListPendingA
         connection(),
         "SELECT i.item_id, i.seller_id, u.username, COALESCE(u.nickname, ''), "
         "COALESCE(i.category_id, 0), i.title, CAST(i.start_price AS CHAR), "
-        "i.trade_mode, COALESCE(i.location, ''), CAST(i.created_at AS CHAR) "
+        "i.trade_mode, COALESCE(i.location, ''), COALESCE(i.cover_image_url, ''), CAST(i.created_at AS CHAR) "
         "FROM item i "
         "JOIN user_account u ON u.user_id = i.seller_id "
         "WHERE i.item_status = 'PENDING_AUDIT' "

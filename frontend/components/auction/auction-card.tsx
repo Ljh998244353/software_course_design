@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Clock3, Eye } from "lucide-react";
 import type { AuctionItem } from "@/types/auction";
@@ -13,7 +12,7 @@ export function AuctionCard({ auction }: { auction: AuctionItem }) {
       className="auction-transition group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card hover:-translate-y-1 hover:border-indigo-300 hover:shadow-float"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-        <Image src={auction.imageUrl} alt={auction.title} fill className="object-cover transition duration-500 group-hover:scale-105" sizes="(min-width: 1024px) 25vw, 100vw" />
+        <img src={auction.imageUrl} alt={auction.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
         <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 shadow-card">
           {auction.category}
         </div>

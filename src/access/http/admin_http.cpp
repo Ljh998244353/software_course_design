@@ -89,6 +89,7 @@ Json::Value PendingAuditItemToJson(const modules::item::PendingAuditItemSummary&
     json["category_id"] = static_cast<Json::UInt64>(item.category_id);
     json["title"] = item.title;
     json["start_price"] = item.start_price;
+    json["cover_image_url"] = item.cover_image_url;
     json["created_at"] = item.created_at;
     return json;
 }

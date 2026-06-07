@@ -22,6 +22,7 @@ export type AuctionItem = {
   description: string;
   tradeMode: string;
   sellerUsername?: string;
+  acceptingBids?: boolean;
 };
 
 export type BidRecord = {
@@ -53,8 +54,21 @@ export type AdminReviewItem = {
   risk: "LOW" | "MEDIUM" | "HIGH";
   submittedAt: string;
   price: number;
+  imageUrl?: string;
   location?: string;
   tradeMode?: string;
+};
+
+export type AdminReviewDecision = {
+  itemId: string;
+  title: string;
+  seller: string;
+  price: number;
+  result: "APPROVED" | "REJECTED";
+  auditedAt: string;
+  comment?: string;
+  auctionId?: string | null;
+  auctionStatus?: string | null;
 };
 
 export type AuctionListQuery = {
@@ -106,10 +120,46 @@ export type AuctionSummaryRaw = {
   end_time: string;
 };
 
+export type PublicAuctionSummaryRaw = {
+  auctionId: number;
+  itemId: number;
+  title: string;
+  coverImageUrl: string;
+  status: string;
+  currentPrice: number;
+  startTime: string;
+  endTime: string;
+  acceptingBids?: boolean;
+};
+
+export type PublicAuctionListRaw = {
+  list: PublicAuctionSummaryRaw[];
+  total: number;
+  pageNo: number;
+  pageSize: number;
+};
+
 export type AuctionDetailRaw = AuctionSummaryRaw & {
   anti_sniping_window_seconds: number;
   extend_seconds: number;
   highest_bidder_masked: string;
+};
+
+export type PublicAuctionDetailRaw = {
+  auctionId: number;
+  itemId: number;
+  title: string;
+  coverImageUrl: string;
+  status: string;
+  startPrice: number;
+  currentPrice: number;
+  bidStep: number;
+  startTime: string;
+  endTime: string;
+  antiSnipingWindowSeconds: number;
+  extendSeconds: number;
+  highestBidderMasked: string;
+  acceptingBids?: boolean;
 };
 
 export type BidHistoryEntryRaw = {
@@ -124,6 +174,21 @@ export type BidHistoryResponseRaw = {
   records: BidHistoryEntryRaw[];
   page_no: number;
   page_size: number;
+};
+
+export type PublicBidHistoryEntryRaw = {
+  bidId: number;
+  bidAmount: number;
+  bidStatus: string;
+  bidTime: string;
+  bidderMasked: string;
+};
+
+export type PublicBidHistoryResponseRaw = {
+  list: PublicBidHistoryEntryRaw[];
+  total: number;
+  pageNo: number;
+  pageSize: number;
 };
 
 export type PlaceBidResultRaw = {
@@ -200,6 +265,7 @@ export type PendingAuditItemRaw = {
   category_id: number;
   title: string;
   start_price: number;
+  cover_image_url: string;
   created_at: string;
 };
 
@@ -243,4 +309,12 @@ export type AdminAuctionListRaw = {
   total: number;
   pageNo: number;
   pageSize: number;
+};
+
+export type CreateAdminAuctionResultRaw = {
+  auctionId: number;
+  itemId: number;
+  status: string;
+  currentPrice: number;
+  createdAt: string;
 };

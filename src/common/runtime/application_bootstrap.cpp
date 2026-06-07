@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <iostream>
+#include <chrono>
+#include <string>
 #include <stdexcept>
 
 #include "access/http/auction_admin_http.h"
@@ -26,6 +28,8 @@
 #include "common/config/config_loader.h"
 #include "common/http/http_service_context.h"
 #include "common/logging/logger.h"
+#include "jobs/auction_scheduler.h"
+#include "jobs/order_scheduler.h"
 
 #if AUCTION_HAS_DROGON
 #include <drogon/drogon.h>
@@ -44,6 +48,40 @@ void EnsureRuntimeDirectories(
     std::filesystem::create_directories(project_root / "build");
     std::filesystem::create_directories(config.ResolveLogPath(project_root).parent_path());
     std::filesystem::create_directories(config.ResolveUploadBasePath(project_root));
+}
+
+void LogAuctionScheduleResult(
+    const char* cycle_name,
+    const modules::auction::AuctionScheduleResult& result
+) {
+    if (result.scanned == 0 && result.failed == 0 && result.succeeded == 0 &&
+        result.skipped == 0) {
+        return;
+    }
+    logging::Logger::Instance().Info(
+        std::string("auction scheduler ") + cycle_name + ": scanned=" +
+        std::to_string(result.scanned) + ", succeeded=" +
+        std::to_string(result.succeeded) + ", skipped=" +
+        std::to_string(result.skipped) + ", failed=" +
+        std::to_string(result.failed)
+    );
+}
+
+void LogOrderScheduleResult(
+    const char* cycle_name,
+    const modules::order::OrderScheduleResult& result
+) {
+    if (result.scanned == 0 && result.failed == 0 && result.succeeded == 0 &&
+        result.skipped == 0) {
+        return;
+    }
+    logging::Logger::Instance().Info(
+        std::string("order scheduler ") + cycle_name + ": scanned=" +
+        std::to_string(result.scanned) + ", succeeded=" +
+        std::to_string(result.succeeded) + ", skipped=" +
+        std::to_string(result.skipped) + ", failed=" +
+        std::to_string(result.failed)
+    );
 }
 
 }  // namespace
@@ -114,6 +152,74 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
 
     access::http::AuctionWebSocketController::SetGateway(ws_gateway);
     access::http::AuctionWebSocketController::SetTokenSecret(app_config.auth.token_secret);
+
+    auto auction_scheduler = std::make_shared<jobs::AuctionScheduler>(services->auction_service());
+    auto order_scheduler = std::make_shared<jobs::OrderScheduler>(services->order_service());
+
+    drogon::app().registerBeginningAdvice([auction_scheduler, order_scheduler]() {
+        try {
+            LogAuctionScheduleResult("start", auction_scheduler->RunStartCycle());
+            LogAuctionScheduleResult("finish", auction_scheduler->RunFinishCycle());
+            LogOrderScheduleResult("settlement", order_scheduler->RunSettlementCycle());
+            LogOrderScheduleResult("timeout-close", order_scheduler->RunTimeoutCloseCycle());
+        } catch (const std::exception& exception) {
+            logging::Logger::Instance().Error(
+                std::string("initial scheduler bootstrap failed: ") + exception.what()
+            );
+        }
+
+        drogon::app().getLoop()->runEvery(
+            1.0,
+            [auction_scheduler]() {
+                try {
+                    LogAuctionScheduleResult("start", auction_scheduler->RunStartCycle());
+                } catch (const std::exception& exception) {
+                    logging::Logger::Instance().Error(
+                        std::string("auction start scheduler failed: ") + exception.what()
+                    );
+                }
+            }
+        );
+
+        drogon::app().getLoop()->runEvery(
+            1.0,
+            [auction_scheduler]() {
+                try {
+                    LogAuctionScheduleResult("finish", auction_scheduler->RunFinishCycle());
+                } catch (const std::exception& exception) {
+                    logging::Logger::Instance().Error(
+                        std::string("auction finish scheduler failed: ") + exception.what()
+                    );
+                }
+            }
+        );
+
+        drogon::app().getLoop()->runEvery(
+            1.0,
+            [order_scheduler]() {
+                try {
+                    LogOrderScheduleResult("settlement", order_scheduler->RunSettlementCycle());
+                } catch (const std::exception& exception) {
+                    logging::Logger::Instance().Error(
+                        std::string("order settlement scheduler failed: ") + exception.what()
+                    );
+                }
+            }
+        );
+
+        drogon::app().getLoop()->runEvery(
+            30.0,
+            [order_scheduler]() {
+                try {
+                    LogOrderScheduleResult("timeout-close", order_scheduler->RunTimeoutCloseCycle());
+                } catch (const std::exception& exception) {
+                    logging::Logger::Instance().Error(
+                        std::string("order timeout-close scheduler failed: ") + exception.what()
+                    );
+                }
+            }
+        );
+    });
 
     drogon::app().addListener(app_config.server.host, app_config.server.port);
     drogon::app().setThreadNum(1);

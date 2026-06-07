@@ -14,8 +14,8 @@ import { formatPrice } from "@/lib/utils/format";
 
 export default function HomePage() {
   const { data: auctions = [], isLoading } = useQuery({
-    queryKey: queryKeys.auctions({ pageSize: 8 }),
-    queryFn: () => getAuctions({ pageSize: 8 }),
+    queryKey: queryKeys.auctions({ status: "RUNNING", pageSize: 8 }),
+    queryFn: () => getAuctions({ status: "RUNNING", pageSize: 8 }),
   });
 
   const featured = auctions[1] ?? auctions[0];

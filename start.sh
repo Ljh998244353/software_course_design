@@ -14,6 +14,8 @@ BACKEND_LOG="${BUILD_DIR}/start_backend.log"
 FRONTEND_LOG="${BUILD_DIR}/start_frontend.log"
 MYSQL_RUNTIME_INFO="${BUILD_DIR}/start_mysql_runtime.info"
 PREPARED_RUNTIME_CONFIG=""
+SELECTED_C_COMPILER=""
+SELECTED_CXX_COMPILER=""
 
 START_BACKEND=true
 START_FRONTEND=true
@@ -154,6 +156,94 @@ require_command() {
 ensure_parent_dir() {
     local target_path="$1"
     mkdir -p "$(dirname "${target_path}")"
+}
+
+find_first_linux_command() {
+    local command_name="$1"
+    local path=""
+
+    while IFS= read -r path; do
+        [[ -n "${path}" ]] || continue
+        if [[ "${path}" != /mnt/[a-zA-Z]/* && "${path}" != *.exe ]]; then
+            printf '%s\n' "${path}"
+            return 0
+        fi
+    done < <(type -aP "${command_name}" 2>/dev/null | awk '!seen[$0]++')
+
+    return 1
+}
+
+is_windows_compiler_path() {
+    local compiler_path="$1"
+    [[ "${compiler_path}" == /mnt/[a-zA-Z]/* || "${compiler_path}" == *.exe ]]
+}
+
+read_cmake_cache_value() {
+    local key="$1"
+    local cache_path="${BUILD_DIR}/CMakeCache.txt"
+    [[ -f "${cache_path}" ]] || return 1
+    sed -n "s#^${key}:[^=]*=##p" "${cache_path}" | head -n 1
+}
+
+select_build_compilers() {
+    if [[ -n "${SELECTED_C_COMPILER}" && -n "${SELECTED_CXX_COMPILER}" ]]; then
+        return 0
+    fi
+
+    local linux_clang=""
+    local linux_clangxx=""
+    local linux_gcc=""
+    local linux_gxx=""
+
+    linux_clang="$(find_first_linux_command clang || true)"
+    linux_clangxx="$(find_first_linux_command clang++ || true)"
+    if [[ -n "${linux_clang}" && -n "${linux_clangxx}" ]]; then
+        SELECTED_C_COMPILER="${linux_clang}"
+        SELECTED_CXX_COMPILER="${linux_clangxx}"
+    else
+        linux_gcc="$(find_first_linux_command gcc || true)"
+        linux_gxx="$(find_first_linux_command g++ || true)"
+        if [[ -n "${linux_gcc}" && -n "${linux_gxx}" ]]; then
+            SELECTED_C_COMPILER="${linux_gcc}"
+            SELECTED_CXX_COMPILER="${linux_gxx}"
+        else
+            fail "未找到可用的 Linux C/C++ 编译器（clang/clang++ 或 gcc/g++）"
+            fail "请确认当前 WSL 环境已安装编译工具链，且 PATH 中优先使用 Linux 路径而不是 /mnt/c 下的 Windows 编译器"
+            exit 1
+        fi
+    fi
+
+    note "后端编译器: C=${SELECTED_C_COMPILER} CXX=${SELECTED_CXX_COMPILER}"
+}
+
+cmake_cache_needs_reset() {
+    local cache_path="${BUILD_DIR}/CMakeCache.txt"
+    [[ -f "${cache_path}" ]] || return 1
+
+    local cached_c_compiler=""
+    local cached_cxx_compiler=""
+    cached_c_compiler="$(read_cmake_cache_value CMAKE_C_COMPILER || true)"
+    cached_cxx_compiler="$(read_cmake_cache_value CMAKE_CXX_COMPILER || true)"
+
+    if [[ -z "${cached_c_compiler}" || -z "${cached_cxx_compiler}" ]]; then
+        return 0
+    fi
+
+    if is_windows_compiler_path "${cached_c_compiler}" || is_windows_compiler_path "${cached_cxx_compiler}"; then
+        return 0
+    fi
+
+    if [[ "${cached_c_compiler}" != "${SELECTED_C_COMPILER}" || "${cached_cxx_compiler}" != "${SELECTED_CXX_COMPILER}" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+reset_cmake_cache() {
+    warn "检测到 build 目录缓存的编译器与当前 WSL/Linux 工具链不一致，正在重置 CMake 配置缓存"
+    rm -f "${BUILD_DIR}/CMakeCache.txt"
+    rm -rf "${BUILD_DIR}/CMakeFiles"
 }
 
 load_mysql_runtime_info() {
@@ -317,8 +407,20 @@ preflight_backend() {
 
 build_backend() {
     require_command cmake
+    select_build_compilers
+
+    if cmake_cache_needs_reset; then
+        reset_cmake_cache
+    fi
+
     step "构建后端"
-    cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}"
+    CC="${SELECTED_C_COMPILER}" \
+    CXX="${SELECTED_CXX_COMPILER}" \
+    cmake \
+        -S "${ROOT_DIR}" \
+        -B "${BUILD_DIR}" \
+        -DCMAKE_C_COMPILER="${SELECTED_C_COMPILER}" \
+        -DCMAKE_CXX_COMPILER="${SELECTED_CXX_COMPILER}"
     cmake --build "${BUILD_DIR}"
 }
 

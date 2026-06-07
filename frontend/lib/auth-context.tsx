@@ -20,11 +20,11 @@ const AuthContext = createContext<AuthState>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem("auth_token");
+    const token = sessionStorage.getItem("auth_token");
     if (!token) {
       setUser(null);
       setLoading(false);

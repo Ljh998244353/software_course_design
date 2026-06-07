@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { ChangeEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { CheckCircle2, ImagePlus, Loader2, Save, Send, UploadCloud } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Save, Send, UploadCloud, X } from "lucide-react";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,57 @@ type PublishDraft = {
   addedImageUrls?: string[];
 };
 
+function dedupeImageUrls(urls: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const url of urls) {
+    const normalized = url.trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result;
+}
+
+const allowedImageExtensions = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "avif"]);
+
+function isLikelyImageUrl(url: URL) {
+  const pathname = url.pathname.toLowerCase();
+  const ext = pathname.includes(".") ? pathname.slice(pathname.lastIndexOf(".") + 1) : "";
+  if (ext && allowedImageExtensions.has(ext)) {
+    return true;
+  }
+
+  const format = url.searchParams.get("format")?.toLowerCase();
+  const fm = url.searchParams.get("fm")?.toLowerCase();
+  return Boolean((format && allowedImageExtensions.has(format)) || (fm && allowedImageExtensions.has(fm)));
+}
+
+async function validateImageUrl(urlText: string): Promise<void> {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlText);
+  } catch {
+    throw new Error("图片地址格式不正确，请填写完整的 http/https URL");
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("图片地址必须使用 http 或 https 协议");
+  }
+
+  if (!isLikelyImageUrl(parsed)) {
+    throw new Error("图片地址不是常见可访问图片格式，请使用 png/jpg/jpeg/webp/gif/bmp/svg/avif");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("该图片无法访问或不是有效图片资源"));
+    image.referrerPolicy = "no-referrer";
+    image.src = parsed.toString();
+  });
+}
+
 export default function PublishPage() {
   return (
     <AuthGuard requireAuth>
@@ -51,6 +102,8 @@ function PublishPageContent() {
   const [antiSnipingWindow, setAntiSnipingWindow] = useState("300");
   const [extendSeconds, setExtendSeconds] = useState("180");
   const [images, setImages] = useState<string[]>([]);
+  const [pendingImageUrl, setPendingImageUrl] = useState("");
+  const [validatingImage, setValidatingImage] = useState(false);
   const [toast, setToast] = useState("");
   const [toastTone, setToastTone] = useState<"success" | "danger">("success");
   const [idempotencyKey, setIdempotencyKey] = useState("");
@@ -64,6 +117,8 @@ function PublishPageContent() {
     const saved = localStorage.getItem(draftStorageKey);
     if (saved) {
       const draft = JSON.parse(saved) as PublishDraft;
+      const draftImages = dedupeImageUrls(draft.images ?? []);
+      const draftAddedImageUrls = dedupeImageUrls(draft.addedImageUrls ?? []);
       setTitle(draft.title ?? "");
       setDescription(draft.description ?? "");
       setPrice(draft.price ?? "300");
@@ -74,13 +129,23 @@ function PublishPageContent() {
       setSuggestedBidStep(draft.suggestedBidStep ?? "20");
       setAntiSnipingWindow(draft.antiSnipingWindow ?? "300");
       setExtendSeconds(draft.extendSeconds ?? "180");
-      setImages(draft.images ?? []);
+      setImages(draftImages);
       setCreatedItemId(draft.createdItemId ?? null);
-      setAddedImageUrls(draft.addedImageUrls ?? []);
+      setAddedImageUrls(draftAddedImageUrls);
+      localStorage.setItem(
+        draftStorageKey,
+        JSON.stringify({
+          ...draft,
+          images: draftImages,
+          addedImageUrls: draftAddedImageUrls,
+        }),
+      );
     }
   }, []);
 
   function saveDraft(next?: Partial<PublishDraft>) {
+    const nextImages = dedupeImageUrls(next?.images ?? images);
+    const nextAddedImageUrls = dedupeImageUrls(next?.addedImageUrls ?? addedImageUrls);
     const payload = {
       title,
       description,
@@ -92,11 +157,13 @@ function PublishPageContent() {
       suggestedBidStep,
       antiSnipingWindow,
       extendSeconds,
-      images,
+      images: nextImages,
       createdItemId,
-      addedImageUrls,
+      addedImageUrls: nextAddedImageUrls,
       ...next,
     };
+    payload.images = nextImages;
+    payload.addedImageUrls = nextAddedImageUrls;
     localStorage.setItem(draftStorageKey, JSON.stringify(payload));
     setToast("草稿已自动保存");
     setToastTone("success");
@@ -107,13 +174,39 @@ function PublishPageContent() {
     saveDraft({ createdItemId: itemId });
   }
 
-  function addImage(event: ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value.trim();
+  async function addImage() {
+    const value = pendingImageUrl.trim();
     if (!value) return;
+    if (images.includes(value)) {
+      setToast("相同图片 URL 已存在，无需重复添加");
+      setToastTone("danger");
+      return;
+    }
+    setValidatingImage(true);
+    setToast("");
+    try {
+      await validateImageUrl(value);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "图片校验失败");
+      setToastTone("danger");
+      setValidatingImage(false);
+      return;
+    }
     const next = [...images, value];
     setImages(next);
     saveDraft({ images: next });
-    event.target.value = "";
+    setPendingImageUrl("");
+    setToast("图片已添加");
+    setToastTone("success");
+    setValidatingImage(false);
+  }
+
+  function removeImage(imageUrl: string) {
+    const next = images.filter((image) => image !== imageUrl);
+    setImages(next);
+    saveDraft({ images: next });
+    setToast("图片已移除");
+    setToastTone("success");
   }
 
   async function submit() {
@@ -218,12 +311,31 @@ function PublishPageContent() {
                 <div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/40">
                   <UploadCloud className="mx-auto mb-3 h-10 w-10 text-indigo-600" />
                   <p className="font-black text-slate-950">粘贴图片 URL 作为首轮占位上传</p>
-                  <input onChange={addImage} className="mx-auto mt-5 h-11 w-full max-w-xl rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500" placeholder="https://images.unsplash.com/..." />
+                  <div className="mx-auto mt-5 flex w-full max-w-xl gap-3">
+                    <input
+                      value={pendingImageUrl}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => setPendingImageUrl(event.target.value)}
+                      className="h-11 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500"
+                      placeholder="https://images.unsplash.com/..."
+                    />
+                    <Button onClick={addImage} disabled={validatingImage || !pendingImageUrl.trim()} type="button">
+                      {validatingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                      {validatingImage ? "校验中" : "添加图片"}
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-4">
                   {images.map((image, index) => (
-                    <div key={image} className="relative aspect-square rounded-lg border border-slate-200 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }}>
+                    <div key={`${image}-${index}`} className="relative aspect-square rounded-lg border border-slate-200 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }}>
                       {index === 0 ? <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-indigo-700">封面首图</span> : null}
+                      <button
+                        type="button"
+                        aria-label="移除图片"
+                        onClick={() => removeImage(image)}
+                        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-white transition hover:bg-rose-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
                   ))}
                   {images.length === 0 ? (

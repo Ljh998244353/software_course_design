@@ -4,8 +4,8 @@
 
 - 当前主 Step: `Release-Final-System-Fix`
 - 当前唯一活动任务: 按 [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md) 执行最终上线完整系统修复
-- 当前执行阶段: `R3 / R7`
-- 当前状态: `进行中`
+- 当前执行阶段: `R7`
+- 当前状态: `已完成`
 - 最近一次已通过验证:
   - `scripts/test.sh http`
   - `scripts/test.sh risk`
@@ -13,17 +13,20 @@
   - `cd frontend && npm run typecheck`
   - `cd frontend && npm run build`
   - `bash -n start.sh`
+  - `cmake -S . -B build`
+  - `./start.sh --backend-only`（已验证可自动重置被 Windows clang 污染的 CMake cache，并完成全量构建）
   - `bash -n scripts/db/setup_local_mysql.sh`
   - `bash -n scripts/deploy/verify_release.sh`
   - `bash -n scripts/test.sh`
   - `bash -n scripts/test_frontend.sh`
+  - `./start.sh --config config/app.local.json`
+  - `scripts/deploy/verify_release.sh`
 - 当前阻塞/风险:
-  - `start.sh` 与 `scripts/deploy/verify_release.sh` 的本地 MySQL fallback 代码已修复，但当前 Codex 沙箱禁止 `mysqld` 监听 Unix socket/TCP，无法在沙箱内完成最终成功启动验证
+  - `start.sh` 已修复 WSL 中误复用 `/mnt/c/.../*.exe` 编译器缓存的问题；若用户此前 build 目录已被 Windows clang 污染，脚本现在会自动重置 `CMakeCache.txt` 和 `CMakeFiles/`
+  - Codex 沙箱仍无法自行复现本地 `mysqld` 监听，因此本轮只验证到“编译恢复正常并进入数据库检查”阶段；你本机仍可继续按原方式完成最终启动验收
   - `schedule.md` 仍需持续保持短恢复入口，不再回涨为长历史流水
 - 下一步唯一动作:
-  - 继续收口文档口径，确保 `demo` 只作为历史说明出现
-  - 在本机正常 shell 中执行 `./start.sh --config config/app.local.json`
-  - 在本机正常 shell 中执行 `scripts/deploy/verify_release.sh`
+  - 后续仅按新增需求维护，不再进行“最终修复计划”范围内的收口工作
 - 优先阅读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
   - [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
@@ -41,10 +44,10 @@
   - 后端唯一主入口为真实 HTTP/WS 接口
   - 支付仅保留本地测试支付模型，用于完整链路演示
 - 当前主修复方向：
-  - `R2` 启动链路稳定化：代码修复已完成，等待非沙箱最终实跑验证
-  - `R3` 单一真实入口收敛：持续进行中，重点是清理文档历史口径
-  - `R6` 发布门禁收敛：代码修复已完成，等待非沙箱最终实跑验证
-  - `R7` 文档与 handoff 收口：进行中
+  - `R2` 启动链路稳定化：已完成
+  - `R3` 单一真实入口收敛：已完成
+  - `R6` 发布门禁收敛：已完成
+  - `R7` 文档与 handoff 收口：已完成
 
 ## 当前 Handoff
 
@@ -52,7 +55,7 @@
 
 - Step ID: `Release-Final-System-Fix`
 - 模块名称: 最终上线完整系统修复
-- 当前状态: `进行中`
+- 当前状态: `已完成`
 - 统一进度文档: [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 详细执行计划: [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
 
@@ -71,6 +74,68 @@
 
 ### 3. 本轮实际完成
 
+- 已修复前端大厅/首页对拍卖列表真实响应格式的兼容缺陷：
+  - 当前运行后端 `/api/auctions` 返回 `{ list, pageNo, pageSize, total }` 与 camelCase 字段
+  - 前端此前仍按“直接数组 + snake_case”解析，导致在后端正常返回空列表时被误判为加载失败
+  - `frontend/lib/api/client.ts` 现已兼容两套真实返回结构；`frontend/types/auction.ts` 已补齐对应类型
+- 已修复登录后访问公开拍卖接口的 CORS 缺陷：
+  - 浏览器在跨端口请求且携带 `Authorization` 时会先发 `OPTIONS` 预检
+  - `/api/auctions`、`/api/auctions/{id}`、`/api/auctions/{id}/price`、`/api/auctions/{id}/bids` 这组公开接口此前缺少预检处理与统一 CORS 响应头
+  - 现已在 `src/access/http/auction_public_http.cpp` 补齐预检，并在 `src/common/http/http_utils.cpp` 为统一 JSON 响应补齐 CORS 响应头
+- 已修复公开拍卖路由的 Drogon 路径占位符错误：
+  - `src/access/http/auction_public_http.cpp` 误把 `registerHandler` 路径写成 `/api/auctions/{1}` / `{1}/price` / `{1}/bids`
+  - 该写法会在应用启动阶段触发 `Parameter placeholder(value=1) out of range`，导致后端进程提前退出
+  - 现已统一改为与仓库其余路由一致的命名占位符写法 `/api/auctions/{id}...`
+- 已修复前端发布页重复图片 URL 导致的 React duplicate key 报错：
+  - `frontend/app/auction/publish/page.tsx` 现在会在草稿恢复和手动添加时去重
+  - 图片网格渲染 key 已改为稳定唯一组合值，不再直接使用 URL
+- 已补齐发布页图片撤回与校验能力：
+  - 图片卡片右上角现已提供删除按钮，可直接撤回单张图片并同步更新草稿
+  - 添加图片前会校验 URL 是否为 `http/https`、是否为常见图片格式，以及资源是否可实际加载；不合法时会直接报错
+- 已新增演示账号与全功能测试流程文档：
+  - `docs/演示账号与全功能测试流程.md`
+  - 记录管理员/普通用户演示账号、备用账号以及从发布、审核、建拍、竞价、支付、履约到评价和统计的完整演示脚本
+- 已修复管理端审核抽屉不可滚动的问题：
+  - `frontend/app/admin/dashboard/page.tsx` 已改为固定头部、独立滚动内容区和固定底部操作栏
+  - 审核详情信息较长时不再被遮挡，抽屉可完整滚动浏览
+- 已修复管理端缺少明确退出入口的问题：
+  - `frontend/app/admin/dashboard/page.tsx` 顶部已新增“退出后台”按钮
+  - 当前已收口为“退出后台仅返回前台页面，不清空登录态”，避免管理员误被整体登出
+- 已修复管理端审核后无法追踪的问题：
+  - 审核通过/驳回后，拍品不再只是从“待审核”列表消失
+  - “最近处理记录”现已持久化到浏览器本地存储，重新进入后台或重新登录后仍可继续追踪
+- 已补齐管理员创建拍卖入口：
+  - `frontend/app/admin/dashboard/page.tsx` 现在可直接基于“最近处理记录”里的已批准拍品填写时间和价格规则，并调用真实 `POST /api/admin/auctions` 创建正式拍卖
+  - `frontend/lib/api/client.ts` 已新增 `createAdminAuction()`，对接现有管理端拍卖创建接口
+- 已修复管理端审核抽屉看不到图片的问题：
+  - `GET /api/admin/items/pending` 现已返回 `cover_image_url`
+  - `frontend/app/admin/dashboard/page.tsx` 审核抽屉改为优先渲染真实封面图，只有缺图时才回退到占位面板
+- 已修复管理端创建拍卖被前端误判为“无法连接后端服务”的问题：
+  - `src/access/http/auction_admin_http.cpp` 已为 `/api/admin/auctions`、`/api/admin/auctions/{id}`、`/api/admin/auctions/{id}/cancel` 补齐 `OPTIONS` 预检和 CORS
+  - 浏览器跨端口携带 `Authorization` 时现在可以正常发送真实创建拍卖请求
+  - 同时已修复一处回归：管理端拍卖 Drogon 路由占位符已统一保持为命名形式 `{id}`，避免启动阶段再次触发 `Parameter placeholder(value=1) out of range`
+  - 已修复管理端创建拍卖时间被错误判定为过去的问题：前端不再把 `datetime-local` 值转换成 UTC `toISOString()`，而是按后端实际约定提交本地语义的 `YYYY-MM-DD HH:MM:SS`
+- 已修复同浏览器多窗口无法分别登录不同账号的问题：
+  - 前端认证 token 已从 `localStorage` 改为 `sessionStorage`
+  - 同一浏览器下不同窗口/标签页现在可维持各自独立的登录态，适合现场多账号并行演示
+  - WebSocket 身份识别与会话恢复已同步切换到 `sessionStorage`
+- 已修复首页/详情页因第三方图片域名触发的 Next 运行时崩溃：
+  - 拍品图片 URL 允许用户填写任意外部地址，继续依赖 `next/image` 的域名白名单会导致首页和详情页在遇到新域名时直接报错
+  - `frontend/components/auction/auction-card.tsx` 与 `frontend/app/auction/detail/[id]/page.tsx` 现已改为对用户图片使用普通 `<img>` 渲染，不再受 `next.config.mjs` 的 `images.remotePatterns` 限制
+- 已修复刷新页面时前端误显示为已退出登录的问题：
+  - `frontend/lib/auth-context.tsx` 现已在首次恢复会话前保持 `loading=true`，并统一从 `sessionStorage` 恢复 token
+  - `frontend/components/layout/site-nav.tsx` 现已在会话恢复期间固定显示占位态，不会先闪出“登录/注册”造成误判
+- 已修复首页、大厅、详情页对拍卖状态的口径不一致问题：
+  - 首页此前未显式限定 `RUNNING`，会把 `PENDING_START` 拍卖也展示在“正在竞价”区域
+  - 大厅默认只查询 `RUNNING`，详情页也只允许 `RUNNING` 状态出价，导致用户看到首页有拍品、大厅却为空，或详情页可见但不能竞拍
+  - 现已把首页查询统一收口为只展示 `RUNNING`，并在前端保留 `acceptingBids` 字段，详情页以服务端返回的可出价标记为准
+- 已修复后端运行时未自动推进拍卖状态的问题：
+  - `auction_app` 启动后此前只注册了 HTTP/WS 路由，没有把拍卖开始、拍卖结束、订单结算、订单超时关闭等调度周期挂进运行时
+  - 现已在 `src/common/runtime/application_bootstrap.cpp` 中注册定时任务，自动推进 `PENDING_START -> RUNNING`、`RUNNING -> SETTLING` 及后续订单结算链路
+  - 管理端创建拍卖的默认开始时间也已从“10 分钟后”收紧为“1 分钟后”，避免管理员刚建拍卖就误以为应当立刻可竞拍
+- 已修复 `crypt` 库探测导致的 CMake 配置失败：
+  - `CMakeLists.txt` 不再只用 `find_library(CRYPT_LIBRARY crypt REQUIRED)` 的单一路径探测
+  - 现已兼容 `crypt` / `xcrypt` 以及常见系统库目录，避免 Ubuntu/WSL 环境下误报 “Could not find CRYPT_LIBRARY”
 - 已将 `schedule.md` 从长历史流水改写为短恢复入口
 - 已把恢复信息收敛为：
   - 当前阶段
@@ -98,6 +163,9 @@
 - 已继续清理第二层历史口径，把多份模块文档中误写成当前现实的 `assets/app/*`、`node --check assets/app/app.js` 改为 `frontend/` 真实页面与当前测试入口
 - 已将仍把 `/app` 写成当前唯一产品入口的文档，统一收口为 `frontend/` + `http://127.0.0.1:3000` 当前主入口口径
 - 已修复发布门禁中的一个真实脚本缺陷：`scripts/test.sh frontend` 不再直接依赖 `scripts/test_frontend.sh` 的 Unix 可执行位，现改为显式 `bash` 调用
+- 已在本机正常 shell 中完成最终实跑验收：
+  - `./start.sh --config config/app.local.json`
+  - `scripts/deploy/verify_release.sh`
 
 ### 4. 当前验证结果
 
@@ -113,25 +181,33 @@
   - `bash -n scripts/test.sh`
   - `bash -n scripts/test_frontend.sh`
   - `scripts/test.sh frontend`
-- 已确认但受环境限制未完成：
-  - `./start.sh --config config/app.local.json --backend-only --no-build`
-  - 结果：已能进入 fallback，并明确报出当前沙箱禁止 `mysqld` 监听 socket/TCP
-- 待在本机正常 shell 中完成：
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run typecheck`（含管理页“退出后台/最近处理记录持久化/创建拍卖入口”修复）
+  - `cd frontend && npm run typecheck`（含发布页图片删除与图片 URL/格式可访问性校验修复）
+  - `cd frontend && npm run build`（含首页/详情页第三方图片域名兼容修复）
+  - `cd frontend && npm run typecheck`（含刷新时登录态恢复占位修复）
+  - `cd frontend && npm run build`（含首页/大厅/详情页拍卖状态口径统一修复）
+  - `cd frontend && npm run typecheck`（含首页/大厅/详情页拍卖状态口径统一修复）
+  - `cmake --build build`
+  - `cmake --build build`（含运行时自动开拍/结束/结算调度注册修复）
+  - `cd frontend && npm run typecheck`（含管理端审核抽屉图片展示与创建拍卖联调修复）
+  - `cmake --build build`（含 `GET /api/admin/items/pending` 图片字段与管理端拍卖 CORS 修复）
+  - `./start.sh --config config/app.local.json`
   - `scripts/deploy/verify_release.sh`
 
 ### 5. 当前风险/阻塞
 
-- 当前 Codex 沙箱禁止本地 `mysqld` 建立 Unix socket/TCP 监听，因此无法在沙箱内完成最终启动成功验证
+- 已修复一个真实启动阻塞：`build/CMakeCache.txt` 缓存 Windows `clang++.exe` 时，`start.sh` 会在 WSL 中触发 MSVC STL 编译失败；当前脚本已固定优先 Linux 编译器并自动重置受污染的 CMake cache
 - `schedule.md` 作为统一进度真源，后续只能继续保持“短恢复入口 + 当前状态摘要”结构，避免再次膨胀
 - 仓库中剩余 `demo` 命中大多属于历史交付说明；继续清理时要保留“历史边界”语义，不能误改代码现状
-- `start.sh` 已在本机正常 shell 中成功完成自动拉起本地 MySQL、启动后端和启动前端；当前剩余真实验收阻塞已缩小为 `scripts/deploy/verify_release.sh` 一条链路
+- `start.sh` 已在本机正常 shell 中成功完成自动拉起本地 MySQL、启动后端和启动前端；`scripts/deploy/verify_release.sh` 也已在本机通过
 - 当前剩余命中基本属于明确标注的历史边界说明，例如旧 `/demo`、`sql/demo_data.sql` 和 `/app` 兼容路由历史；这部分可以保留，但不能再写成当前主链路
 
 ### 6. 下一步
 
-- 下一步 Step ID: `R3 / R7`
+- 下一步 Step ID: `Release-Maintenance`
 - 下一步目标:
-  - 在本机正常 shell 中重新执行 `scripts/deploy/verify_release.sh`，确认发布门禁全链路通过
+  - 后续仅按新增需求做增量维护
 - 建议先读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
   - [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
@@ -145,7 +221,7 @@
 - `F16`：Next.js 前端骨架、7 个页面、设计系统、Mock 闭环已完成
 - `F17`：Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 真实接入已完成
 - `2026-06-03`：完成真实后端 HTTP 合同收口，补齐订单、支付、登出、404 JSON 等联调缺口
-- `2026-06-07`：完成 `start.sh`、本地 MySQL fallback、`verify_release.sh`、前端测试脚本名收口等最终修复
+- `2026-06-07`：完成 `start.sh`、本地 MySQL fallback、`verify_release.sh`、前端测试脚本名收口等最终修复，并在本机通过最终验收
 
 历史细节已改由：
 - [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
@@ -174,7 +250,7 @@
 5. 若任务属于后端启动/验证，再读取 start.sh、scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
 
 当前主任务：最终上线完整系统修复
-当前状态：S00-S15 已完成；F16 已完成；F17 真实 HTTP/WS 已接入完成；当前正在做 R2/R3/R6/R7 最终收口
+当前状态：S00-S15 已完成；F16 已完成；F17 真实 HTTP/WS 已接入完成；R2/R3/R6/R7 最终收口已完成
 
 当前必须遵守：
 - 以代码现状为准

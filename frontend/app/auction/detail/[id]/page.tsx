@@ -2,7 +2,6 @@
 
 export const dynamic = "force-dynamic";
 
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -113,7 +112,7 @@ export default function AuctionDetailPage() {
 
   function submitBid(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!auction || cooldown > 0 || auction.status !== "RUNNING") {
+    if (!auction || cooldown > 0 || !auction.acceptingBids) {
       return;
     }
     mutation.mutate(Number(amount || nextBid));
@@ -138,7 +137,7 @@ export default function AuctionDetailPage() {
       <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8">
         <section className="space-y-5">
           <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
-            <Image src={auction.imageUrl} alt={auction.title} fill className="object-cover" sizes="60vw" />
+            <img src={auction.imageUrl} alt={auction.title} className="h-full w-full object-cover" />
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
             <div className="mb-4 flex gap-2 border-b border-slate-200 pb-4 text-sm font-bold text-slate-600">
@@ -218,9 +217,9 @@ export default function AuctionDetailPage() {
               ))}
             </div>
             <input value={amount} onChange={(event) => setAmount(event.target.value)} className="tabular h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-lg font-bold outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" placeholder={String(nextBid)} inputMode="numeric" />
-            <Button className="w-full" disabled={mutation.isPending || cooldown > 0 || auction.status !== "RUNNING"}>
+            <Button className="w-full" disabled={mutation.isPending || cooldown > 0 || !auction.acceptingBids}>
               {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              {cooldown > 0 ? `冷却 ${cooldown}s` : auction.status === "RUNNING" ? "PLACE BID" : "拍卖不可出价"}
+              {cooldown > 0 ? `冷却 ${cooldown}s` : auction.acceptingBids ? "PLACE BID" : "拍卖不可出价"}
             </Button>
           </form>
 

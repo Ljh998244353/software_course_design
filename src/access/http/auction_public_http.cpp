@@ -26,6 +26,27 @@ namespace {
 
 #if AUCTION_HAS_DROGON
 
+void AddCorsHeaders(const drogon::HttpResponsePtr& response) {
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response->addHeader("Access-Control-Max-Age", "86400");
+}
+
+void RegisterCorsPreflight(const std::string& path) {
+    drogon::app().registerHandler(
+        path,
+        [](const drogon::HttpRequestPtr&,
+           std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            auto response = drogon::HttpResponse::newHttpResponse();
+            response->setStatusCode(drogon::k204NoContent);
+            AddCorsHeaders(response);
+            callback(response);
+        },
+        {drogon::Options}
+    );
+}
+
 std::uint64_t ParsePositiveId(const std::string& raw_value, const std::string& field_name) {
     std::size_t parsed_length = 0;
     const auto value = std::stoull(raw_value, &parsed_length);
@@ -192,6 +213,7 @@ void RegisterAuctionPublicHttpRoutes(
     const std::shared_ptr<common::http::HttpServiceContext> services
 ) {
 #if AUCTION_HAS_DROGON
+    RegisterCorsPreflight("/api/auctions");
     drogon::app().registerHandler(
         "/api/auctions",
         [services](const drogon::HttpRequestPtr& request,
@@ -207,8 +229,9 @@ void RegisterAuctionPublicHttpRoutes(
         {drogon::Get}
     );
 
+    RegisterCorsPreflight("/api/auctions/{id}/price");
     drogon::app().registerHandler(
-        "/api/auctions/{1}/price",
+        "/api/auctions/{id}/price",
         [services](const drogon::HttpRequestPtr&,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                    const std::string& raw_auction_id) {
@@ -222,8 +245,9 @@ void RegisterAuctionPublicHttpRoutes(
         {drogon::Get}
     );
 
+    RegisterCorsPreflight("/api/auctions/{id}/bids");
     drogon::app().registerHandler(
-        "/api/auctions/{1}/bids",
+        "/api/auctions/{id}/bids",
         [services](const drogon::HttpRequestPtr& request,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                    const std::string& raw_auction_id) {
@@ -241,8 +265,9 @@ void RegisterAuctionPublicHttpRoutes(
         {drogon::Get}
     );
 
+    RegisterCorsPreflight("/api/auctions/{id}");
     drogon::app().registerHandler(
-        "/api/auctions/{1}",
+        "/api/auctions/{id}",
         [services](const drogon::HttpRequestPtr&,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                    const std::string& raw_auction_id) {

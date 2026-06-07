@@ -156,6 +156,10 @@ drogon::HttpResponsePtr BuildJsonResponse(
         forced_status.value_or(MapErrorCodeToHttpStatus(response.code))
     );
     http_response->addHeader("Cache-Control", "no-store");
+    http_response->addHeader("Access-Control-Allow-Origin", "*");
+    http_response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    http_response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    http_response->addHeader("Access-Control-Max-Age", "86400");
     return http_response;
 }
 

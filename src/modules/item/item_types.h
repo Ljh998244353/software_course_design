@@ -176,6 +176,7 @@ struct PendingAuditItemSummary {
     double start_price{0.0};
     std::string trade_mode;
     std::string location;
+    std::string cover_image_url;
     std::string created_at;
 };
 

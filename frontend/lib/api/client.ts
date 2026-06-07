@@ -10,6 +10,7 @@ import type {
   BidHistoryEntryRaw,
   BidHistoryResponseRaw,
   BidRecord,
+  CreateAdminAuctionResultRaw,
   CreateItemRaw,
   DailyStatisticsRaw,
   ItemImageRaw,
@@ -20,6 +21,11 @@ import type {
   PaymentChannel,
   PendingAuditItemRaw,
   PlaceBidResultRaw,
+  PublicAuctionDetailRaw,
+  PublicAuctionListRaw,
+  PublicAuctionSummaryRaw,
+  PublicBidHistoryEntryRaw,
+  PublicBidHistoryResponseRaw,
   SubmitReviewRaw,
   UserProfile,
 } from "@/types/auction";
@@ -85,6 +91,7 @@ function mapAuctionItem(raw: AuctionSummaryRaw): AuctionItem {
     description: raw.description,
     tradeMode: raw.trade_mode,
     sellerUsername: raw.seller_username,
+    acceptingBids: raw.status === "RUNNING",
   };
 }
 
@@ -97,6 +104,47 @@ function mapAuctionDetail(raw: AuctionDetailRaw): AuctionItem {
   };
 }
 
+function mapPublicAuctionSummary(raw: PublicAuctionSummaryRaw): AuctionItem {
+  return {
+    id: String(raw.auctionId),
+    title: raw.title,
+    category: "拍卖",
+    imageUrl: normalizeAuctionImageUrl(raw.coverImageUrl),
+    currentPrice: raw.currentPrice,
+    startPrice: raw.currentPrice,
+    minIncrement: 1,
+    endTime: raw.endTime,
+    status: raw.status as AuctionItem["status"],
+    highestBidder: "",
+    seller: { name: "", rating: 0, deals: 0 },
+    watchers: 0,
+    location: "",
+    tags: [],
+    description: "",
+    tradeMode: "",
+    acceptingBids: raw.acceptingBids ?? raw.status === "RUNNING",
+  };
+}
+
+function mapPublicAuctionDetail(raw: PublicAuctionDetailRaw): AuctionItem {
+  return {
+    ...mapPublicAuctionSummary({
+      auctionId: raw.auctionId,
+      itemId: raw.itemId,
+      title: raw.title,
+      coverImageUrl: raw.coverImageUrl,
+      status: raw.status,
+      currentPrice: raw.currentPrice,
+      startTime: raw.startTime,
+      endTime: raw.endTime,
+      acceptingBids: raw.acceptingBids,
+    }),
+    startPrice: raw.startPrice,
+    minIncrement: raw.bidStep,
+    highestBidder: raw.highestBidderMasked,
+  };
+}
+
 function mapBidHistoryEntry(raw: BidHistoryEntryRaw, auctionId: string): BidRecord {
   return {
     id: String(raw.bid_id),
@@ -105,6 +153,17 @@ function mapBidHistoryEntry(raw: BidHistoryEntryRaw, auctionId: string): BidReco
     amount: raw.bid_amount,
     createdAt: raw.bid_time,
     status: raw.bid_status === "WINNING" ? "SUCCESS" : "OUTBID",
+  };
+}
+
+function mapPublicBidHistoryEntry(raw: PublicBidHistoryEntryRaw, auctionId: string): BidRecord {
+  return {
+    id: String(raw.bidId),
+    auctionId,
+    bidder: raw.bidderMasked,
+    amount: raw.bidAmount,
+    createdAt: raw.bidTime,
+    status: raw.bidStatus === "WINNING" ? "SUCCESS" : "OUTBID",
   };
 }
 
@@ -128,6 +187,7 @@ function mapPendingAuditItem(raw: PendingAuditItemRaw): AdminReviewItem {
     risk: "LOW",
     submittedAt: raw.created_at,
     price: raw.start_price,
+    imageUrl: normalizeAuctionImageUrl(raw.cover_image_url),
     location: "",
     tradeMode: "",
   };
@@ -170,18 +230,18 @@ function mapOrderDetail(raw: OrderDetailRaw): OrderSummary {
 
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("auth_token");
+  return sessionStorage.getItem("auth_token");
 }
 
 function storeToken(token: string) {
   if (typeof window !== "undefined") {
-    localStorage.setItem("auth_token", token);
+    sessionStorage.setItem("auth_token", token);
   }
 }
 
 function clearToken() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("auth_token");
+    sessionStorage.removeItem("auth_token");
   }
 }
 
@@ -296,20 +356,29 @@ export async function getAuctions(query: AuctionListQuery = {}): Promise<Auction
   if (typeof query.sellerRating === "number") params.set("seller_rating", String(query.sellerRating));
   if (typeof query.sellerHasDeals === "boolean") params.set("seller_has_deals", query.sellerHasDeals ? "true" : "false");
   if (query.tradeMode) params.set("trade_mode", query.tradeMode);
-  if (query.pageNo) params.set("page_no", String(query.pageNo));
-  if (query.pageSize) params.set("page_size", String(query.pageSize));
-  const raw = await liveFetch<AuctionSummaryRaw[]>(`/api/auctions${params.toString() ? `?${params.toString()}` : ""}`);
-  return raw.map(mapAuctionItem);
+  if (query.pageNo) params.set("pageNo", String(query.pageNo));
+  if (query.pageSize) params.set("pageSize", String(query.pageSize));
+  const raw = await liveFetch<AuctionSummaryRaw[] | PublicAuctionListRaw>(`/api/auctions${params.toString() ? `?${params.toString()}` : ""}`);
+  if (Array.isArray(raw)) {
+    return raw.map(mapAuctionItem);
+  }
+  return raw.list.map(mapPublicAuctionSummary);
 }
 
 export async function getAuction(id: string): Promise<AuctionItem> {
-  const raw = await liveFetch<AuctionDetailRaw>(`/api/auctions/${id}`);
-  return mapAuctionDetail(raw);
+  const raw = await liveFetch<AuctionDetailRaw | PublicAuctionDetailRaw>(`/api/auctions/${id}`);
+  if ("auction_id" in raw) {
+    return mapAuctionDetail(raw);
+  }
+  return mapPublicAuctionDetail(raw);
 }
 
 export async function getBids(auctionId: string): Promise<BidRecord[]> {
-  const raw = await liveFetch<BidHistoryResponseRaw>(`/api/auctions/${auctionId}/bids`);
-  return raw.records.map((entry) => mapBidHistoryEntry(entry, auctionId));
+  const raw = await liveFetch<BidHistoryResponseRaw | PublicBidHistoryResponseRaw>(`/api/auctions/${auctionId}/bids`);
+  if ("records" in raw) {
+    return raw.records.map((entry) => mapBidHistoryEntry(entry, auctionId));
+  }
+  return raw.list.map((entry) => mapPublicBidHistoryEntry(entry, auctionId));
 }
 
 export async function placeBid(auctionId: string, amount: number): Promise<BidRecord> {
@@ -363,6 +432,22 @@ export async function getAdminAuctions(status?: string): Promise<AuctionItem[]> 
   const query = status && status !== "ALL" ? `?status=${encodeURIComponent(status)}` : "";
   const raw = await liveFetch<AdminAuctionListRaw>(`/api/admin/auctions${query}`);
   return raw.list.map(mapAdminAuctionSummary);
+}
+
+export async function createAdminAuction(params: {
+  itemId: number;
+  startTime: string;
+  endTime: string;
+  startPrice: number;
+  bidStep: number;
+  antiSnipingWindowSeconds?: number;
+  extendSeconds?: number;
+}): Promise<CreateAdminAuctionResultRaw> {
+  return liveFetch<CreateAdminAuctionResultRaw>("/api/admin/auctions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
 }
 
 export async function approveItem(itemId: string): Promise<AuditItemResultRaw> {

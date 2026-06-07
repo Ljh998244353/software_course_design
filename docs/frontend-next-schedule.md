@@ -251,6 +251,18 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - 发布页已实现四步向导、图片 URL 占位上传、`localStorage` 草稿保存和 UUID v4 幂等令牌。
 - 支付页已实现支付方式选择、支付处理中状态和 Mock 成功态。
 - 管理页已实现 KPI、待审表格、500px 审核抽屉、批准/驳回后行淡出移除。
+- 管理页“退出后台”现已收口为仅离开管理视图并返回前台，不再触发全局登出。
+- 管理页“最近处理记录”现已持久化到浏览器本地存储，重新进入后台或重新登录后仍可保留最近审核结果。
+- 管理页已补齐管理员创建拍卖入口：可基于已批准拍品直接填写起止时间、起拍价、加价幅度和延时规则，并调用真实 `POST /api/admin/auctions` 创建正式拍卖。
+- 管理页审核抽屉现已渲染真实封面图：`GET /api/admin/items/pending` 已补回 `cover_image_url`，抽屉只有在缺图时才显示占位背景。
+- 管理页创建拍卖链路现已补齐跨域预检：管理端拍卖 HTTP 控制器已为 `POST/GET/PUT` 路由注册 `OPTIONS`，浏览器不再把创建拍卖误判成“无法连接后端服务”。
+- 发布页图片卡片右上角现已支持单张撤回删除，并会同步更新本地草稿状态。
+- 发布页添加图片前现已校验 URL 协议、常见图片扩展名/格式参数，以及资源是否真的可加载；非法或不可访问图片会直接提示错误。
+- 首页卡片与详情页主图现已对用户自填图片 URL 使用普通 `<img>`，避免第三方图片域名触发 `next/image` 运行时白名单错误。
+- 会话恢复阶段现已统一显示加载占位：`AuthProvider` 启动时先从 `sessionStorage` 恢复 token，导航条不会在刷新瞬间误闪“登录/注册”。
+- 首页现已与大厅保持一致，只展示 `RUNNING` 拍卖，不再把 `PENDING_START` 误展示为“正在竞价”。
+- 详情页出价按钮现已依据服务端 `acceptingBids` 标记控制，不再只靠本地字符串判断状态。
+- 管理端创建拍卖默认开始时间已由 10 分钟后调整为 1 分钟后，减少“建完拍卖却长期不可竞价”的误判。
 
 ### F16-4：前端文档与本地演示验证
 
@@ -371,6 +383,7 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 - 修复 live 发布流程缺陷：`cover_image_url` 只写入拍品主表，不会产生 `item_image` 元数据；而 `SubmitForAudit` 明确要求至少存在一条图片元数据
 - 已在 `src/access/http/item_http.cpp` 新增 `POST /api/items/{id}/images`，复用 `ItemService::AddItemImage` 写入图片 URL 元数据并维护封面
 - 已更新前端 `create -> add images -> submit-review` 提交流程；提交审核失败后复用本地已创建的 `item_id` 和已写入图片 URL，避免重试时重复创建草稿或重复写图
+- 已修复发布页重复图片 URL 的前端状态缺陷：草稿恢复与手动添加都会去重，图片网格渲染 key 不再直接使用 URL，避免 React 因重复 key 报错
 - 已新增服务层回归断言：仅提供 `cover_image_url` 但未写 `item_image` 时，提交审核必须失败
 - 已同步 `frontend/API_READINESS.md` 与 `docs/物品与审核模块说明.md`
 - 验证：`git diff --check`、`cmake --build build`、`scripts/test.sh smoke`、前端 `npm run typecheck` 与 `npm run build` 均通过；`ctest --test-dir build --output-on-failure -R auction_item_flow` 初次因残留测试 MySQL `Unable to lock ./ibdata1 error: 11` 失败，停止残留 `mysqld --datadir=build/test_mysql/data` 进程后重跑通过

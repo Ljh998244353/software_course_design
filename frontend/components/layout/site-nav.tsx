@@ -52,7 +52,7 @@ export function SiteNav() {
               管理大盘
             </Link>
           )}
-          {loading && user ? (
+          {loading ? (
             <div className="h-10 w-20 animate-pulse rounded-lg bg-slate-100" />
           ) : user ? (
             <div className="flex items-center gap-2">
