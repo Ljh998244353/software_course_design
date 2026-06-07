@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, Check, CheckCircle2, CreditCard, Loader2, WalletCards } from "lucide-react";
 import { useState } from "react";
+import { AuthGuard } from "@/components/layout/auth-guard";
 import { Button } from "@/components/ui/button";
 import { getOrder, payOrder } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
@@ -18,6 +19,14 @@ const paymentMethods: Array<{ id: PaymentChannel; label: string; icon: typeof Cr
 ];
 
 export default function CheckoutPage() {
+  return (
+    <AuthGuard requireAuth>
+      <CheckoutPageContent />
+    </AuthGuard>
+  );
+}
+
+function CheckoutPageContent() {
   const params = useParams<{ orderId: string }>();
   const [method, setMethod] = useState<PaymentChannel>("MOCK_WECHAT");
   const orderQuery = useQuery({ queryKey: queryKeys.order(params.orderId), queryFn: () => getOrder(params.orderId) });

@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BadgeCheck, Clock3, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, BellRing, Clock3, ShieldCheck } from "lucide-react";
 import { AuctionCard } from "@/components/auction/auction-card";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -105,7 +105,25 @@ export default function HomePage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {isLoading
               ? Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-[360px]" />)
-              : auctions.slice(0, 4).map((auction) => <AuctionCard key={auction.id} auction={auction} />)}
+              : auctions.length > 0 ? (
+                  auctions.slice(0, 4).map((auction) => <AuctionCard key={auction.id} auction={auction} />)
+                ) : (
+                  <div className="col-span-full rounded-lg border border-slate-200 bg-white p-10 text-center shadow-card">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                      <BellRing className="h-6 w-6" />
+                    </div>
+                    <h3 className="mt-4 text-xl font-black text-slate-950">暂时没有正在竞价的拍品</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">可以先登录发布拍品，或等待管理员创建新的拍卖活动。</p>
+                    <div className="mt-5 flex justify-center gap-3">
+                      <Link href="/auth/login" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-float hover:bg-indigo-700">
+                        登录 / 注册
+                      </Link>
+                      <Link href="/auction/publish" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:border-indigo-300 hover:text-indigo-700">
+                        发布拍品
+                      </Link>
+                    </div>
+                  </div>
+                )}
           </div>
         </section>
       </main>

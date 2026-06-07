@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, BarChart3, Check, ChevronRight, ClipboardCheck, Command, Gavel, Loader2, ShieldAlert, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { AuthGuard } from "@/components/layout/auth-guard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { approveItem, getAdminAuctions, getAdminDailyStatistics, getAdminReviews, rejectItem } from "@/lib/api/client";
@@ -17,6 +18,14 @@ import type { AdminReviewItem, AuctionItem } from "@/types/auction";
 type Panel = "reviews" | "auctions" | "stats" | "ops";
 
 export default function AdminDashboardPage() {
+  return (
+    <AuthGuard requireAuth requireAdmin>
+      <AdminDashboardContent />
+    </AuthGuard>
+  );
+}
+
+function AdminDashboardContent() {
   const queryClient = useQueryClient();
   const [panel, setPanel] = useState<Panel>("reviews");
   const [selected, setSelected] = useState<AdminReviewItem | null>(null);

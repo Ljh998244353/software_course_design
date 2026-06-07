@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { ChangeEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, ImagePlus, Loader2, Save, Send, UploadCloud } from "lucide-react";
+import { AuthGuard } from "@/components/layout/auth-guard";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
@@ -30,6 +31,14 @@ type PublishDraft = {
 };
 
 export default function PublishPage() {
+  return (
+    <AuthGuard requireAuth>
+      <PublishPageContent />
+    </AuthGuard>
+  );
+}
+
+function PublishPageContent() {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

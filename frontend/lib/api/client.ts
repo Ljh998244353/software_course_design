@@ -26,6 +26,26 @@ import type {
 const fallbackAuctionImage =
   "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80";
 
+type ApiEnvelope<T> = {
+  code?: number;
+  message?: string;
+  data?: T;
+};
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: number;
+  readonly detail?: string;
+
+  constructor(params: { message: string; status: number; code?: number; detail?: string }) {
+    super(params.message);
+    this.name = "ApiError";
+    this.status = params.status;
+    this.code = params.code;
+    this.detail = params.detail;
+  }
+}
+
 function apiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:18080";
 }
@@ -173,29 +193,97 @@ async function liveFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (token && !headers["Authorization"]) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers });
-  const json = (await response.json().catch(() => null)) as {
-    code?: number;
-    message?: string;
-    data?: T;
-  } | null;
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearToken();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${apiBaseUrl()}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const json = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearToken();
+      }
+      throw new ApiError({
+        status: response.status,
+        code: json?.code,
+        detail: json?.message,
+        message:
+          json?.message ??
+          (response.status === 404 ? "API route not ready" : `HTTP ${response.status}`),
+      });
     }
-    throw new Error(
-      json?.message
-        ? `${response.status} ${json.message}`
-        : (response.status === 404 ? "API route not ready" : `HTTP ${response.status}`)
-    );
+    if (!json || typeof json.code !== "number") {
+      throw new ApiError({
+        status: response.status,
+        message: "invalid API response",
+      });
+    }
+    if (json.code !== 0) {
+      throw new ApiError({
+        status: response.status,
+        code: json.code,
+        detail: json.message,
+        message: json.message || `API error ${json.code}`,
+      });
+    }
+    return json.data as T;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError({
+        status: 0,
+        message: "请求超时，请检查后端服务是否运行",
+      });
+    }
+    if (error instanceof TypeError) {
+      throw new ApiError({
+        status: 0,
+        message: "无法连接后端服务，请确认服务已启动且地址可访问",
+      });
+    }
+    throw error;
   }
-  if (!json || typeof json.code !== "number") {
-    throw new Error("invalid API response");
+}
+
+export function describeLoginError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 0) {
+      return error.message;
+    }
+    switch (error.code) {
+      case 4001:
+        if (error.detail?.includes("principal")) return "用户名不能为空";
+        if (error.detail?.includes("password")) return "密码不能为空";
+        return "登录请求参数不完整";
+      case 4102:
+        return "用户名不存在或密码错误";
+      case 4106:
+        return "账号已被冻结，请联系管理员";
+      case 4107:
+        return "账号已被禁用，请联系管理员";
+      case 5004:
+      case 5005:
+        return "数据库暂不可用，请稍后重试";
+      case 5001:
+        return "服务内部错误，请查看后端日志";
+      default:
+        if (error.status === 404) return "登录接口不存在，请确认后端版本和路由注册";
+        if (error.status === 401) return error.detail || "认证失败";
+        if (error.status >= 500) return "后端服务异常，请稍后重试";
+        return error.detail || error.message;
+    }
   }
-  if (json.code !== 0) {
-    throw new Error(json.message || `API error ${json.code}`);
+  if (error instanceof Error) {
+    return error.message;
   }
-  return json.data as T;
+  return "登录失败";
 }
 
 export async function getAuctions(query: AuctionListQuery = {}): Promise<AuctionItem[]> {

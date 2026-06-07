@@ -125,6 +125,18 @@ Json::Value PlaceBidResultToJson(const modules::bid::PlaceBidResult& r) {
     return json;
 }
 
+Json::Value MyBidStatusResultToJson(const modules::bid::MyBidStatusResult& r) {
+    Json::Value json(Json::objectValue);
+    json["auctionId"] = static_cast<Json::UInt64>(r.auction_id);
+    json["userId"] = static_cast<Json::UInt64>(r.user_id);
+    json["myHighestBid"] = r.my_highest_bid;
+    json["isCurrentHighest"] = r.is_current_highest;
+    json["lastBidTime"] = r.last_bid_time;
+    json["currentPrice"] = r.current_price;
+    json["endTime"] = r.end_time;
+    return json;
+}
+
 void MapBidHttpStatus(
     const common::errors::ErrorCode code,
     drogon::HttpStatusCode& out_status
@@ -287,6 +299,51 @@ void RegisterBidHttpRoutes(
             }
         },
         {drogon::Post}
+    );
+
+    // GET /api/auctions/{id}/my-bid - current user's bid status (requires auth)
+    RegisterCorsPreflight("/api/auctions/{id}/my-bid");
+    drogon::app().registerHandler(
+        "/api/auctions/{id}/my-bid",
+        [&bid_service](const drogon::HttpRequestPtr& request,
+                       std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                       const std::string& id_str) {
+            try {
+                if (id_str.empty()) {
+                    callback(MakeError(
+                        common::errors::ErrorCode::kInvalidArgument,
+                        "auction id is required"
+                    ));
+                    return;
+                }
+
+                const auto auction_id = SafeParseUint64(id_str, "auction id");
+                const auto result =
+                    bid_service.GetMyBidStatus(request->getHeader("authorization"), auction_id);
+
+                callback(MakeOk(MyBidStatusResultToJson(result)));
+            } catch (const modules::bid::BidException& e) {
+                drogon::HttpStatusCode http_status = drogon::k400BadRequest;
+                MapBidHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const modules::auth::AuthException& e) {
+                drogon::HttpStatusCode http_status = drogon::k401Unauthorized;
+                MapBidHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                common::logging::Logger::Instance().Error(
+                    "unhandled exception in GET /api/auctions/{id}/my-bid"
+                );
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Get}
     );
 
 #else

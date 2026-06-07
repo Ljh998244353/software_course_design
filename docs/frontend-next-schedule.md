@@ -475,3 +475,9 @@ ctest --test-dir build --output-on-failure
   - `npm audit` 剩余 2 个 moderate，等待 Next.js 后续补丁释放可用修复版本
 - 下一步: F17 按 Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 顺序接入真实后端，保留 Mock 模式。Auth/Auction/Bid/Publish/Checkout/Admin 已完成，下一步 WebSocket。
 - 下一步必须先读: `docs/schedule.md`、`docs/frontend-next-schedule.md`、`frontend/API_READINESS.md`、`docs/接口联调记录.md`。
+- 2026-06-03 补充修复：大厅页已区分“首屏加载 / 刷新中 / 错误 / 空结果”状态；当真实后端当前无拍卖数据时，不再持续显示 Skeleton，而是展示可操作空态。顶部导航的访客会话初始态也已修正，未登录用户首屏直接可见 `登录/注册` 入口。
+- 2026-06-03 补充修复：登录页已修正浏览器自动填充后的提交态，按钮不再因为 React state 未同步而持续灰掉；表单补齐 `required`、`name` 和 `autoComplete`，并在页面文案中明确默认管理员账号为 `admin / Admin@123`。
+- 2026-06-03 补充修复：登录错误已改为分型提示。前端会根据后端返回的 `401/404/5xx` 与业务码 `4001/4102/4106/4107/5004/5005` 等，明确提示是“用户名或密码错误”“账号被冻结/禁用”“数据库不可用”“接口未注册”还是“后端服务不可达/超时”。
+- 2026-06-03 补充修复：登录提交阶段已改为直接从 `FormData` 读取表单值，并把 form method 固定为 `post`；即便浏览器自动填充未触发 `onChange`，也不会再因为 state 为空而提交错误或把凭据拼进 URL。
+- 2026-06-03 补充修复：测试基础设施已开始兼容受限环境。测试库启动脚本优先走 Unix socket，若 socket bind 被环境拒绝则自动回退本地 TCP；本轮在 Codex 沙箱内继续验证时，环境同时限制 socket 与 TCP 监听，最终联通门禁需在沙箱外复验。
+- 2026-06-03 补充修复：最终真实联调门禁已补齐后端 HTTP 合同缺口，订单列表/详情/支付状态/发货/确认收货、管理员用户状态、登出响应和统一 JSON 404 均可由真实 Drogon 接口返回；验证通过 `scripts/test.sh http`、`scripts/test.sh risk`、`ctest --test-dir build --output-on-failure`、`cd frontend && npm run typecheck`、`cd frontend && npm run build`。其中 MySQL 相关门禁在 Codex 沙箱内会受本地监听限制，已在沙箱外权限下完成复验。

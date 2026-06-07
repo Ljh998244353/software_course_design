@@ -87,8 +87,8 @@ struct CreateItemRequest {
     std::string description;
     std::uint64_t category_id{0};
     double start_price{0.0};
-    std::string trade_mode;
-    std::string location;
+    std::string trade_mode{"MEETUP"};
+    std::string location{"线上"};
     std::string tags_json;
     double suggested_bid_step{0.0};
     int suggested_anti_sniping_window_seconds{0};

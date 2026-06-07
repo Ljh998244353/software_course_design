@@ -114,6 +114,78 @@ Json::Value ItemImageRecordToJson(const modules::item::ItemImageRecord& r) {
     return json;
 }
 
+Json::Value ItemRecordToJson(const modules::item::ItemRecord& r) {
+    Json::Value json(Json::objectValue);
+    json["item_id"] = static_cast<Json::UInt64>(r.item_id);
+    json["seller_id"] = static_cast<Json::UInt64>(r.seller_id);
+    json["category_id"] = static_cast<Json::UInt64>(r.category_id);
+    json["title"] = r.title;
+    json["description"] = r.description;
+    json["start_price"] = r.start_price;
+    json["trade_mode"] = r.trade_mode;
+    json["location"] = r.location;
+    json["tags_json"] = r.tags_json;
+    json["suggested_bid_step"] = r.suggested_bid_step;
+    json["suggested_anti_sniping_window_seconds"] =
+        r.suggested_anti_sniping_window_seconds;
+    json["suggested_extend_seconds"] = r.suggested_extend_seconds;
+    json["item_status"] = r.item_status;
+    json["reject_reason"] = r.reject_reason;
+    json["cover_image_url"] = r.cover_image_url;
+    json["created_at"] = r.created_at;
+    json["updated_at"] = r.updated_at;
+    return json;
+}
+
+Json::Value ItemSummaryToJson(const modules::item::ItemSummary& r) {
+    Json::Value json(Json::objectValue);
+    json["item_id"] = static_cast<Json::UInt64>(r.item_id);
+    json["seller_id"] = static_cast<Json::UInt64>(r.seller_id);
+    json["category_id"] = static_cast<Json::UInt64>(r.category_id);
+    json["title"] = r.title;
+    json["start_price"] = r.start_price;
+    json["trade_mode"] = r.trade_mode;
+    json["location"] = r.location;
+    json["tags_json"] = r.tags_json;
+    json["suggested_bid_step"] = r.suggested_bid_step;
+    json["suggested_anti_sniping_window_seconds"] =
+        r.suggested_anti_sniping_window_seconds;
+    json["suggested_extend_seconds"] = r.suggested_extend_seconds;
+    json["item_status"] = r.item_status;
+    json["reject_reason"] = r.reject_reason;
+    json["cover_image_url"] = r.cover_image_url;
+    json["created_at"] = r.created_at;
+    json["updated_at"] = r.updated_at;
+    return json;
+}
+
+Json::Value AuditLogRecordToJson(const modules::item::ItemAuditLogRecord& r) {
+    Json::Value json(Json::objectValue);
+    json["audit_log_id"] = static_cast<Json::UInt64>(r.audit_log_id);
+    json["item_id"] = static_cast<Json::UInt64>(r.item_id);
+    json["admin_id"] = static_cast<Json::UInt64>(r.admin_id);
+    json["admin_username"] = r.admin_username;
+    json["audit_result"] = r.audit_result;
+    json["audit_comment"] = r.audit_comment;
+    json["created_at"] = r.created_at;
+    return json;
+}
+
+Json::Value ItemDetailToJson(const modules::item::ItemDetail& detail) {
+    Json::Value json = ItemRecordToJson(detail.item);
+    Json::Value images(Json::arrayValue);
+    for (const auto& image : detail.images) {
+        images.append(ItemImageRecordToJson(image));
+    }
+    json["images"] = std::move(images);
+    if (detail.latest_audit_log.has_value()) {
+        json["latest_audit_log"] = AuditLogRecordToJson(*detail.latest_audit_log);
+    } else {
+        json["latest_audit_log"] = Json::nullValue;
+    }
+    return json;
+}
+
 void MapItemHttpStatus(
     const common::errors::ErrorCode code,
     drogon::HttpStatusCode& out_status
@@ -178,7 +250,7 @@ void RegisterItemHttpRoutes(
                 req.category_id = body->get("category_id", 0).asUInt64();
                 req.start_price = body->get("start_price", 0.0).asDouble();
                 req.trade_mode = body->get("trade_mode", "MEETUP").asString();
-                req.location = body->get("location", "").asString();
+                req.location = body->get("location", "线上").asString();
                 req.tags_json = body->isMember("tags_json") ? Json::writeString(Json::StreamWriterBuilder{}, (*body)["tags_json"]) : "[]";
                 req.suggested_bid_step = body->get("suggested_bid_step", 0.0).asDouble();
                 req.suggested_anti_sniping_window_seconds =
@@ -211,6 +283,98 @@ void RegisterItemHttpRoutes(
             }
         },
         {drogon::Post}
+    );
+
+    // GET /api/items/mine - list current seller's items (requires auth)
+    RegisterCorsPreflight("/api/items/mine", "GET, OPTIONS");
+    drogon::app().registerHandler(
+        "/api/items/mine",
+        [&item_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            try {
+                const auto auth_header = request->getHeader("authorization");
+                std::optional<std::string> item_status;
+                const auto status_filter = request->getParameter("item_status").empty()
+                    ? request->getParameter("itemStatus")
+                    : request->getParameter("item_status");
+                if (!status_filter.empty()) {
+                    item_status = status_filter;
+                }
+
+                const auto items = item_service.ListMyItems(auth_header, item_status);
+                Json::Value data(Json::objectValue);
+                Json::Value rows(Json::arrayValue);
+                for (const auto& item : items) {
+                    rows.append(ItemSummaryToJson(item));
+                }
+                data["items"] = std::move(rows);
+                data["total"] = static_cast<Json::UInt64>(items.size());
+                callback(MakeOk(data));
+            } catch (const modules::item::ItemException& e) {
+                drogon::HttpStatusCode http_status = drogon::k400BadRequest;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const modules::auth::AuthException& e) {
+                drogon::HttpStatusCode http_status = drogon::k401Unauthorized;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                common::logging::Logger::Instance().Error(
+                    "unhandled exception in GET /api/items/mine"
+                );
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Get}
+    );
+
+    // GET /api/items/{id} - item detail with images and latest audit log (requires auth)
+    drogon::app().registerHandler(
+        "/api/items/{id}",
+        [&item_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                        const std::string& id_str) {
+            try {
+                if (id_str.empty()) {
+                    callback(MakeError(
+                        common::errors::ErrorCode::kInvalidArgument,
+                        "item id is required"
+                    ));
+                    return;
+                }
+
+                const auto item_id = SafeParseUint64(id_str, "item id");
+                const auto auth_header = request->getHeader("authorization");
+                const auto detail = item_service.GetItemDetail(auth_header, item_id);
+                callback(MakeOk(ItemDetailToJson(detail)));
+            } catch (const modules::item::ItemException& e) {
+                drogon::HttpStatusCode http_status = drogon::k400BadRequest;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const modules::auth::AuthException& e) {
+                drogon::HttpStatusCode http_status = drogon::k401Unauthorized;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                common::logging::Logger::Instance().Error(
+                    "unhandled exception in GET /api/items/{id}"
+                );
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Get}
     );
 
     // PUT /api/items/{id} - update item (requires auth)
@@ -350,6 +514,59 @@ void RegisterItemHttpRoutes(
             }
         },
         {drogon::Post}
+    );
+
+    // DELETE /api/items/{id}/images/{image_id} - delete image metadata (requires auth)
+    RegisterCorsPreflight("/api/items/{id}/images/{image_id}", "DELETE, OPTIONS");
+    drogon::app().registerHandler(
+        "/api/items/{id}/images/{image_id}",
+        [&item_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                        const std::string& id_str,
+                        const std::string& image_id_str) {
+            try {
+                if (id_str.empty()) {
+                    callback(MakeError(
+                        common::errors::ErrorCode::kInvalidArgument,
+                        "item id is required"
+                    ));
+                    return;
+                }
+
+                const auto item_id = SafeParseUint64(id_str, "item id");
+                const auto image_id = SafeParseUint64(image_id_str, "image id");
+                const auto auth_header = request->getHeader("authorization");
+
+                const auto result = item_service.DeleteItemImage(auth_header, item_id, image_id);
+
+                Json::Value json;
+                json["image_id"] = static_cast<Json::UInt64>(result.image_id);
+                json["item_id"] = static_cast<Json::UInt64>(result.item_id);
+                json["item_status"] = result.item_status;
+                json["cover_image_url"] = result.cover_image_url;
+                callback(MakeOk(json));
+            } catch (const modules::item::ItemException& e) {
+                drogon::HttpStatusCode http_status = drogon::k400BadRequest;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const modules::auth::AuthException& e) {
+                drogon::HttpStatusCode http_status = drogon::k401Unauthorized;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                common::logging::Logger::Instance().Error(
+                    "unhandled exception in DELETE /api/items/{id}/images/{image_id}"
+                );
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Delete}
     );
 
     // POST /api/items/{id}/submit-review - submit item for audit (requires auth)

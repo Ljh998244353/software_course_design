@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthState>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     try {
       const profile = await getMe();
       setUser(profile);
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiLogout();
     } finally {
       setUser(null);
+      setLoading(false);
     }
   }, []);
 

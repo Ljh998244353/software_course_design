@@ -85,7 +85,7 @@ main() {
             run_ctest "suite_security" "$@"
             ;;
         frontend)
-            "${ROOT_DIR}/scripts/test_demo_frontend.sh"
+            bash "${ROOT_DIR}/scripts/test_frontend.sh"
             ;;
         auth)
             run_ctest "module_auth" "$@"

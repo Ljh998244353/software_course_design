@@ -16,7 +16,7 @@ namespace {
 
 void AddCorsHeaders(const drogon::HttpResponsePtr& response) {
     response->addHeader("Access-Control-Allow-Origin", "*");
-    response->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
     response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     response->addHeader("Access-Control-Max-Age", "86400");
 }
@@ -67,6 +67,31 @@ Json::Value UserProfileToJson(const modules::auth::UserProfile& user) {
     return json;
 }
 
+Json::Value ChangeUserStatusToJson(const modules::auth::ChangeUserStatusResult& result) {
+    Json::Value json(Json::objectValue);
+    json["userId"] = static_cast<Json::UInt64>(result.user_id);
+    json["user_id"] = static_cast<Json::UInt64>(result.user_id);
+    json["oldStatus"] = result.old_status;
+    json["old_status"] = result.old_status;
+    json["newStatus"] = result.new_status;
+    json["new_status"] = result.new_status;
+    json["updatedAt"] = result.updated_at;
+    json["updated_at"] = result.updated_at;
+    return json;
+}
+
+std::string ExtractBearerToken(const std::string_view authorization_header) {
+    constexpr std::string_view kPrefix = "Bearer ";
+    if (!authorization_header.starts_with(kPrefix) ||
+        authorization_header.size() <= kPrefix.size()) {
+        throw modules::auth::AuthException(
+            common::errors::ErrorCode::kAuthTokenMissing,
+            "authorization header must use Bearer token"
+        );
+    }
+    return std::string(authorization_header.substr(kPrefix.size()));
+}
+
 }  // namespace
 
 #endif
@@ -81,6 +106,7 @@ void RegisterAuthHttpRoutes(
     RegisterCorsPreflight("/api/auth/login");
     RegisterCorsPreflight("/api/auth/logout");
     RegisterCorsPreflight("/api/auth/me");
+    RegisterCorsPreflight("/api/admin/users/{id}/status");
 
     // POST /api/auth/register
     drogon::app().registerHandler(
@@ -186,6 +212,7 @@ void RegisterAuthHttpRoutes(
                 auth_service.Logout(context.token);
 
                 Json::Value data(Json::objectValue);
+                data["success"] = true;
                 data["message"] = "logged out";
                 callback(MakeOk(std::move(data)));
             } catch (const modules::auth::AuthException& e) {
@@ -240,6 +267,66 @@ void RegisterAuthHttpRoutes(
             }
         },
         {drogon::Get}
+    );
+
+    // PATCH /api/admin/users/{id}/status
+    drogon::app().registerHandler(
+        "/api/admin/users/{id}/status",
+        [&auth_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                        const std::string& id_str) {
+            const auto body = request->getJsonObject();
+            if (!body) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInvalidArgument,
+                    "request body must be valid JSON"
+                ));
+                return;
+            }
+
+            try {
+                std::size_t parsed = 0;
+                const auto user_id = static_cast<std::uint64_t>(std::stoull(id_str, &parsed));
+                if (id_str.empty() || parsed != id_str.size()) {
+                    callback(MakeError(
+                        common::errors::ErrorCode::kInvalidArgument,
+                        "user id must be a valid number"
+                    ));
+                    return;
+                }
+
+                const auto result = auth_service.ChangeUserStatus(
+                    ExtractBearerToken(request->getHeader("authorization")),
+                    user_id,
+                    body->get("status", "").asString(),
+                    body->get("reason", "").asString()
+                );
+                callback(MakeOk(ChangeUserStatusToJson(result)));
+            } catch (const modules::auth::AuthException& e) {
+                auto http_status = drogon::k400BadRequest;
+                if (e.code() == common::errors::ErrorCode::kAuthTokenMissing ||
+                    e.code() == common::errors::ErrorCode::kAuthTokenExpired ||
+                    e.code() == common::errors::ErrorCode::kAuthSessionInvalid) {
+                    http_status = drogon::k401Unauthorized;
+                } else if (e.code() == common::errors::ErrorCode::kAuthPermissionDenied) {
+                    http_status = drogon::k403Forbidden;
+                } else if (e.code() == common::errors::ErrorCode::kResourceNotFound) {
+                    http_status = drogon::k404NotFound;
+                }
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (const std::out_of_range& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Patch}
     );
 
 #else

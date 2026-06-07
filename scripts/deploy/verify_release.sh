@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${ROOT_DIR}/scripts/db/mysql_test_env.sh"
 TEST_SERVER_HOST="${AUCTION_RELEASE_SERVER_HOST:-127.0.0.1}"
 TEST_SERVER_PORT="${AUCTION_RELEASE_SERVER_PORT:-18080}"
 SERVER_LOG="${ROOT_DIR}/build/release_verify_server.log"
@@ -12,6 +13,7 @@ cleanup() {
         kill "${SERVER_PID}" >/dev/null 2>&1 || true
         wait "${SERVER_PID}" >/dev/null 2>&1 || true
     fi
+    mysql_test_env::shutdown
 }
 
 wait_for_server() {
@@ -47,21 +49,18 @@ expect_http_200() {
     fi
 }
 
-write_release_config() {
-    local source_config="${ROOT_DIR}/config/app.example.json"
-    local target_config="${ROOT_DIR}/build/release_verify_app.json"
-    mkdir -p "${ROOT_DIR}/build"
-    sed \
-        -e "s/\"host\": \"127.0.0.1\"/\"host\": \"${TEST_SERVER_HOST//\//\\/}\"/" \
-        -e "0,/\"port\": [0-9]*/s//\"port\": ${TEST_SERVER_PORT}/" \
-        "${source_config}" >"${target_config}"
-    echo "${target_config}"
-}
-
 verify_server_entries() {
     : >"${SERVER_LOG}"
+    local connection_info
+    connection_info="$("${ROOT_DIR}/scripts/db/setup_local_mysql.sh")"
+    mysql_test_env::load "${connection_info}"
+
     local test_config_path
-    test_config_path="$(write_release_config)"
+    test_config_path="$(
+        AUCTION_TEST_SERVER_HOST="${TEST_SERVER_HOST}" \
+        AUCTION_TEST_SERVER_PORT="${TEST_SERVER_PORT}" \
+        "${ROOT_DIR}/scripts/db/write_test_config.sh"
+    )"
 
     AUCTION_APP_CONFIG="${test_config_path}" "${ROOT_DIR}/build/bin/auction_app" \
         >"${SERVER_LOG}" 2>&1 &

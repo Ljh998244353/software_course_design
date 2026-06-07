@@ -38,8 +38,12 @@ double ReadRequiredDouble(const Json::Value& json, const std::string_view field_
 }
 
 modules::payment::InitiatePaymentRequest BuildInitiatePaymentRequest(const Json::Value& body) {
+    auto pay_channel = common::http::ReadOptionalString(body, "payChannel");
+    if (!pay_channel.has_value()) {
+        pay_channel = common::http::ReadOptionalString(body, "pay_channel");
+    }
     return modules::payment::InitiatePaymentRequest{
-        .pay_channel = common::http::ReadRequiredString(body, "payChannel"),
+        .pay_channel = pay_channel.value_or(""),
     };
 }
 
@@ -59,16 +63,26 @@ Json::Value ToInitiatePaymentResultJson(
     const modules::payment::InitiatePaymentResult& result
 ) {
     Json::Value json(Json::objectValue);
+    json["payment_id"] = static_cast<Json::UInt64>(result.payment_id);
     json["paymentId"] = static_cast<Json::UInt64>(result.payment_id);
+    json["order_id"] = static_cast<Json::UInt64>(result.order_id);
     json["orderId"] = static_cast<Json::UInt64>(result.order_id);
+    json["order_no"] = result.order_no;
     json["orderNo"] = result.order_no;
+    json["payment_no"] = result.payment_no;
     json["paymentNo"] = result.payment_no;
+    json["pay_channel"] = result.pay_channel;
     json["payChannel"] = result.pay_channel;
+    json["pay_amount"] = result.pay_amount;
     json["payAmount"] = result.pay_amount;
+    json["pay_status"] = result.pay_status;
     json["payStatus"] = result.pay_status;
     json["merchantNo"] = result.merchant_no;
+    json["pay_url"] = result.pay_url;
     json["payUrl"] = result.pay_url;
+    json["expire_at"] = result.expire_at;
     json["expireAt"] = result.expire_at;
+    json["reused_existing"] = result.reused_existing;
     json["reusedExisting"] = result.reused_existing;
     return json;
 }

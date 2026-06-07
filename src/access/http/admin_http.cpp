@@ -103,6 +103,18 @@ Json::Value AuditItemResultToJson(const modules::item::AuditItemResult& r) {
     return json;
 }
 
+Json::Value AuditLogRecordToJson(const modules::item::ItemAuditLogRecord& r) {
+    Json::Value json(Json::objectValue);
+    json["audit_log_id"] = static_cast<Json::UInt64>(r.audit_log_id);
+    json["item_id"] = static_cast<Json::UInt64>(r.item_id);
+    json["admin_id"] = static_cast<Json::UInt64>(r.admin_id);
+    json["admin_username"] = r.admin_username;
+    json["audit_result"] = r.audit_result;
+    json["audit_comment"] = r.audit_comment;
+    json["created_at"] = r.created_at;
+    return json;
+}
+
 Json::Value DailyStatisticsToJson(const modules::statistics::DailyStatisticsRecord& r) {
     Json::Value json(Json::objectValue);
     json["stat_id"] = static_cast<Json::UInt64>(r.stat_id);
@@ -182,6 +194,55 @@ void RegisterAdminHttpRoutes(
             } catch (...) {
                 common::logging::Logger::Instance().Error(
                     "unhandled exception in GET /api/admin/items/pending"
+                );
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Get}
+    );
+
+    // GET /api/admin/items/{id}/audit-logs - list item audit logs (requires admin/support)
+    RegisterCorsPreflight("/api/admin/items/{id}/audit-logs", "GET, OPTIONS");
+    drogon::app().registerHandler(
+        "/api/admin/items/{id}/audit-logs",
+        [&audit_service](const drogon::HttpRequestPtr& request,
+                         std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                         const std::string& id_str) {
+            try {
+                if (id_str.empty()) {
+                    callback(MakeError(
+                        common::errors::ErrorCode::kInvalidArgument,
+                        "item id is required"
+                    ));
+                    return;
+                }
+
+                const auto item_id = SafeParseUint64(id_str, "item id");
+                const auto auth_header = request->getHeader("authorization");
+                const auto logs = audit_service.GetAuditLogs(auth_header, item_id);
+
+                Json::Value arr(Json::arrayValue);
+                for (const auto& log : logs) {
+                    arr.append(AuditLogRecordToJson(log));
+                }
+                callback(MakeOk(arr));
+            } catch (const modules::item::ItemException& e) {
+                drogon::HttpStatusCode http_status = drogon::k400BadRequest;
+                MapAdminHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const modules::auth::AuthException& e) {
+                drogon::HttpStatusCode http_status = drogon::k401Unauthorized;
+                MapAdminHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                common::logging::Logger::Instance().Error(
+                    "unhandled exception in GET /api/admin/items/{id}/audit-logs"
                 );
                 callback(MakeError(
                     common::errors::ErrorCode::kInternalError,

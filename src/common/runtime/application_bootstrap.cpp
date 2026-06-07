@@ -8,12 +8,19 @@
 #include "access/http/auction_http.h"
 #include "access/http/auction_public_http.h"
 #include "access/http/auction_ws.h"
+#include "access/http/api_error_http.h"
 #include "access/http/auth_http.h"
 #include "access/http/bid_http.h"
 #include "access/http/health_http.h"
 #include "access/http/item_http.h"
 #include "access/http/admin_http.h"
+#include "access/http/notification_http.h"
+#include "access/http/ops_http.h"
 #include "access/http/order_http.h"
+#include "access/http/payment_http.h"
+#include "access/http/review_http.h"
+#include "access/http/statistics_http.h"
+#include "access/http/system_http.h"
 #include "application/database_health_service.h"
 #include "application/health_service.h"
 #include "common/config/config_loader.h"
@@ -97,6 +104,13 @@ int ApplicationBootstrap::Run(const BootstrapOptions& options) const {
         services->statistics_service()
     );
     access::http::RegisterAuctionAdminHttpRoutes(services);
+    access::http::RegisterNotificationHttpRoutes(services);
+    access::http::RegisterOpsHttpRoutes(services);
+    access::http::RegisterPaymentHttpRoutes(services);
+    access::http::RegisterReviewHttpRoutes(services);
+    access::http::RegisterStatisticsHttpRoutes(services);
+    access::http::RegisterSystemHttpRoutes(services);
+    access::http::RegisterApiErrorHttpHandlers();
 
     access::http::AuctionWebSocketController::SetGateway(ws_gateway);
     access::http::AuctionWebSocketController::SetTokenSecret(app_config.auth.token_secret);

@@ -3,12 +3,14 @@
 export const dynamic = "force-dynamic";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, BellRing, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Activity, BellRing, CircleAlert, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
 import { AuctionCard } from "@/components/auction/auction-card";
 import { SiteNav } from "@/components/layout/site-nav";
 import { OfflineBanner } from "@/components/layout/offline-banner";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAuctions } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
@@ -48,11 +50,21 @@ function AuctionHallContent() {
     pageSize: 24,
   };
 
-  const { data: auctions = [], isLoading } = useQuery({
+  const { data: auctions = [], error, isLoading, isFetching, refetch } = useQuery({
     queryKey: queryKeys.auctions(query),
     queryFn: () => getAuctions(query),
     refetchInterval: 5000,
   });
+  const hasFilters = Boolean(
+    query.keyword ||
+      query.category ||
+      query.priceMin !== undefined ||
+      query.priceMax !== undefined ||
+      query.sellerRating !== undefined ||
+      query.sellerHasDeals ||
+      query.tradeMode
+  );
+  const isInitialLoading = isLoading && auctions.length === 0;
 
   function updateParam(key: string, value?: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -169,6 +181,7 @@ function AuctionHallContent() {
               <p className="text-sm font-bold text-indigo-600">AUCTION HALL</p>
               <h1 className="text-2xl font-black text-slate-950">拍卖大厅</h1>
               <p className="mt-1 text-sm text-slate-500">当前结果 {auctions.length} 条</p>
+              {isFetching && !isInitialLoading ? <p className="mt-1 text-xs font-medium text-slate-400">数据刷新中...</p> : null}
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-950 px-4 py-3 text-white">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -177,16 +190,42 @@ function AuctionHallContent() {
               </div>
               <p className="mt-1 text-sm">
                 <BellRing className="mr-1 inline h-4 w-4" />
-                {auctions[0]?.title ?? "加载中"} 当前价 {auctions[0] ? formatPrice(auctions[0].currentPrice) : "-"}
+                {auctions[0]?.title ?? "暂无实时拍卖"} 当前价 {auctions[0] ? formatPrice(auctions[0].currentPrice) : "-"}
               </p>
             </div>
           </div>
 
-          {isLoading ? (
+          {isInitialLoading ? (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
                 <Skeleton key={index} className="h-[360px]" />
               ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-8 text-center shadow-card">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-rose-600 shadow-card">
+                <CircleAlert className="h-6 w-6" />
+              </div>
+              <h2 className="mt-4 text-xl font-black text-slate-950">大厅数据加载失败</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{error instanceof Error ? error.message : "请检查后端服务或接口状态后重试。"}</p>
+              <div className="mt-5 flex justify-center gap-3">
+                <Button onClick={() => refetch()}>重新加载</Button>
+                <Button variant="secondary" onClick={resetFilters}>清空筛选</Button>
+              </div>
+            </div>
+          ) : auctions.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-10 text-center shadow-card">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <BellRing className="h-6 w-6" />
+              </div>
+              <h2 className="mt-4 text-2xl font-black text-slate-950">{hasFilters ? "没有匹配的拍品" : "当前还没有在拍拍品"}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {hasFilters ? "调整筛选条件后会自动重新查询。" : "管理员创建拍卖后会在这里展示。现在可以先登录、发布拍品，或稍后刷新查看。"}
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                {hasFilters ? <Button onClick={resetFilters}>清空筛选</Button> : <Link href="/auth/login" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-float hover:bg-indigo-700">登录 / 注册</Link>}
+                <Button variant="secondary" onClick={() => refetch()}>刷新列表</Button>
+              </div>
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/db/mysql_test_env.sh"
 HTTP_FIXTURE_DIR="${ROOT_DIR}/tests/http"
 TMP_DIR="${ROOT_DIR}/build/test_http"
 SERVER_HOST="127.0.0.1"
@@ -59,6 +60,7 @@ cleanup() {
         kill "${SERVER_PID}" >/dev/null 2>&1 || true
         wait "${SERVER_PID}" >/dev/null 2>&1 || true
     fi
+    mysql_test_env::shutdown
 }
 
 on_error() {
@@ -76,11 +78,12 @@ mark_step "构建并初始化测试配置"
 "${ROOT_DIR}/scripts/bootstrap.sh"
 
 mark_step "初始化本地测试 MySQL"
-SOCKET_FILE="$("${ROOT_DIR}/scripts/db/setup_local_mysql.sh")"
+CONNECTION_INFO="$("${ROOT_DIR}/scripts/db/setup_local_mysql.sh")"
+mysql_test_env::load "${CONNECTION_INFO}"
 TEST_CONFIG_PATH="$(
     AUCTION_TEST_SERVER_HOST="${SERVER_HOST}" \
     AUCTION_TEST_SERVER_PORT="${SERVER_PORT}" \
-    "${ROOT_DIR}/scripts/db/write_test_config.sh" "${SOCKET_FILE}"
+    "${ROOT_DIR}/scripts/db/write_test_config.sh"
 )"
 
 LOGIN_BODY="${TMP_DIR}/login.json"
@@ -206,7 +209,7 @@ LOGIN_STATUS="$(
 )"
 [[ "${LOGIN_STATUS}" == "200" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*0' "${LOGIN_BODY}"
-grep -q '"roleCode"[[:space:]]*:[[:space:]]*"ADMIN"' "${LOGIN_BODY}"
+grep -q '"role_code"[[:space:]]*:[[:space:]]*"ADMIN"' "${LOGIN_BODY}"
 
 TOKEN="$(
     tr -d '\n' <"${LOGIN_BODY}" |
@@ -231,12 +234,12 @@ REGISTER_STATUS="$(
 )"
 [[ "${REGISTER_STATUS}" == "200" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*0' "${REGISTER_BODY}"
-grep -q '"roleCode"[[:space:]]*:[[:space:]]*"USER"' "${REGISTER_BODY}"
+grep -q '"role_code"[[:space:]]*:[[:space:]]*"USER"' "${REGISTER_BODY}"
 grep -q '"status"[[:space:]]*:[[:space:]]*"ACTIVE"' "${REGISTER_BODY}"
 
 REGISTER_USER_ID="$(
     tr -d '\n' <"${REGISTER_BODY}" |
-        sed -n 's/.*"userId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+        sed -n 's/.*"user_id"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
 )"
 if [[ -z "${REGISTER_USER_ID}" ]]; then
     echo "failed to extract registered user id" >&2
@@ -283,11 +286,11 @@ BIDDER_REGISTER_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/auth/register"
 )"
 [[ "${BIDDER_REGISTER_STATUS}" == "200" ]]
-grep -q '"roleCode"[[:space:]]*:[[:space:]]*"USER"' "${BIDDER_REGISTER_BODY}"
+grep -q '"role_code"[[:space:]]*:[[:space:]]*"USER"' "${BIDDER_REGISTER_BODY}"
 
 BIDDER_USER_ID="$(
     tr -d '\n' <"${BIDDER_REGISTER_BODY}" |
-        sed -n 's/.*"userId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+        sed -n 's/.*"user_id"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
 )"
 if [[ -z "${BIDDER_USER_ID}" ]]; then
     echo "failed to extract bidder user id" >&2
@@ -318,16 +321,16 @@ ITEM_CREATE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"title\":\"${ITEM_TITLE}\",\"description\":\"HTTP item description\",\"categoryId\":1,\"startPrice\":99.50,\"coverImageUrl\":\"\"}" \
+        --data "{\"title\":\"${ITEM_TITLE}\",\"description\":\"HTTP item description\",\"category_id\":1,\"start_price\":99.50,\"cover_image_url\":\"\"}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
 )"
 [[ "${ITEM_CREATE_STATUS}" == "200" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*0' "${ITEM_CREATE_BODY}"
-grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"DRAFT"' "${ITEM_CREATE_BODY}"
+grep -q '"item_status"[[:space:]]*:[[:space:]]*"DRAFT"' "${ITEM_CREATE_BODY}"
 
 ITEM_ID="$(
     tr -d '\n' <"${ITEM_CREATE_BODY}" |
-        sed -n 's/.*"itemId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+        sed -n 's/.*"item_id"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
 )"
 if [[ -z "${ITEM_ID}" ]]; then
     echo "failed to extract item id" >&2
@@ -339,7 +342,7 @@ ITEM_INVALID_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data '{"title":"","description":"invalid","categoryId":1,"startPrice":10.00}' \
+        --data '{"title":"","description":"invalid","category_id":1,"start_price":10.00}' \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
 )"
 [[ "${ITEM_INVALID_STATUS}" == "400" ]]
@@ -350,15 +353,15 @@ ITEM_ADD_IMAGE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"imageUrl\":\"/uploads/http/${REGISTER_USERNAME}/front.jpg\",\"isCover\":true}" \
+        --data "{\"image_url\":\"/uploads/http/${REGISTER_USERNAME}/front.jpg\",\"is_cover\":true}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}/images"
 )"
 [[ "${ITEM_ADD_IMAGE_STATUS}" == "200" ]]
-grep -q '"isCover"[[:space:]]*:[[:space:]]*true' "${ITEM_ADD_IMAGE_BODY}"
+grep -q '"is_cover"[[:space:]]*:[[:space:]]*true' "${ITEM_ADD_IMAGE_BODY}"
 
 IMAGE_ID="$(
     tr -d '\n' <"${ITEM_ADD_IMAGE_BODY}" |
-        sed -n 's/.*"imageId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+        sed -n 's/.*"image_id"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
 )"
 if [[ -z "${IMAGE_ID}" ]]; then
     echo "failed to extract image id" >&2
@@ -370,7 +373,7 @@ ITEM_ADD_SECOND_IMAGE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"imageUrl\":\"/uploads/http/${REGISTER_USERNAME}/side.jpg\",\"sortNo\":2,\"isCover\":false}" \
+        --data "{\"image_url\":\"/uploads/http/${REGISTER_USERNAME}/side.jpg\",\"sort_no\":2,\"is_cover\":false}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}/images"
 )"
 [[ "${ITEM_ADD_SECOND_IMAGE_STATUS}" == "200" ]]
@@ -383,7 +386,7 @@ ITEM_DELETE_IMAGE_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}/images/${IMAGE_ID}"
 )"
 [[ "${ITEM_DELETE_IMAGE_STATUS}" == "200" ]]
-grep -q "\"imageId\"[[:space:]]*:[[:space:]]*${IMAGE_ID}" "${ITEM_DELETE_IMAGE_BODY}"
+grep -q "\"image_id\"[[:space:]]*:[[:space:]]*${IMAGE_ID}" "${ITEM_DELETE_IMAGE_BODY}"
 
 ITEM_UPDATE_STATUS="$(
     curl -sS -o "${ITEM_UPDATE_BODY}" -w "%{http_code}" \
@@ -391,11 +394,11 @@ ITEM_UPDATE_STATUS="$(
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
         -X PUT \
-        --data "{\"title\":\"${ITEM_TITLE} Updated\",\"description\":\"HTTP item updated\",\"categoryId\":1,\"startPrice\":120.00,\"coverImageUrl\":\"\"}" \
+        --data "{\"title\":\"${ITEM_TITLE} Updated\",\"description\":\"HTTP item updated\",\"category_id\":1,\"start_price\":120.00,\"cover_image_url\":\"\"}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}"
 )"
 [[ "${ITEM_UPDATE_STATUS}" == "200" ]]
-grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"DRAFT"' "${ITEM_UPDATE_BODY}"
+grep -q '"item_status"[[:space:]]*:[[:space:]]*"DRAFT"' "${ITEM_UPDATE_BODY}"
 
 ITEM_DETAIL_STATUS="$(
     curl -sS -o "${ITEM_DETAIL_BODY}" -w "%{http_code}" \
@@ -411,20 +414,20 @@ ITEM_MINE_STATUS="$(
     curl -sS -o "${ITEM_MINE_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/mine?itemStatus=DRAFT"
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/mine?item_status=DRAFT"
 )"
 [[ "${ITEM_MINE_STATUS}" == "200" ]]
-grep -q "\"itemId\"[[:space:]]*:[[:space:]]*${ITEM_ID}" "${ITEM_MINE_BODY}"
+grep -q "\"item_id\"[[:space:]]*:[[:space:]]*${ITEM_ID}" "${ITEM_MINE_BODY}"
 
 ITEM_SUBMIT_STATUS="$(
     curl -sS -o "${ITEM_SUBMIT_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
         -X POST \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}/submit-audit"
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}/submit-review"
 )"
 [[ "${ITEM_SUBMIT_STATUS}" == "200" ]]
-grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"PENDING_AUDIT"' "${ITEM_SUBMIT_BODY}"
+grep -q '"item_status"[[:space:]]*:[[:space:]]*"PENDING_AUDIT"' "${ITEM_SUBMIT_BODY}"
 
 ITEM_EDIT_AFTER_SUBMIT_STATUS="$(
     curl -sS -o "${ITEM_EDIT_AFTER_SUBMIT_BODY}" -w "%{http_code}" \
@@ -435,7 +438,7 @@ ITEM_EDIT_AFTER_SUBMIT_STATUS="$(
         --data '{"title":"should fail"}' \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}"
 )"
-[[ "${ITEM_EDIT_AFTER_SUBMIT_STATUS}" == "400" ]]
+[[ "${ITEM_EDIT_AFTER_SUBMIT_STATUS}" == "409" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*4203' "${ITEM_EDIT_AFTER_SUBMIT_BODY}"
 
 PENDING_ITEMS_STATUS="$(
@@ -445,20 +448,20 @@ PENDING_ITEMS_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/pending"
 )"
 [[ "${PENDING_ITEMS_STATUS}" == "200" ]]
-grep -q "\"itemId\"[[:space:]]*:[[:space:]]*${ITEM_ID}" "${PENDING_ITEMS_BODY}"
-grep -q "\"sellerUsername\"[[:space:]]*:[[:space:]]*\"${REGISTER_USERNAME}\"" "${PENDING_ITEMS_BODY}"
+grep -q "\"item_id\"[[:space:]]*:[[:space:]]*${ITEM_ID}" "${PENDING_ITEMS_BODY}"
+grep -q "\"seller_username\"[[:space:]]*:[[:space:]]*\"${REGISTER_USERNAME}\"" "${PENDING_ITEMS_BODY}"
 
 ITEM_AUDIT_STATUS="$(
     curl -sS -o "${ITEM_AUDIT_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${TOKEN}" \
-        --data '{"auditStatus":"APPROVED","reason":"http approval"}' \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${ITEM_ID}/audit"
+        --data '{"reason":"http approval"}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${ITEM_ID}/approve"
 )"
 [[ "${ITEM_AUDIT_STATUS}" == "200" ]]
-grep -q '"auditStatus"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_AUDIT_BODY}"
-grep -q '"newStatus"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_AUDIT_BODY}"
+grep -q '"audit_result"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_AUDIT_BODY}"
+grep -q '"new_status"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_AUDIT_BODY}"
 
 mark_step "管理员审核和拍卖管理接口"
 ITEM_DETAIL_AFTER_APPROVE_STATUS="$(
@@ -468,8 +471,8 @@ ITEM_DETAIL_AFTER_APPROVE_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${ITEM_ID}"
 )"
 [[ "${ITEM_DETAIL_AFTER_APPROVE_STATUS}" == "200" ]]
-grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_DETAIL_AFTER_APPROVE_BODY}"
-grep -q '"auditResult"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_DETAIL_AFTER_APPROVE_BODY}"
+grep -q '"item_status"[[:space:]]*:[[:space:]]*"READY_FOR_AUCTION"' "${ITEM_DETAIL_AFTER_APPROVE_BODY}"
+grep -q '"audit_result"[[:space:]]*:[[:space:]]*"APPROVED"' "${ITEM_DETAIL_AFTER_APPROVE_BODY}"
 
 AUCTION_START_TIME="$(date -d '+10 minutes' '+%Y-%m-%d %H:%M:%S')"
 AUCTION_END_TIME="$(date -d '+25 minutes' '+%Y-%m-%d %H:%M:%S')"
@@ -562,7 +565,7 @@ if [[ -z "${PUBLIC_AUCTION_ID}" ]]; then
 fi
 
 BUYER_DEMO_ID="$(
-    mysql --socket="${SOCKET_FILE}" -uroot "${TEST_DB_NAME}" -Nse \
+    mysql $(mysql_test_env::mysql_args) "${TEST_DB_NAME}" -Nse \
         "SELECT user_id FROM user_account WHERE username = 'buyer_demo' LIMIT 1"
 )"
 if [[ -z "${BUYER_DEMO_ID}" ]]; then
@@ -570,7 +573,7 @@ if [[ -z "${BUYER_DEMO_ID}" ]]; then
     exit 1
 fi
 
-mysql --socket="${SOCKET_FILE}" -uroot "${TEST_DB_NAME}" <<SQL
+mysql $(mysql_test_env::mysql_args) "${TEST_DB_NAME}" <<SQL
 UPDATE item
 SET item_status = 'IN_AUCTION', updated_at = CURRENT_TIMESTAMP(3)
 WHERE item_id = ${ITEM_ID};
@@ -610,6 +613,7 @@ PUBLIC_AUCTION_LIST_STATUS="$(
 )"
 [[ "${PUBLIC_AUCTION_LIST_STATUS}" == "200" ]]
 grep -q "\"auctionId\"[[:space:]]*:[[:space:]]*${PUBLIC_AUCTION_ID}" "${PUBLIC_AUCTION_LIST_BODY}"
+grep -q '"currentPrice"[[:space:]]*:[[:space:]]*180' "${PUBLIC_AUCTION_LIST_BODY}"
 grep -q '"acceptingBids"[[:space:]]*:[[:space:]]*true' "${PUBLIC_AUCTION_LIST_BODY}"
 
 PUBLIC_AUCTION_DETAIL_STATUS="$(
@@ -634,11 +638,11 @@ grep -q '"minimumNextBid"[[:space:]]*:[[:space:]]*200' "${PUBLIC_AUCTION_PRICE_B
 PUBLIC_AUCTION_BIDS_STATUS="$(
     curl -sS -o "${PUBLIC_AUCTION_BIDS_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids?pageSize=5"
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids?page_size=5"
 )"
 [[ "${PUBLIC_AUCTION_BIDS_STATUS}" == "200" ]]
-grep -q '"bidStatus"[[:space:]]*:[[:space:]]*"WINNING"' "${PUBLIC_AUCTION_BIDS_BODY}"
-grep -q '"bidAmount"[[:space:]]*:[[:space:]]*180' "${PUBLIC_AUCTION_BIDS_BODY}"
+grep -q '"bid_status"[[:space:]]*:[[:space:]]*"WINNING"' "${PUBLIC_AUCTION_BIDS_BODY}"
+grep -q '"bid_amount"[[:space:]]*:[[:space:]]*180' "${PUBLIC_AUCTION_BIDS_BODY}"
 
 PUBLIC_BID_REQUEST_ID="HTTP-BID-${PUBLIC_AUCTION_ID}"
 PUBLIC_BID_SUCCESS_STATUS="$(
@@ -646,33 +650,33 @@ PUBLIC_BID_SUCCESS_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${BIDDER_TOKEN}" \
-        --data "{\"requestId\":\"${PUBLIC_BID_REQUEST_ID}\",\"bidAmount\":220.00}" \
+        --data "{\"request_id\":\"${PUBLIC_BID_REQUEST_ID}\",\"bid_amount\":220.00}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids"
 )"
 [[ "${PUBLIC_BID_SUCCESS_STATUS}" == "200" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*0' "${PUBLIC_BID_SUCCESS_BODY}"
-grep -q '"bidAmount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_SUCCESS_BODY}"
-grep -q '"bidStatus"[[:space:]]*:[[:space:]]*"WINNING"' "${PUBLIC_BID_SUCCESS_BODY}"
-grep -q '"currentHighestPrice"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_SUCCESS_BODY}"
+grep -q '"bid_amount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_SUCCESS_BODY}"
+grep -q '"bid_status"[[:space:]]*:[[:space:]]*"WINNING"' "${PUBLIC_BID_SUCCESS_BODY}"
+grep -q '"current_price"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_SUCCESS_BODY}"
 
 PUBLIC_BID_RETRY_STATUS="$(
     curl -sS -o "${PUBLIC_BID_RETRY_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${BIDDER_TOKEN}" \
-        --data "{\"requestId\":\"${PUBLIC_BID_REQUEST_ID}\",\"bidAmount\":220.00}" \
+        --data "{\"request_id\":\"${PUBLIC_BID_REQUEST_ID}\",\"bid_amount\":220.00}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids"
 )"
 [[ "${PUBLIC_BID_RETRY_STATUS}" == "200" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*0' "${PUBLIC_BID_RETRY_BODY}"
-grep -q '"bidAmount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_RETRY_BODY}"
+grep -q '"bid_amount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_RETRY_BODY}"
 
 PUBLIC_BID_CONFLICT_STATUS="$(
     curl -sS -o "${PUBLIC_BID_CONFLICT_BODY}" -w "%{http_code}" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${BIDDER_TOKEN}" \
-        --data "{\"requestId\":\"${PUBLIC_BID_REQUEST_ID}\",\"bidAmount\":240.00}" \
+        --data "{\"request_id\":\"${PUBLIC_BID_REQUEST_ID}\",\"bid_amount\":240.00}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids"
 )"
 [[ "${PUBLIC_BID_CONFLICT_STATUS}" == "409" ]]
@@ -683,10 +687,10 @@ PUBLIC_BID_LOW_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${BIDDER_TOKEN}" \
-        --data "{\"requestId\":\"HTTP-BID-LOW-${PUBLIC_AUCTION_ID}\",\"bidAmount\":230.00}" \
+        --data "{\"request_id\":\"HTTP-BID-LOW-${PUBLIC_AUCTION_ID}\",\"bid_amount\":230.00}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids"
 )"
-[[ "${PUBLIC_BID_LOW_STATUS}" == "400" ]]
+[[ "${PUBLIC_BID_LOW_STATUS}" == "409" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*4406' "${PUBLIC_BID_LOW_BODY}"
 
 PUBLIC_BID_MY_STATUS="$(
@@ -711,12 +715,12 @@ grep -q '"minimumNextBid"[[:space:]]*:[[:space:]]*240' "${PUBLIC_BID_PRICE_AFTER
 PUBLIC_BID_BIDS_AFTER_STATUS="$(
     curl -sS -o "${PUBLIC_BID_BIDS_AFTER_BODY}" -w "%{http_code}" \
         -H "Accept: application/json" \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids?pageSize=5"
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids?page_size=5"
 )"
 [[ "${PUBLIC_BID_BIDS_AFTER_STATUS}" == "200" ]]
-grep -q '"bidStatus"[[:space:]]*:[[:space:]]*"WINNING"' "${PUBLIC_BID_BIDS_AFTER_BODY}"
-grep -q '"bidStatus"[[:space:]]*:[[:space:]]*"OUTBID"' "${PUBLIC_BID_BIDS_AFTER_BODY}"
-grep -q '"bidAmount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_BIDS_AFTER_BODY}"
+grep -q '"bid_status"[[:space:]]*:[[:space:]]*"WINNING"' "${PUBLIC_BID_BIDS_AFTER_BODY}"
+grep -q '"bid_status"[[:space:]]*:[[:space:]]*"OUTBID"' "${PUBLIC_BID_BIDS_AFTER_BODY}"
+grep -q '"bid_amount"[[:space:]]*:[[:space:]]*220' "${PUBLIC_BID_BIDS_AFTER_BODY}"
 
 BUYER_DEMO_LOGIN_STATUS="$(
     curl -sS -o "${BUYER_LOGIN_BODY}" -w "%{http_code}" \
@@ -764,7 +768,7 @@ PUBLIC_BID_NOTIFICATION_READ_STATUS="$(
 [[ "${PUBLIC_BID_NOTIFICATION_READ_STATUS}" == "200" ]]
 grep -q '"readStatus"[[:space:]]*:[[:space:]]*"READ"' "${PUBLIC_BID_NOTIFICATION_READ_BODY}"
 
-mysql --socket="${SOCKET_FILE}" -uroot "${TEST_DB_NAME}" <<SQL
+mysql $(mysql_test_env::mysql_args) "${TEST_DB_NAME}" <<SQL
 UPDATE auction
 SET end_time = DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL 1 SECOND),
     updated_at = CURRENT_TIMESTAMP(3)
@@ -776,14 +780,14 @@ PUBLIC_BID_EXPIRED_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${BIDDER_TOKEN}" \
-        --data "{\"requestId\":\"HTTP-BID-EXPIRED-${PUBLIC_AUCTION_ID}\",\"bidAmount\":240.00}" \
+        --data "{\"request_id\":\"HTTP-BID-EXPIRED-${PUBLIC_AUCTION_ID}\",\"bid_amount\":240.00}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/auctions/${PUBLIC_AUCTION_ID}/bids"
 )"
-[[ "${PUBLIC_BID_EXPIRED_STATUS}" == "400" ]]
+[[ "${PUBLIC_BID_EXPIRED_STATUS}" == "409" ]]
 grep -q '"code"[[:space:]]*:[[:space:]]*4403' "${PUBLIC_BID_EXPIRED_BODY}"
 
 ORDER_NO="HTTP-ORDER-${PUBLIC_AUCTION_ID}-$(date +%s%N)"
-mysql --socket="${SOCKET_FILE}" -uroot "${TEST_DB_NAME}" <<SQL
+mysql $(mysql_test_env::mysql_args) "${TEST_DB_NAME}" <<SQL
 UPDATE item
 SET item_status = 'IN_AUCTION', updated_at = CURRENT_TIMESTAMP(3)
 WHERE item_id = ${ITEM_ID};
@@ -817,7 +821,7 @@ INSERT INTO order_info (
 SQL
 
 ORDER_ID="$(
-    mysql --socket="${SOCKET_FILE}" -uroot "${TEST_DB_NAME}" -Nse \
+    mysql $(mysql_test_env::mysql_args) "${TEST_DB_NAME}" -Nse \
         "SELECT order_id FROM order_info WHERE order_no = '${ORDER_NO}' LIMIT 1"
 )"
 if [[ -z "${ORDER_ID}" ]]; then
@@ -994,8 +998,8 @@ ORDER_SHIP_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/orders/${ORDER_ID}/ship"
 )"
 [[ "${ORDER_SHIP_STATUS}" == "200" ]]
-grep -q '"oldStatus"[[:space:]]*:[[:space:]]*"PAID"' "${ORDER_SHIP_BODY}"
-grep -q '"newStatus"[[:space:]]*:[[:space:]]*"SHIPPED"' "${ORDER_SHIP_BODY}"
+grep -q '"old_status"[[:space:]]*:[[:space:]]*"PAID"' "${ORDER_SHIP_BODY}"
+grep -q '"new_status"[[:space:]]*:[[:space:]]*"SHIPPED"' "${ORDER_SHIP_BODY}"
 
 ORDER_SHIP_RETRY_STATUS="$(
     curl -sS -o "${ORDER_SHIP_RETRY_BODY}" -w "%{http_code}" \
@@ -1025,8 +1029,8 @@ ORDER_CONFIRM_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/orders/${ORDER_ID}/confirm-receipt"
 )"
 [[ "${ORDER_CONFIRM_STATUS}" == "200" ]]
-grep -q '"oldStatus"[[:space:]]*:[[:space:]]*"SHIPPED"' "${ORDER_CONFIRM_BODY}"
-grep -q '"newStatus"[[:space:]]*:[[:space:]]*"COMPLETED"' "${ORDER_CONFIRM_BODY}"
+grep -q '"old_status"[[:space:]]*:[[:space:]]*"SHIPPED"' "${ORDER_CONFIRM_BODY}"
+grep -q '"new_status"[[:space:]]*:[[:space:]]*"COMPLETED"' "${ORDER_CONFIRM_BODY}"
 
 ORDER_CONFIRM_RETRY_STATUS="$(
     curl -sS -o "${ORDER_CONFIRM_RETRY_BODY}" -w "%{http_code}" \
@@ -1239,13 +1243,13 @@ REJECT_ITEM_CREATE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"title\":\"${REJECT_ITEM_TITLE}\",\"description\":\"HTTP reject item\",\"categoryId\":1,\"startPrice\":50.00,\"coverImageUrl\":\"\"}" \
+        --data "{\"title\":\"${REJECT_ITEM_TITLE}\",\"description\":\"HTTP reject item\",\"category_id\":1,\"start_price\":50.00,\"cover_image_url\":\"\"}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
 )"
 [[ "${REJECT_ITEM_CREATE_STATUS}" == "200" ]]
 REJECT_ITEM_ID="$(
     tr -d '\n' <"${REJECT_ITEM_CREATE_BODY}" |
-        sed -n 's/.*"itemId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+        sed -n 's/.*"item_id"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
 )"
 if [[ -z "${REJECT_ITEM_ID}" ]]; then
     echo "failed to extract reject item id" >&2
@@ -1257,7 +1261,7 @@ REJECT_ITEM_IMAGE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"imageUrl\":\"/uploads/http/${REGISTER_USERNAME}/reject.jpg\",\"isCover\":true}" \
+        --data "{\"image_url\":\"/uploads/http/${REGISTER_USERNAME}/reject.jpg\",\"is_cover\":true}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}/images"
 )"
 [[ "${REJECT_ITEM_IMAGE_STATUS}" == "200" ]]
@@ -1267,7 +1271,7 @@ REJECT_ITEM_SUBMIT_STATUS="$(
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
         -X POST \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}/submit-audit"
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}/submit-review"
 )"
 [[ "${REJECT_ITEM_SUBMIT_STATUS}" == "200" ]]
 
@@ -1276,12 +1280,12 @@ REJECT_AUDIT_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${TOKEN}" \
-        --data '{"auditStatus":"REJECTED","reason":"image is not authentic"}' \
-        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${REJECT_ITEM_ID}/audit"
+        --data '{"reason":"image is not authentic"}' \
+        "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${REJECT_ITEM_ID}/reject"
 )"
 [[ "${REJECT_AUDIT_STATUS}" == "200" ]]
-grep -q '"auditStatus"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_AUDIT_BODY}"
-grep -q '"newStatus"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_AUDIT_BODY}"
+grep -q '"audit_result"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_AUDIT_BODY}"
+grep -q '"new_status"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_AUDIT_BODY}"
 
 REJECT_ITEM_DETAIL_STATUS="$(
     curl -sS -o "${REJECT_ITEM_DETAIL_BODY}" -w "%{http_code}" \
@@ -1290,7 +1294,7 @@ REJECT_ITEM_DETAIL_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items/${REJECT_ITEM_ID}"
 )"
 [[ "${REJECT_ITEM_DETAIL_STATUS}" == "200" ]]
-grep -q '"itemStatus"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_ITEM_DETAIL_BODY}"
+grep -q '"item_status"[[:space:]]*:[[:space:]]*"REJECTED"' "${REJECT_ITEM_DETAIL_BODY}"
 grep -q 'image is not authentic' "${REJECT_ITEM_DETAIL_BODY}"
 
 AUDIT_LOGS_STATUS="$(
@@ -1300,7 +1304,7 @@ AUDIT_LOGS_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/items/${REJECT_ITEM_ID}/audit-logs"
 )"
 [[ "${AUDIT_LOGS_STATUS}" == "200" ]]
-grep -q '"auditResult"[[:space:]]*:[[:space:]]*"REJECTED"' "${AUDIT_LOGS_BODY}"
+grep -q '"audit_result"[[:space:]]*:[[:space:]]*"REJECTED"' "${AUDIT_LOGS_BODY}"
 
 REGISTER_LOGOUT_STATUS="$(
     curl -sS -o "${REGISTER_LOGOUT_BODY}" -w "%{http_code}" \
@@ -1451,8 +1455,8 @@ ADMIN_STATUS="$(
         "http://${SERVER_HOST}:${SERVER_PORT}/api/admin/users/${REGISTER_USER_ID}/status"
 )"
 [[ "${ADMIN_STATUS}" == "200" ]]
-grep -q '"oldStatus"[[:space:]]*:[[:space:]]*"ACTIVE"' "${ADMIN_STATUS_BODY}"
-grep -q '"newStatus"[[:space:]]*:[[:space:]]*"FROZEN"' "${ADMIN_STATUS_BODY}"
+grep -q '"old_status"[[:space:]]*:[[:space:]]*"ACTIVE"' "${ADMIN_STATUS_BODY}"
+grep -q '"new_status"[[:space:]]*:[[:space:]]*"FROZEN"' "${ADMIN_STATUS_BODY}"
 
 FROZEN_LOGIN_STATUS="$(
     curl -sS -o "${FROZEN_LOGIN_BODY}" -w "%{http_code}" \

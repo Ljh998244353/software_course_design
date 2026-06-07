@@ -76,6 +76,9 @@ else()
 endif()
 
 set(AUCTION_CORE_SOURCES
+    src/access/http/api_error_http.cpp
+    src/access/http/app_http.cpp
+    src/access/http/audit_http.cpp
     src/access/http/auction_admin_http.cpp
     src/access/http/auction_http.cpp
     src/access/http/auction_public_http.cpp
@@ -84,7 +87,13 @@ set(AUCTION_CORE_SOURCES
     src/access/http/bid_http.cpp
     src/access/http/health_http.cpp
     src/access/http/item_http.cpp
+    src/access/http/notification_http.cpp
+    src/access/http/ops_http.cpp
     src/access/http/order_http.cpp
+    src/access/http/payment_http.cpp
+    src/access/http/review_http.cpp
+    src/access/http/statistics_http.cpp
+    src/access/http/system_http.cpp
     src/access/http/admin_http.cpp
     src/application/database_health_service.cpp
     src/application/health_service.cpp
