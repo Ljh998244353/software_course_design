@@ -13,6 +13,7 @@ FRONTEND_PORT="3000"
 BACKEND_LOG="${BUILD_DIR}/start_backend.log"
 FRONTEND_LOG="${BUILD_DIR}/start_frontend.log"
 MYSQL_RUNTIME_INFO="${BUILD_DIR}/start_mysql_runtime.info"
+MYSQL_RUNTIME_ROOT="${BUILD_DIR}/local_mysql/runtime"
 PREPARED_RUNTIME_CONFIG=""
 SELECTED_C_COMPILER=""
 SELECTED_CXX_COMPILER=""
@@ -70,6 +71,7 @@ show_help() {
 说明:
   启动后端前会执行 --check-config 和 --check-db。
   如果数据库不可用，脚本会先尝试自动拉起仓库用户态本地 MySQL；
+  fallback MySQL 使用 ${MYSQL_RUNTIME_ROOT} 作为持久数据目录，重启后保留业务数据；
   若当前环境禁止 mysqld 监听 socket/TCP 或 fallback 仍失败，则会直接退出并提示错误日志位置。
 
 日志:
@@ -302,6 +304,10 @@ last_mysql_error_log() {
         printf '%s\n' "${START_MYSQL_ROOT_DIR}/error.log"
         return 0
     fi
+    if [[ -f "${MYSQL_RUNTIME_ROOT}/error.log" ]]; then
+        printf '%s\n' "${MYSQL_RUNTIME_ROOT}/error.log"
+        return 0
+    fi
 
     local latest_log
     latest_log="$(find "${BUILD_DIR}/test_mysql" -maxdepth 2 -name 'error.log' -print 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n 1)"
@@ -374,8 +380,9 @@ preflight_backend() {
     step "检查数据库连通性"
     if ! AUCTION_APP_CONFIG="${runtime_config}" "${BUILD_DIR}/bin/auction_app" --check-db >/dev/null; then
         warn "当前配置数据库不可用，尝试自动拉起仓库本地 MySQL 运行时"
-        step "初始化本地 MySQL 运行时"
-        if ! "${ROOT_DIR}/scripts/db/setup_local_mysql.sh" >"${MYSQL_RUNTIME_INFO}"; then
+        step "初始化持久本地 MySQL 运行时: ${MYSQL_RUNTIME_ROOT}"
+        if ! AUCTION_TEST_MYSQL_ROOT_DIR="${MYSQL_RUNTIME_ROOT}" \
+            "${ROOT_DIR}/scripts/db/setup_local_mysql.sh" >"${MYSQL_RUNTIME_INFO}"; then
             load_mysql_runtime_info "${MYSQL_RUNTIME_INFO}" || true
             local mysql_error_log=""
             mysql_error_log="$(last_mysql_error_log || true)"
@@ -571,6 +578,9 @@ EOF
         printf '后端: http://%s:%s\n' "${BACKEND_HOST}" "${BACKEND_PORT}"
         printf '健康检查: http://%s:%s/healthz\n' "${BACKEND_HOST}" "${BACKEND_PORT}"
         printf '后端配置: %s\n' "${BACKEND_CONFIG}"
+        if [[ -n "${START_MYSQL_ROOT_DIR:-}" ]]; then
+            printf '本地 MySQL 数据目录: %s\n' "${START_MYSQL_ROOT_DIR}"
+        fi
     fi
     printf '后端日志: %s\n' "${BACKEND_LOG}"
     printf '前端日志: %s\n' "${FRONTEND_LOG}"

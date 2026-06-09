@@ -2,11 +2,17 @@
 
 ## 新会话最小恢复卡片
 
-- 当前主 Step: `Release-Final-System-Fix`
-- 当前唯一活动任务: 按 [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md) 执行最终上线完整系统修复
-- 当前执行阶段: `R7`
+- 当前主 Step: `Release-Maintenance`
+- 当前唯一活动任务: 修复 `start.sh` fallback MySQL 持久化，避免重启后拍卖历史丢失
+- 当前执行阶段: `Persistence-Fallback`
 - 当前状态: `已完成`
 - 最近一次已通过验证:
+  - `bash -n start.sh`
+  - `bash -n scripts/db/setup_local_mysql.sh`
+  - `cmake --build build`
+  - `scripts/test.sh auction`（非沙箱环境，需本地 MySQL socket/TCP）
+  - `scripts/test.sh bid`（非沙箱环境，需本地 MySQL socket/TCP）
+  - `git diff --check`
   - `scripts/test.sh http`
   - `scripts/test.sh risk`
   - `ctest --test-dir build --output-on-failure`
@@ -22,8 +28,9 @@
   - `./start.sh --config config/app.local.json`
   - `scripts/deploy/verify_release.sh`
 - 当前阻塞/风险:
+  - `start.sh` 的自动 fallback MySQL 已改为复用 `build/local_mysql/runtime` 持久数据目录；测试与发布验证仍使用 `build/test_mysql/run-*` 临时库
   - `start.sh` 已修复 WSL 中误复用 `/mnt/c/.../*.exe` 编译器缓存的问题；若用户此前 build 目录已被 Windows clang 污染，脚本现在会自动重置 `CMakeCache.txt` 和 `CMakeFiles/`
-  - Codex 沙箱仍无法自行复现本地 `mysqld` 监听，因此本轮只验证到“编译恢复正常并进入数据库检查”阶段；你本机仍可继续按原方式完成最终启动验收
+  - Codex 沙箱仍无法自行复现本地 `mysqld` 监听；依赖 MySQL socket/TCP 的模块测试需在非沙箱本机环境运行
   - `schedule.md` 仍需持续保持短恢复入口，不再回涨为长历史流水
 - 下一步唯一动作:
   - 后续仅按新增需求维护，不再进行“最终修复计划”范围内的收口工作
@@ -53,8 +60,8 @@
 
 ### 1. 基本信息
 
-- Step ID: `Release-Final-System-Fix`
-- 模块名称: 最终上线完整系统修复
+- Step ID: `Release-Maintenance`
+- 模块名称: 启动链路与本地持久化维护
 - 当前状态: `已完成`
 - 统一进度文档: [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 详细执行计划: [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
@@ -74,6 +81,17 @@
 
 ### 3. 本轮实际完成
 
+- 已修复重启后拍卖历史丢失的根因：
+  - 业务仓储层本身已使用 MySQL 持久化 `auction`、`bid_record`、`order_info` 等交易事实
+  - 问题来自 `start.sh` 在配置数据库不可用时调用 `scripts/db/setup_local_mysql.sh`，而该脚本默认使用 `build/test_mysql/run-$$` 临时目录
+  - `start.sh` 现已显式传入 `AUCTION_TEST_MYSQL_ROOT_DIR=build/local_mysql/runtime`，使产品启动 fallback 复用同一数据目录
+  - 启动结束只停止本次自动拉起的 `mysqld`，不删除 `build/local_mysql/runtime`，因此后续重启可继续读取历史拍卖、出价、订单和支付数据
+- 已保持测试库隔离：
+  - `scripts/test_*.sh` 与 `scripts/deploy/verify_release.sh` 未改动，继续使用 `build/test_mysql/run-*` 临时库
+  - 测试和发布验证不会污染 `start.sh` 的本地持久运行库
+- 已同步文档：
+  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
+  - [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md)
 - 已修复前端大厅/首页对拍卖列表真实响应格式的兼容缺陷：
   - 当前运行后端 `/api/auctions` 返回 `{ list, pageNo, pageSize, total }` 与 camelCase 字段
   - 前端此前仍按“直接数组 + snake_case”解析，导致在后端正常返回空列表时被误判为加载失败
@@ -170,6 +188,12 @@
 ### 4. 当前验证结果
 
 - 已通过：
+  - `bash -n start.sh`
+  - `bash -n scripts/db/setup_local_mysql.sh`
+  - `cmake --build build`
+  - `scripts/test.sh auction`（非沙箱环境，3/3 通过）
+  - `scripts/test.sh bid`（非沙箱环境，3/3 通过）
+  - `git diff --check`
   - `scripts/test.sh http`
   - `scripts/test.sh risk`
   - `ctest --test-dir build --output-on-failure`
