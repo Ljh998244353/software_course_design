@@ -4,12 +4,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Gavel, LogOut, Search, User } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getNotifications } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth-context";
+import { queryKeys } from "@/lib/query/keys";
 
 export function SiteNav() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [keyword, setKeyword] = useState("");
+  const notificationsQuery = useQuery({
+    queryKey: queryKeys.notifications(true),
+    queryFn: () => getNotifications(true),
+    enabled: Boolean(user) && !loading,
+    refetchInterval: 5000,
+  });
+  const unreadCount = notificationsQuery.data?.unreadCount ?? 0;
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,8 +68,13 @@ export function SiteNav() {
             </Link>
           )}
           {user && (
-            <Link className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700" href="/notifications">
+            <Link className="relative rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700" href="/notifications">
               通知
+              {unreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white shadow-card">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              ) : null}
             </Link>
           )}
           {user?.role_code === "ADMIN" && (

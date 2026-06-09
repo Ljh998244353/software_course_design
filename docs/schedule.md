@@ -40,6 +40,19 @@
   - `scripts/test.sh frontend`
   - `scripts/test.sh e2e`（非沙箱环境，6/6 通过）
   - `git diff --check`
+  - `cmake --build build`
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run build`
+  - `scripts/test.sh auction`
+  - `scripts/test.sh payment`（非沙箱环境，3/3 通过；Codex 沙箱内临时 MySQL 启动失败）
+  - `cd frontend && npm run test:e2e`（非沙箱环境，9/9 通过；Codex 沙箱内 Next dev server 启动失败）
+  - `cmake --build build`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run test:e2e`（9/9 通过，覆盖通知红点、右下角弹窗和已读接口）
+  - `scripts/test.sh item`
+  - `scripts/test.sh integration`（非沙箱环境，2/2 通过；Codex 沙箱内临时 MySQL 启动失败）
+  - `git diff --check`
 - 当前阻塞/风险:
   - 需求覆盖矩阵、注册 UI、拍品下架、订单履约/评价/通知前端闭环、运维真实数据入口、性能脚本与 E2E 骨架已补齐
   - 当前工作区已有 Playwright 相关未提交改动，需保留并在此基础上扩展，不回滚
@@ -48,6 +61,7 @@
   - `start.sh` 的自动 fallback MySQL 已改为复用 `build/local_mysql/runtime` 持久数据目录；测试与发布验证仍使用 `build/test_mysql/run-*` 临时库
   - `start.sh` 已修复 WSL 中误复用 `/mnt/c/.../*.exe` 编译器缓存的问题；若用户此前 build 目录已被 Windows clang 污染，脚本现在会自动重置 `CMakeCache.txt` 和 `CMakeFiles/`
   - Codex 沙箱仍无法自行复现本地 `mysqld` 监听；依赖 MySQL socket/TCP 的模块测试需在非沙箱本机环境运行
+  - 本轮已修复大厅登录空态、真实筛选、审核通知、提审/建拍/开拍/支付/履约通知、通知红点与右下角弹窗、已读接口和虚拟支付成功闭环；后续如继续改支付回调需保留不传 `confirmSuccess` 时的 WAITING_CALLBACK 安全测试路径
   - `schedule.md` 仍需持续保持短恢复入口，不再回涨为长历史流水
 - 下一步唯一动作:
   - 后续按新增答辩问题或验收反馈做增量维护；若需要性能证据，运行 `scripts/deploy/verify_release.sh --full`
@@ -68,6 +82,7 @@
   - 后端唯一主入口为真实 HTTP/WS 接口
   - 支付仅保留本地测试支付模型，用于完整链路演示
 - 当前主修复方向：
+  - `F17-UX-Fix` 大厅筛选、登录空态、审核通知和虚拟支付闭环：已完成
   - `Graduation-Excellence` 需求覆盖闭环与答辩证据补强：已完成
   - `Graduation-Excellence` Playwright 浏览器 E2E 基础设施：已完成
   - `R2` 启动链路稳定化：已完成
@@ -100,6 +115,25 @@
 
 ### 3. 本轮实际完成
 
+- 已修复拍卖大厅空态登录入口问题：
+  - 未登录且无拍品时继续显示“登录 / 注册”
+  - 已登录且无拍品时改为“发布拍品 / 查看通知 / 刷新列表”，不再跳回登录页
+- 已修复拍卖大厅筛选未对齐真实字段的问题：
+  - `/auction/hall` 分类已对齐种子数据：数码设备、图书文创、运动户外、校园收藏
+  - 分类、价格区间、卖家评分、有成交记录、交易方式都会写入 URL 并传给 `/api/auctions`
+  - `src/access/http/auction_public_http.cpp` 已解析上述参数，并返回分类、起拍价、加价幅度、卖家评分、成交记录、交易方式、地点、标签和描述等前端字段
+- 已补齐关键流程提示与通知闭环：
+  - 发布页继续在提交后提示“进入审核队列”
+  - `ItemService::SubmitForAudit` 现已在提审成功后给卖家写入 `ITEM_SUBMITTED_FOR_REVIEW`，并给所有可用管理员写入 `ITEM_REVIEW_REQUIRED`
+  - `ItemAuditService` 现已在审核事务提交后给卖家写入 `ITEM_REVIEW_APPROVED` / `ITEM_REVIEW_REJECTED` 站内通知，通知失败不回滚审核
+  - `AuctionService` 现已在管理员创建/修改/取消拍卖、系统自动开拍和无出价流拍后给卖家补发 `AUCTION_SCHEDULED` / `AUCTION_SCHEDULE_UPDATED` / `AUCTION_CANCELLED` / `AUCTION_STARTED` / `AUCTION_UNSOLD` 站内通知
+  - 竞价成功/被超价继续通过 Toast 与站内通知提示，成交和支付通知继续走现有订单/支付通知服务
+  - 前端全局导航会轮询未读通知并显示红点计数，新增未读通知会在右下角弹窗提示
+  - `/api/notifications/{id}/read` 已修正为 Drogon 命名占位符并支持 `PATCH/POST` 与 CORS 预检，点击“已读”不再误报无法连接后端
+- 已收敛虚拟支付体验：
+  - 前端支付页提交 `confirm_success=true`
+  - 后端 `/api/orders/{id}/pay` 在该开关下会创建或复用支付单并立即生成本地 mock 成功回调，推进订单到 `PAID`，拍卖/拍品到 `SOLD`
+  - 不传 `confirmSuccess` 时仍保留 `WAITING_CALLBACK` 模型，用于支付回调签名、金额和幂等测试
 - 已新增 [毕业设计需求覆盖矩阵.md](/home/ljh/project/soft_course_design/docs/毕业设计需求覆盖矩阵.md)，按需求规格说明书覆盖系统目标、8 个模块、主流程、非功能需求和验证证据
 - 已补齐卖家拍品下架：
   - 后端新增 `POST /api/items/{id}/offline`
@@ -224,6 +258,13 @@
 - 已在本机正常 shell 中完成最终实跑验收：
   - `./start.sh --config config/app.local.json`
   - `scripts/deploy/verify_release.sh`
+  - `cmake --build build`（含提审、拍卖状态通知和通知已读路由修复）
+  - `cd frontend && npm run build`（含通知红点和右下角弹窗）
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run test:e2e`（9/9 通过）
+  - `scripts/test.sh item`
+  - `scripts/test.sh integration`（非沙箱环境，2/2 通过；Codex 沙箱内临时 MySQL 启动失败）
+  - `git diff --check`
 
 ### 4. 当前验证结果
 

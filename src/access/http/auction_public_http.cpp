@@ -65,6 +65,25 @@ int ParsePositiveInt(const std::string& raw_value, const std::string& field_name
     return static_cast<int>(value);
 }
 
+double ParseNonNegativeDouble(const std::string& raw_value, const std::string& field_name) {
+    std::size_t parsed_length = 0;
+    const auto value = std::stod(raw_value, &parsed_length);
+    if (parsed_length != raw_value.size() || value < 0.0) {
+        throw std::invalid_argument(field_name + " must be a non-negative number");
+    }
+    return value;
+}
+
+bool ParseBool(const std::string& raw_value, const std::string& field_name) {
+    if (raw_value == "true" || raw_value == "1") {
+        return true;
+    }
+    if (raw_value == "false" || raw_value == "0") {
+        return false;
+    }
+    throw std::invalid_argument(field_name + " must be true or false");
+}
+
 std::optional<std::string> NormalizeOptionalString(std::optional<std::string> raw_value) {
     if (!raw_value.has_value() || raw_value->empty()) {
         return std::nullopt;
@@ -91,9 +110,20 @@ Json::Value ToPublicAuctionSummaryJson(const modules::auction::PublicAuctionSumm
     json["auctionId"] = static_cast<Json::UInt64>(auction.auction_id);
     json["itemId"] = static_cast<Json::UInt64>(auction.item_id);
     json["title"] = auction.title;
+    json["categoryName"] = auction.category_name;
     json["coverImageUrl"] = auction.cover_image_url;
     json["status"] = auction.status;
+    json["startPrice"] = auction.start_price;
     json["currentPrice"] = auction.current_price;
+    json["bidStep"] = auction.bid_step;
+    json["sellerUsername"] = auction.seller_username;
+    json["sellerRating"] = auction.seller_rating;
+    json["sellerDeals"] = auction.seller_deals;
+    json["watcherCount"] = auction.watcher_count;
+    json["tradeMode"] = auction.trade_mode;
+    json["location"] = auction.location;
+    json["tagsJson"] = auction.tags_json;
+    json["description"] = auction.description;
     json["startTime"] = auction.start_time;
     json["endTime"] = auction.end_time;
     json["acceptingBids"] = IsAcceptingBids(auction.status);
@@ -121,11 +151,20 @@ Json::Value ToPublicAuctionDetailJson(const modules::auction::PublicAuctionDetai
     json["auctionId"] = static_cast<Json::UInt64>(detail.auction_id);
     json["itemId"] = static_cast<Json::UInt64>(detail.item_id);
     json["title"] = detail.title;
+    json["categoryName"] = detail.category_name;
     json["coverImageUrl"] = detail.cover_image_url;
     json["status"] = detail.status;
     json["startPrice"] = detail.start_price;
     json["currentPrice"] = detail.current_price;
     json["bidStep"] = detail.bid_step;
+    json["sellerUsername"] = detail.seller_username;
+    json["sellerRating"] = detail.seller_rating;
+    json["sellerDeals"] = detail.seller_deals;
+    json["watcherCount"] = detail.watcher_count;
+    json["tradeMode"] = detail.trade_mode;
+    json["location"] = detail.location;
+    json["tagsJson"] = detail.tags_json;
+    json["description"] = detail.description;
     json["startTime"] = detail.start_time;
     json["endTime"] = detail.end_time;
     json["antiSnipingWindowSeconds"] = detail.anti_sniping_window_seconds;
@@ -180,6 +219,32 @@ modules::auction::PublicAuctionQuery BuildPublicAuctionQuery(
     modules::auction::PublicAuctionQuery query;
     query.keyword = NormalizeOptionalString(request->getOptionalParameter<std::string>("keyword"));
     query.status = NormalizeOptionalString(request->getOptionalParameter<std::string>("status"));
+    query.category = NormalizeOptionalString(request->getOptionalParameter<std::string>("category"));
+    query.trade_mode = NormalizeOptionalString(
+        request->getOptionalParameter<std::string>("trade_mode")
+    );
+
+    const auto price_min = request->getOptionalParameter<std::string>("price_min");
+    if (price_min.has_value() && !price_min->empty()) {
+        query.price_min = ParseNonNegativeDouble(*price_min, "price_min");
+    }
+    const auto price_max = request->getOptionalParameter<std::string>("price_max");
+    if (price_max.has_value() && !price_max->empty()) {
+        query.price_max = ParseNonNegativeDouble(*price_max, "price_max");
+    }
+    if (query.price_min.has_value() && query.price_max.has_value() &&
+        *query.price_min > *query.price_max) {
+        throw std::invalid_argument("price_min must be less than or equal to price_max");
+    }
+    const auto seller_rating = request->getOptionalParameter<std::string>("seller_rating");
+    if (seller_rating.has_value() && !seller_rating->empty()) {
+        query.seller_rating_min = ParseNonNegativeDouble(*seller_rating, "seller_rating");
+    }
+    const auto seller_has_deals =
+        request->getOptionalParameter<std::string>("seller_has_deals");
+    if (seller_has_deals.has_value() && !seller_has_deals->empty()) {
+        query.seller_has_deals = ParseBool(*seller_has_deals, "seller_has_deals");
+    }
 
     const auto page_no = request->getOptionalParameter<std::string>("pageNo");
     if (page_no.has_value() && !page_no->empty()) {

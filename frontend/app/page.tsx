@@ -80,7 +80,7 @@ export default function HomePage() {
 
         <section className="border-y border-slate-200 bg-white/72">
           <div className="mx-auto flex max-w-7xl gap-3 overflow-x-auto px-4 py-4 sm:px-6 lg:px-8">
-            {["数码3C", "运动装备", "图书教材", "生活闲置"].map((category) => (
+            {["数码设备", "图书文创", "运动户外", "校园收藏"].map((category) => (
               <Link
                 key={category}
                 href={`/auction/hall?category=${encodeURIComponent(category)}`}

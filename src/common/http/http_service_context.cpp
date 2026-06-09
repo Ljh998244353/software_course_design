@@ -18,9 +18,9 @@ HttpServiceContext::HttpServiceContext(
             event_gateway_ ? event_gateway_ : (event_gateway_ = std::make_shared<ws::InMemoryAuctionEventGateway>())
         )
     ),
-    item_service_(config_, project_root_, auth_middleware_),
-    item_audit_service_(config_, project_root_, auth_middleware_),
-    auction_service_(config_, project_root_, auth_middleware_),
+    item_service_(config_, project_root_, auth_middleware_, &notification_service_),
+    item_audit_service_(config_, project_root_, auth_middleware_, &notification_service_),
+    auction_service_(config_, project_root_, auth_middleware_, &notification_service_),
     bid_service_(
         config_,
         project_root_,

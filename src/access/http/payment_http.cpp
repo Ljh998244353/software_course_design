@@ -44,6 +44,7 @@ modules::payment::InitiatePaymentRequest BuildInitiatePaymentRequest(const Json:
     }
     return modules::payment::InitiatePaymentRequest{
         .pay_channel = pay_channel.value_or(""),
+        .confirm_success = body.get("confirmSuccess", body.get("confirm_success", false)).asBool(),
     };
 }
 

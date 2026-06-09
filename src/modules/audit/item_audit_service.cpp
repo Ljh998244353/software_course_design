@@ -5,6 +5,7 @@
 
 #include "common/db/mysql_connection.h"
 #include "common/errors/error_code.h"
+#include "common/logging/logger.h"
 #include "modules/auth/auth_types.h"
 #include "modules/item/item_exception.h"
 #include "repository/item_repository.h"
@@ -38,15 +39,33 @@ modules::item::ItemRecord LoadItemOrThrow(
     return *item;
 }
 
+void CreateStationNoticeSafely(
+    modules::notification::NotificationService* notification_service,
+    const modules::notification::StationNoticeRequest& request
+) {
+    if (notification_service == nullptr) {
+        return;
+    }
+    try {
+        notification_service->CreateStationNotice(request);
+    } catch (const std::exception& exception) {
+        common::logging::Logger::Instance().Warn(
+            "item audit station notice create failed: " + std::string(exception.what())
+        );
+    }
+}
+
 }  // namespace
 
 ItemAuditService::ItemAuditService(
     const common::config::AppConfig& config,
     std::filesystem::path project_root,
-    middleware::AuthMiddleware& auth_middleware
+    middleware::AuthMiddleware& auth_middleware,
+    modules::notification::NotificationService* notification_service
 ) : mysql_config_(config.mysql),
     project_root_(std::move(project_root)),
-    auth_middleware_(&auth_middleware) {}
+    auth_middleware_(&auth_middleware),
+    notification_service_(notification_service) {}
 
 std::vector<modules::item::PendingAuditItemSummary> ItemAuditService::ListPendingItems(
     const std::string_view authorization_header
@@ -121,6 +140,24 @@ modules::item::AuditItemResult ItemAuditService::AuditItem(
     }
 
     const auto updated = LoadItemOrThrow(repository, item_id);
+    CreateStationNoticeSafely(
+        notification_service_,
+        modules::notification::StationNoticeRequest{
+            .user_id = item.seller_id,
+            .notice_type = audit_result == modules::item::kAuditResultApproved
+                               ? "ITEM_REVIEW_APPROVED"
+                               : "ITEM_REVIEW_REJECTED",
+            .title = audit_result == modules::item::kAuditResultApproved
+                         ? "Item review approved"
+                         : "Item review rejected",
+            .content = audit_result == modules::item::kAuditResultApproved
+                           ? "Item \"" + item.title +
+                                 "\" has been approved and is ready for auction creation."
+                           : "Item \"" + item.title + "\" was rejected. Reason: " + reason,
+            .biz_type = "ITEM",
+            .biz_id = item_id,
+        }
+    );
     return modules::item::AuditItemResult{
         .item_id = item_id,
         .old_status = item.item_status,

@@ -11,6 +11,7 @@
 
 #include "common/db/mysql_connection.h"
 #include "common/errors/error_code.h"
+#include "common/logging/logger.h"
 #include "modules/auth/auth_types.h"
 #include "modules/auction/auction_exception.h"
 #include "modules/item/item_types.h"
@@ -223,15 +224,33 @@ void InsertTaskLogSafely(
     }
 }
 
+void CreateStationNoticeSafely(
+    notification::NotificationService* notification_service,
+    const notification::StationNoticeRequest& request
+) {
+    if (notification_service == nullptr) {
+        return;
+    }
+    try {
+        notification_service->CreateStationNotice(request);
+    } catch (const std::exception& exception) {
+        common::logging::Logger::Instance().Warn(
+            "auction station notice create failed: " + std::string(exception.what())
+        );
+    }
+}
+
 }  // namespace
 
 AuctionService::AuctionService(
     const common::config::AppConfig& config,
     std::filesystem::path project_root,
-    middleware::AuthMiddleware& auth_middleware
+    middleware::AuthMiddleware& auth_middleware,
+    notification::NotificationService* notification_service
 ) : mysql_config_(config.mysql),
     project_root_(std::move(project_root)),
-    auth_middleware_(&auth_middleware) {}
+    auth_middleware_(&auth_middleware),
+    notification_service_(notification_service) {}
 
 CreateAuctionResult AuctionService::CreateAuction(
     const std::string_view authorization_header,
@@ -284,6 +303,19 @@ CreateAuctionResult AuctionService::CreateAuction(
         });
         connection.Commit();
 
+        CreateStationNoticeSafely(
+            notification_service_,
+            notification::StationNoticeRequest{
+                .user_id = item.seller_id,
+                .notice_type = "AUCTION_SCHEDULED",
+                .title = "Auction scheduled",
+                .content = "Item \"" + item.title + "\" has been scheduled for auction from " +
+                           normalized.start_time + " to " + normalized.end_time + ".",
+                .biz_type = "AUCTION",
+                .biz_id = created.auction_id,
+            }
+        );
+
         return CreateAuctionResult{
             .auction_id = created.auction_id,
             .item_id = created.item_id,
@@ -323,6 +355,7 @@ UpdateAuctionResult AuctionService::UpdatePendingAuction(
     try {
         const auto auction = LoadAuctionOrThrow(repository, auction_id, true);
         RequirePendingStartForUpdate(auction);
+        const auto item = LoadItemOrThrow(repository, auction.item_id, false);
 
         const auto normalized = NormalizeAndValidateConfig(
             request.start_time.value_or(auction.start_time),
@@ -343,6 +376,19 @@ UpdateAuctionResult AuctionService::UpdatePendingAuction(
             .extend_seconds = normalized.extend_seconds,
         });
         connection.Commit();
+
+        CreateStationNoticeSafely(
+            notification_service_,
+            notification::StationNoticeRequest{
+                .user_id = auction.seller_id,
+                .notice_type = "AUCTION_SCHEDULE_UPDATED",
+                .title = "Auction schedule updated",
+                .content = "Auction for item \"" + item.title + "\" has been updated to " +
+                           normalized.start_time + " through " + normalized.end_time + ".",
+                .biz_type = "AUCTION",
+                .biz_id = auction_id,
+            }
+        );
 
         return UpdateAuctionResult{
             .auction_id = updated.auction_id,
@@ -375,9 +421,23 @@ CancelAuctionResult AuctionService::CancelPendingAuction(
     try {
         const auto auction = LoadAuctionOrThrow(repository, auction_id, true);
         RequirePendingStartForCancel(auction);
+        const auto item = LoadItemOrThrow(repository, auction.item_id, false);
 
         repository.UpdateAuctionStatus(auction_id, std::string(kAuctionStatusCancelled));
         connection.Commit();
+
+        CreateStationNoticeSafely(
+            notification_service_,
+            notification::StationNoticeRequest{
+                .user_id = auction.seller_id,
+                .notice_type = "AUCTION_CANCELLED",
+                .title = "Auction cancelled",
+                .content = "Auction for item \"" + item.title +
+                           "\" has been cancelled by an administrator.",
+                .biz_type = "AUCTION",
+                .biz_id = auction_id,
+            }
+        );
 
         const auto updated = LoadAuctionOrThrow(repository, auction_id, false);
         return CancelAuctionResult{
@@ -518,6 +578,18 @@ AuctionScheduleResult AuctionService::StartDueAuctions() {
             connection.Commit();
             transaction_started = false;
 
+            CreateStationNoticeSafely(
+                notification_service_,
+                notification::StationNoticeRequest{
+                    .user_id = auction.seller_id,
+                    .notice_type = "AUCTION_STARTED",
+                    .title = "Auction started",
+                    .content = "Auction for item \"" + item.title + "\" has started.",
+                    .biz_type = "AUCTION",
+                    .biz_id = auction_id,
+                }
+            );
+
             ++result.succeeded;
             result.affected_auction_ids.push_back(auction_id);
             InsertTaskLogSafely(
@@ -621,6 +693,21 @@ AuctionScheduleResult AuctionService::FinishDueAuctions() {
             }
             connection.Commit();
             transaction_started = false;
+
+            if (!auction.highest_bidder_id.has_value()) {
+                CreateStationNoticeSafely(
+                    notification_service_,
+                    notification::StationNoticeRequest{
+                        .user_id = auction.seller_id,
+                        .notice_type = "AUCTION_UNSOLD",
+                        .title = "Auction ended without bids",
+                        .content = "Auction for item \"" + item.title +
+                                   "\" ended without a winning bid.",
+                        .biz_type = "AUCTION",
+                        .biz_id = auction_id,
+                    }
+                );
+            }
 
             ++result.succeeded;
             result.affected_auction_ids.push_back(auction_id);

@@ -554,6 +554,35 @@ int main() {
     assert(QueryItemStatusByAuction(config, project_root, success_context.auction_id) == "SOLD");
     assert(CountCallbackLogsByOrder(config, project_root, success_context.order_id) == 2);
 
+    const auto virtual_pay_context = CreateSettledOrder(
+        auth_service,
+        item_service,
+        item_audit_service,
+        auction_service,
+        bid_service,
+        auction_scheduler,
+        order_scheduler,
+        config,
+        project_root,
+        admin_header,
+        unique_suffix + "_virtual",
+        15
+    );
+    const auto virtual_paid = payment_service.InitiatePayment(
+        virtual_pay_context.buyer.header,
+        virtual_pay_context.order_id,
+        {
+            .pay_channel = "MOCK_WECHAT",
+            .confirm_success = true,
+        }
+    );
+    assert(virtual_paid.pay_status == "SUCCESS");
+    assert(QueryOrderStatus(config, project_root, virtual_pay_context.order_id) == "PAID");
+    assert(QueryPaymentStatusByOrder(config, project_root, virtual_pay_context.order_id) == "SUCCESS");
+    assert(QueryAuctionStatus(config, project_root, virtual_pay_context.auction_id) == "SOLD");
+    assert(QueryItemStatusByAuction(config, project_root, virtual_pay_context.auction_id) == "SOLD");
+    assert(CountCallbackLogsByOrder(config, project_root, virtual_pay_context.order_id) == 1);
+
     const auto mismatch_context = CreateSettledOrder(
         auth_service,
         item_service,

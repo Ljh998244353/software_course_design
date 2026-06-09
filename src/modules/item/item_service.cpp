@@ -10,6 +10,7 @@
 
 #include "common/db/mysql_connection.h"
 #include "common/errors/error_code.h"
+#include "common/logging/logger.h"
 #include "modules/auth/auth_exception.h"
 #include "modules/auth/auth_types.h"
 #include "modules/item/item_exception.h"
@@ -210,15 +211,33 @@ void EnsureEditableItem(const ItemRecord& item) {
     }
 }
 
+void CreateStationNoticeSafely(
+    modules::notification::NotificationService* notification_service,
+    const modules::notification::StationNoticeRequest& request
+) {
+    if (notification_service == nullptr) {
+        return;
+    }
+    try {
+        notification_service->CreateStationNotice(request);
+    } catch (const std::exception& exception) {
+        common::logging::Logger::Instance().Warn(
+            "item station notice create failed: " + std::string(exception.what())
+        );
+    }
+}
+
 }  // namespace
 
 ItemService::ItemService(
     const common::config::AppConfig& config,
     std::filesystem::path project_root,
-    middleware::AuthMiddleware& auth_middleware
+    middleware::AuthMiddleware& auth_middleware,
+    modules::notification::NotificationService* notification_service
 ) : mysql_config_(config.mysql),
     project_root_(std::move(project_root)),
-    auth_middleware_(&auth_middleware) {}
+    auth_middleware_(&auth_middleware),
+    notification_service_(notification_service) {}
 
 CreateItemResult ItemService::CreateDraftItem(
     const std::string_view authorization_header,
@@ -469,6 +488,32 @@ SubmitAuditResult ItemService::SubmitForAudit(
     }
 
     const auto submitted = LoadItemOrThrow(repository, item_id);
+    CreateStationNoticeSafely(
+        notification_service_,
+        modules::notification::StationNoticeRequest{
+            .user_id = submitted.seller_id,
+            .notice_type = "ITEM_SUBMITTED_FOR_REVIEW",
+            .title = "Item submitted for review",
+            .content = "Item \"" + submitted.title +
+                       "\" has been submitted. Please wait for administrator review.",
+            .biz_type = "ITEM",
+            .biz_id = submitted.item_id,
+        }
+    );
+    for (const auto admin_id : repository.ListActiveAdminUserIds()) {
+        CreateStationNoticeSafely(
+            notification_service_,
+            modules::notification::StationNoticeRequest{
+                .user_id = admin_id,
+                .notice_type = "ITEM_REVIEW_REQUIRED",
+                .title = "New item pending review",
+                .content = "Seller submitted item \"" + submitted.title +
+                           "\". Please review it in the admin dashboard.",
+                .biz_type = "ITEM",
+                .biz_id = submitted.item_id,
+            }
+        );
+    }
     return SubmitAuditResult{
         .item_id = submitted.item_id,
         .item_status = submitted.item_status,

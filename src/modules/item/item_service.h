@@ -10,6 +10,7 @@
 #include "common/db/mysql_connection.h"
 #include "middleware/auth_middleware.h"
 #include "modules/item/item_types.h"
+#include "modules/notification/notification_service.h"
 
 namespace auction::modules::item {
 
@@ -18,7 +19,8 @@ public:
     ItemService(
         const common::config::AppConfig& config,
         std::filesystem::path project_root,
-        middleware::AuthMiddleware& auth_middleware
+        middleware::AuthMiddleware& auth_middleware,
+        modules::notification::NotificationService* notification_service = nullptr
     );
 
     [[nodiscard]] CreateItemResult CreateDraftItem(
@@ -66,6 +68,7 @@ private:
     common::config::MysqlConfig mysql_config_;
     std::filesystem::path project_root_;
     middleware::AuthMiddleware* auth_middleware_;
+    modules::notification::NotificationService* notification_service_;
 };
 
 }  // namespace auction::modules::item

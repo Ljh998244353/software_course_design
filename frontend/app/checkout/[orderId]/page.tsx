@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, Check, CheckCircle2, CreditCard, Loader2, WalletCards } from "lucide-react";
 import { useState } from "react";
@@ -48,6 +49,9 @@ function CheckoutPageContent() {
             </div>
             <h1 className="text-3xl font-black text-slate-950">支付成功</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">订单已进入履约阶段。</p>
+            <Link href="/orders" className="auction-transition mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-float hover:bg-indigo-700">
+              返回订单
+            </Link>
           </div>
         ) : isPaymentPending ? (
           <div className="py-14 text-center">

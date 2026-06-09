@@ -47,6 +47,63 @@ test("auction hall route is available", async ({ page }) => {
   await expect(page.getByText("详情页优先使用 WebSocket 实时通道")).toBeVisible();
 });
 
+test("auction hall empty state respects authenticated session", async ({ page }) => {
+  await mockAuthenticatedApi(page);
+  await page.route("**/api/auctions**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: 0,
+        message: "OK",
+        data: { list: [], total: 0, pageNo: 1, pageSize: 24 },
+      }),
+    }),
+  );
+
+  await page.goto("/auction/hall");
+
+  await expect(page.getByRole("heading", { name: "当前还没有在拍拍品" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "登录 / 注册" })).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("link", { name: "发布拍品" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "查看通知" })).toBeVisible();
+});
+
+test("auction hall filters are sent to the real list API", async ({ page }) => {
+  await page.route("**/api/auctions**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: 0,
+        message: "OK",
+        data: { list: [], total: 0, pageNo: 1, pageSize: 24 },
+      }),
+    }),
+  );
+
+  await page.goto("/auction/hall");
+  const categoryRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname === "/api/auctions" && url.searchParams.get("category") === "数码设备";
+  });
+  await page.getByRole("button", { name: "数码设备" }).click();
+  await categoryRequest;
+
+  const minPriceRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname === "/api/auctions" && url.searchParams.get("price_min") === "100";
+  });
+  await page.getByPlaceholder("最低").fill("100");
+  await page.getByPlaceholder("最低").blur();
+  await minPriceRequest;
+
+  const tradeModeRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname === "/api/auctions" && url.searchParams.get("trade_mode") === "MEETUP";
+  });
+  await page.getByLabel("校园当面交易").click();
+  await tradeModeRequest;
+});
+
 test("seller item offline workflow is reachable", async ({ page }) => {
   await mockAuthenticatedApi(page);
   await page.route("**/api/items/mine", (route) =>
@@ -119,7 +176,7 @@ test("order, review and notification entries are reachable", async ({ page }) =>
     }),
   );
   await page.route("**/api/notifications**", (route) =>
-    route.fulfill({
+    new URL(route.request().url()).pathname.endsWith("/read") ? route.fallback() : route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         code: 0,
@@ -144,14 +201,118 @@ test("order, review and notification entries are reachable", async ({ page }) =>
       }),
     }),
   );
+  await page.route("**/api/notifications/5/read", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: 0,
+        message: "OK",
+        data: {
+          notificationId: 5,
+          readStatus: "READ",
+          readAt: "2026-06-09T10:01:00Z",
+        },
+      }),
+    }),
+  );
 
   await page.goto("/orders");
   await expect(page.getByRole("heading", { name: "我的订单" })).toBeVisible();
   await expect(page.getByRole("button", { name: "评价" })).toBeVisible();
+  await expect(page.getByRole("navigation").getByRole("link", { name: /通知/ }).locator("span")).toHaveText("1");
+  await expect(page.getByRole("status").filter({ hasText: "价格变更" })).toBeVisible();
 
   await page.goto("/notifications");
   await expect(page.getByRole("heading", { name: "站内通知" })).toBeVisible();
   await expect(page.getByRole("button", { name: "已读" })).toBeVisible();
+  await page.getByRole("button", { name: "已读" }).click();
+  await expect(page.getByText("已标记为已读")).toBeVisible();
+});
+
+test("checkout confirms virtual payment successfully", async ({ page }) => {
+  await mockAuthenticatedApi(page);
+  await page.route("**/api/orders/7", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: 0,
+        message: "OK",
+        data: {
+          orderId: 7,
+          order_id: 7,
+          orderNo: "ORD7",
+          order_no: "ORD7",
+          auctionId: 3,
+          auction_id: 3,
+          buyerId: 2,
+          buyer_id: 2,
+          sellerId: 4,
+          seller_id: 4,
+          finalAmount: 260,
+          final_amount: 260,
+          orderStatus: "PENDING_PAYMENT",
+          order_status: "PENDING_PAYMENT",
+          payDeadlineAt: "2026-06-09T11:00:00Z",
+          pay_deadline_at: "2026-06-09T11:00:00Z",
+          paidAt: "",
+          paid_at: "",
+          shippedAt: "",
+          shipped_at: "",
+          completedAt: "",
+          completed_at: "",
+          createdAt: "2026-06-09T09:00:00Z",
+          created_at: "2026-06-09T09:00:00Z",
+          itemTitle: "待支付订单",
+          item_title: "待支付订单",
+          coverImageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80",
+          cover_image_url: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80",
+          buyerUsername: "buyer",
+          buyer_username: "buyer",
+          sellerUsername: "seller",
+          seller_username: "seller",
+          latestPayment: null,
+        },
+      }),
+    }),
+  );
+  await page.route("**/api/orders/7/pay", async (route) => {
+    const body = route.request().postDataJSON() as { confirm_success?: boolean; confirmSuccess?: boolean };
+    expect(body.confirm_success ?? body.confirmSuccess).toBe(true);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: 0,
+        message: "OK",
+        data: {
+          payment_id: 11,
+          paymentId: 11,
+          order_id: 7,
+          orderId: 7,
+          order_no: "ORD7",
+          orderNo: "ORD7",
+          payment_no: "PAY7",
+          paymentNo: "PAY7",
+          pay_channel: "MOCK_WECHAT",
+          payChannel: "MOCK_WECHAT",
+          pay_amount: 260,
+          payAmount: 260,
+          pay_status: "SUCCESS",
+          payStatus: "SUCCESS",
+          merchantNo: "COURSE_AUCTION",
+          pay_url: "mockpay://checkout",
+          payUrl: "mockpay://checkout",
+          expire_at: "2026-06-09T11:00:00Z",
+          expireAt: "2026-06-09T11:00:00Z",
+          reusedExisting: false,
+        },
+      }),
+    });
+  });
+
+  await page.goto("/checkout/7");
+  await page.getByRole("button", { name: "确认支付" }).click();
+  await expect(page.getByRole("heading", { name: "支付成功" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "返回订单" })).toBeVisible();
 });
 
 test("admin ops panel uses real API contract entries", async ({ page }) => {

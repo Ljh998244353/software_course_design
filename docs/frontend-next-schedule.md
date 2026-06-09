@@ -85,7 +85,7 @@
 
 - 顶部吸顶导航栏，高度 64px，白色 Surface，Logo、400px 搜索框、登录/注册按钮。
 - Hero Section 占据约 50% 视口高度，展示校园爆款或即将截标拍品。
-- Category Bar 使用胶囊按钮：数码3C、运动装备、图书教材、生活闲置。
+- Category Bar 使用胶囊按钮，并对齐当前种子分类：数码设备、图书文创、运动户外、校园收藏。
 - Product Grid 使用 4 列白色扁平卡片。
 - 卡片 Hover：上移 4px，边框转 Indigo，右下角浮现“查看竞价”箭头。
 - 倒计时变色：大于 12 小时灰色，1-12 小时 Amber，小于 5 分钟 Rose 并脉冲。
@@ -249,7 +249,10 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 实际完成：
 
 - 发布页已实现四步向导、图片 URL 占位上传、`localStorage` 草稿保存和 UUID v4 幂等令牌。
-- 支付页已实现支付方式选择、支付处理中状态和 Mock 成功态。
+- 支付页已实现支付方式选择和本地虚拟支付成功态；前端提交 `confirm_success=true` 后，后端同步完成 mock 成功回调并推进订单到 `PAID`。
+- 拍卖大厅空态已按登录态分流：未登录显示登录/注册，已登录显示发布拍品、查看通知和刷新列表，不再把已登录用户引回登录页。
+- 拍卖大厅筛选已接入真实后端字段：分类、价格区间、卖家评分、有成交记录和交易方式都会写入 URL 并传给 `/api/auctions`。
+- 通知交互已接入全局体验：顶部“通知”入口按 5 秒轮询显示未读红点计数，新增未读通知会在右下角弹窗提示；通知页“已读”调用 `PATCH /api/notifications/{id}/read`。
 - 管理页已实现 KPI、待审表格、500px 审核抽屉、批准/驳回后行淡出移除。
 - 管理页“退出后台”现已收口为仅离开管理视图并返回前台，不再触发全局登出。
 - 管理页“最近处理记录”现已持久化到浏览器本地存储，重新进入后台或重新登录后仍可保留最近审核结果。
@@ -455,6 +458,7 @@ cd frontend
 npm install
 npm run typecheck
 npm run build
+npm run test:e2e
 npm run dev
 ```
 
@@ -477,11 +481,13 @@ ctest --test-dir build --output-on-failure
   - `cd frontend && npm install next@^16 react@^19 react-dom@^19 @types/react@^19 @types/react-dom@^19`
   - `cd frontend && npm run typecheck`
   - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e`
   - `cd frontend && npm audit --json`
 - 验证结果:
   - Next.js 已升级到 `16.2.6`，React 已升级到 `19.2.6`
   - `npm run typecheck` 通过
   - `npm run build` 通过，使用 webpack 构建生成 8 个 App Router 页面，其中 7 个为计划内业务页面
+  - `npm run test:e2e` 通过 9 项，覆盖大厅空态、筛选、虚拟支付、订单/评价入口、通知红点、右下角弹窗和已读接口
   - `npm audit --json` 剩余 2 个 moderate，high/critical 为 0
 - 未覆盖风险:
   - 尚未接入真实 Drogon HTTP 控制器和 WebSocket

@@ -13,11 +13,12 @@ import { OfflineBanner } from "@/components/layout/offline-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAuctions } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth-context";
 import { queryKeys } from "@/lib/query/keys";
 import { formatPrice } from "@/lib/utils/format";
 import type { AuctionListQuery } from "@/types/auction";
 
-const categories = ["数码3C", "运动装备", "图书教材", "生活闲置"];
+const categories = ["数码设备", "图书文创", "运动户外", "校园收藏"];
 const tradeModes = [
   { label: "校园当面交易", value: "MEETUP" },
   { label: "自提", value: "SELF_PICKUP" },
@@ -36,6 +37,7 @@ function AuctionHallContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
 
   const query: AuctionListQuery = {
     keyword: searchParams.get("keyword") || undefined,
@@ -115,12 +117,14 @@ function AuctionHallContent() {
               <p className="mb-3 font-bold text-slate-700">价格区间</p>
               <div className="grid grid-cols-2 gap-2">
                 <input
+                  key={`price-min-${query.priceMin ?? ""}`}
                   defaultValue={query.priceMin ?? ""}
                   onBlur={(event) => updateParam("price_min", event.target.value.trim() || undefined)}
                   className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500"
                   placeholder="最低"
                 />
                 <input
+                  key={`price-max-${query.priceMax ?? ""}`}
                   defaultValue={query.priceMax ?? ""}
                   onBlur={(event) => updateParam("price_max", event.target.value.trim() || undefined)}
                   className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 outline-none focus:border-indigo-500"
@@ -220,10 +224,27 @@ function AuctionHallContent() {
               </div>
               <h2 className="mt-4 text-2xl font-black text-slate-950">{hasFilters ? "没有匹配的拍品" : "当前还没有在拍拍品"}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                {hasFilters ? "调整筛选条件后会自动重新查询。" : "管理员创建拍卖后会在这里展示。现在可以先登录、发布拍品，或稍后刷新查看。"}
+                {hasFilters
+                  ? "调整筛选条件后会自动重新查询。"
+                  : user
+                    ? "管理员创建拍卖后会在这里展示。你可以先发布拍品、查看通知，或稍后刷新。"
+                    : "管理员创建拍卖后会在这里展示。现在可以先登录、发布拍品，或稍后刷新查看。"}
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
-                {hasFilters ? <Button onClick={resetFilters}>清空筛选</Button> : <Link href="/auth/login" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-float hover:bg-indigo-700">登录 / 注册</Link>}
+                {hasFilters ? (
+                  <Button onClick={resetFilters}>清空筛选</Button>
+                ) : authLoading ? null : user ? (
+                  <>
+                    <Link href="/auction/publish" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-float hover:bg-indigo-700">
+                      发布拍品
+                    </Link>
+                    <Link href="/notifications" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:border-indigo-300 hover:text-indigo-700">
+                      查看通知
+                    </Link>
+                  </>
+                ) : (
+                  <Link href="/auth/login" className="auction-transition inline-flex min-h-10 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-float hover:bg-indigo-700">登录 / 注册</Link>
+                )}
                 <Button variant="secondary" onClick={() => refetch()}>刷新列表</Button>
               </div>
             </div>

@@ -378,6 +378,10 @@ void RegisterOrderHttpRoutes(
                     "pay_channel",
                     body->get("payChannel", "MOCK_ALIPAY")
                 ).asString();
+                req.confirm_success = body->get(
+                    "confirm_success",
+                    body->get("confirmSuccess", false)
+                ).asBool();
 
                 const auto result = payment_service.InitiatePayment(auth_header, order_id, req);
 

@@ -294,6 +294,41 @@ int main() {
     assert(std::any_of(public_auctions.begin(), public_auctions.end(), [&](const auto& auction) {
         return auction.auction_id == created_auction_1.auction_id;
     }));
+    const auto filtered_public_auctions = auction_service.ListPublicAuctions({
+        .keyword = std::optional<std::string>(unique_suffix),
+        .status = std::optional<std::string>("PENDING_START"),
+        .category = std::optional<std::string>("数码设备"),
+        .price_min = std::optional<double>(100.0),
+        .price_max = std::optional<double>(130.0),
+        .seller_rating_min = std::optional<double>(0.0),
+        .seller_has_deals = std::optional<bool>(false),
+        .trade_mode = std::optional<std::string>("MEETUP"),
+        .page_no = 1,
+        .page_size = 20,
+    });
+    assert(std::any_of(
+        filtered_public_auctions.begin(),
+        filtered_public_auctions.end(),
+        [&](const auto& auction) {
+            return auction.auction_id == created_auction_1.auction_id &&
+                   auction.category_name == "数码设备" && auction.trade_mode == "MEETUP";
+        }
+    ));
+    const auto excluded_by_price = auction_service.ListPublicAuctions({
+        .keyword = std::optional<std::string>(unique_suffix),
+        .status = std::optional<std::string>("PENDING_START"),
+        .category = std::optional<std::string>("数码设备"),
+        .price_min = std::optional<double>(121.0),
+        .page_no = 1,
+        .page_size = 20,
+    });
+    assert(std::none_of(
+        excluded_by_price.begin(),
+        excluded_by_price.end(),
+        [&](const auto& auction) {
+            return auction.auction_id == created_auction_1.auction_id;
+        }
+    ));
 
     const auto public_detail_1 = auction_service.GetPublicAuctionDetail(created_auction_1.auction_id);
     assert(public_detail_1.highest_bidder_masked.empty());

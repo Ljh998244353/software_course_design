@@ -493,6 +493,21 @@ std::vector<modules::item::ItemSummary> ItemRepository::ListItemsBySeller(
     return items;
 }
 
+std::vector<std::uint64_t> ItemRepository::ListActiveAdminUserIds() const {
+    const auto result = ExecuteQuery(
+        connection(),
+        "SELECT user_id FROM user_account WHERE role_code = 'ADMIN' AND status = 'ACTIVE' "
+        "ORDER BY user_id ASC"
+    );
+
+    std::vector<std::uint64_t> user_ids;
+    MYSQL_ROW row = nullptr;
+    while ((row = mysql_fetch_row(result.get())) != nullptr) {
+        user_ids.push_back(ReadRowUint64(row, 0));
+    }
+    return user_ids;
+}
+
 std::vector<modules::item::PendingAuditItemSummary> ItemRepository::ListPendingAuditItems() const {
     const auto result = ExecuteQuery(
         connection(),

@@ -172,6 +172,22 @@ bool HasTransactionConflict(
     return !payment.transaction_no.empty() && payment.transaction_no != transaction_no;
 }
 
+PaymentCallbackRequest BuildMockSuccessCallback(
+    const std::string& callback_secret,
+    const InitiatePaymentResult& payment
+) {
+    PaymentCallbackRequest callback{
+        .payment_no = payment.payment_no,
+        .order_no = payment.order_no,
+        .merchant_no = std::string(kDefaultMerchantNo),
+        .transaction_no = GenerateBusinessNo("TXN"),
+        .pay_status = std::string(kPaymentStatusSuccess),
+        .pay_amount = payment.pay_amount,
+    };
+    callback.signature = SignMockPaymentCallback(callback_secret, callback);
+    return callback;
+}
+
 }  // namespace
 
 PaymentService::PaymentService(
@@ -237,7 +253,7 @@ InitiatePaymentResult PaymentService::InitiatePayment(
 
             connection.Rollback();
             transaction_started = false;
-            return InitiatePaymentResult{
+            InitiatePaymentResult result{
                 .payment_id = active_payment->payment_id,
                 .order_id = order_snapshot->order.order_id,
                 .order_no = order_snapshot->order.order_no,
@@ -250,6 +266,13 @@ InitiatePaymentResult PaymentService::InitiatePayment(
                 .expire_at = order_snapshot->order.pay_deadline_at,
                 .reused_existing = true,
             };
+            if (request.confirm_success) {
+                const auto callback_result = HandlePaymentCallback(
+                    BuildMockSuccessCallback(callback_secret_, result)
+                );
+                result.pay_status = callback_result.pay_status;
+            }
+            return result;
         }
 
         const auto created_payment = repository.CreatePayment(repository::CreatePaymentParams{
@@ -270,7 +293,7 @@ InitiatePaymentResult PaymentService::InitiatePayment(
         connection.Commit();
         transaction_started = false;
 
-        return InitiatePaymentResult{
+        InitiatePaymentResult result{
             .payment_id = created_payment.payment_id,
             .order_id = order_snapshot->order.order_id,
             .order_no = order_snapshot->order.order_no,
@@ -283,6 +306,13 @@ InitiatePaymentResult PaymentService::InitiatePayment(
             .expire_at = order_snapshot->order.pay_deadline_at,
             .reused_existing = false,
         };
+        if (request.confirm_success) {
+            const auto callback_result = HandlePaymentCallback(
+                BuildMockSuccessCallback(callback_secret_, result)
+            );
+            result.pay_status = callback_result.pay_status;
+        }
+        return result;
     } catch (...) {
         if (transaction_started) {
             connection.Rollback();

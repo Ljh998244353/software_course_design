@@ -190,6 +190,52 @@ std::uint64_t CountNotificationsByOrderAndType(
     );
 }
 
+std::uint64_t CountNotificationsByItemAndType(
+    const auction::common::config::AppConfig& config,
+    const std::filesystem::path& project_root,
+    const std::uint64_t item_id,
+    const std::string& notice_type
+) {
+    return QueryUint64(
+        config,
+        project_root,
+        "SELECT COUNT(*) FROM notification WHERE biz_type = 'ITEM' AND biz_id = " +
+            std::to_string(item_id) + " AND notice_type = '" + notice_type + "'"
+    );
+}
+
+std::uint64_t CountNotificationsByItemUserAndType(
+    const auction::common::config::AppConfig& config,
+    const std::filesystem::path& project_root,
+    const std::uint64_t item_id,
+    const std::uint64_t user_id,
+    const std::string& notice_type
+) {
+    return QueryUint64(
+        config,
+        project_root,
+        "SELECT COUNT(*) FROM notification WHERE biz_type = 'ITEM' AND biz_id = " +
+            std::to_string(item_id) + " AND user_id = " + std::to_string(user_id) +
+            " AND notice_type = '" + notice_type + "'"
+    );
+}
+
+std::uint64_t CountNotificationsByAuctionUserAndType(
+    const auction::common::config::AppConfig& config,
+    const std::filesystem::path& project_root,
+    const std::uint64_t auction_id,
+    const std::uint64_t user_id,
+    const std::string& notice_type
+) {
+    return QueryUint64(
+        config,
+        project_root,
+        "SELECT COUNT(*) FROM notification WHERE biz_type = 'AUCTION' AND biz_id = " +
+            std::to_string(auction_id) + " AND user_id = " + std::to_string(user_id) +
+            " AND notice_type = '" + notice_type + "'"
+    );
+}
+
 std::uint64_t QueryNotificationIdByAuctionAndUser(
     const auction::common::config::AppConfig& config,
     const std::filesystem::path& project_root,
@@ -379,22 +425,29 @@ int main() {
     auction::modules::auth::InMemoryAuthSessionStore session_store;
     auction::modules::auth::AuthService auth_service(config, project_root, session_store);
     auction::middleware::AuthMiddleware auth_middleware(auth_service);
-    auction::modules::item::ItemService item_service(config, project_root, auth_middleware);
-    auction::modules::audit::ItemAuditService item_audit_service(
-        config,
-        project_root,
-        auth_middleware
-    );
-    auction::modules::auction::AuctionService auction_service(
-        config,
-        project_root,
-        auth_middleware
-    );
     auction::ws::InMemoryAuctionEventGateway event_gateway;
     auction::modules::notification::NotificationService notification_service(
         config,
         project_root,
         event_gateway
+    );
+    auction::modules::item::ItemService item_service(
+        config,
+        project_root,
+        auth_middleware,
+        &notification_service
+    );
+    auction::modules::audit::ItemAuditService item_audit_service(
+        config,
+        project_root,
+        auth_middleware,
+        &notification_service
+    );
+    auction::modules::auction::AuctionService auction_service(
+        config,
+        project_root,
+        auth_middleware,
+        &notification_service
     );
     auction::modules::bid::InMemoryBidCacheStore cache_store;
     auction::modules::bid::BidService bid_service(
@@ -476,6 +529,21 @@ int main() {
         admin_header,
         unique_suffix
     );
+    assert(CountNotificationsByItemUserAndType(
+               config,
+               project_root,
+               item_id,
+               seller.user_id,
+               "ITEM_SUBMITTED_FOR_REVIEW"
+           ) == 1);
+    assert(CountNotificationsByItemUserAndType(
+               config,
+               project_root,
+               item_id,
+               admin_login.user_info.user_id,
+               "ITEM_REVIEW_REQUIRED"
+           ) == 1);
+    assert(CountNotificationsByItemAndType(config, project_root, item_id, "ITEM_REVIEW_APPROVED") == 1);
 
     const auto created_auction = auction_service.CreateAuction(
         admin_header,
@@ -490,6 +558,13 @@ int main() {
         }
     );
     assert(created_auction.status == "PENDING_START");
+    assert(CountNotificationsByAuctionUserAndType(
+               config,
+               project_root,
+               created_auction.auction_id,
+               seller.user_id,
+               "AUCTION_SCHEDULED"
+           ) == 1);
 
     const auto admin_detail =
         auction_service.GetAdminAuctionDetail(admin_header, created_auction.auction_id);
@@ -500,6 +575,13 @@ int main() {
     const auto started = auction_scheduler.RunStartCycle();
     assert(Contains(started.affected_auction_ids, created_auction.auction_id));
     assert(QueryAuctionStatus(config, project_root, created_auction.auction_id) == "RUNNING");
+    assert(CountNotificationsByAuctionUserAndType(
+               config,
+               project_root,
+               created_auction.auction_id,
+               seller.user_id,
+               "AUCTION_STARTED"
+           ) == 1);
 
     const auto public_detail = auction_service.GetPublicAuctionDetail(created_auction.auction_id);
     assert(public_detail.status == "RUNNING");

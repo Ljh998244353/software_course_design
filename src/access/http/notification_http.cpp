@@ -171,7 +171,7 @@ void RegisterNotificationHttpRoutes(
 ) {
 #if AUCTION_HAS_DROGON
     RegisterCorsPreflight("/api/notifications", "GET, OPTIONS");
-    RegisterCorsPreflight("/api/notifications/{id}/read", "PATCH, OPTIONS");
+    RegisterCorsPreflight("/api/notifications/{id}/read", "PATCH, POST, OPTIONS");
 
     drogon::app().registerHandler(
         "/api/notifications",
@@ -191,7 +191,7 @@ void RegisterNotificationHttpRoutes(
     );
 
     drogon::app().registerHandler(
-        "/api/notifications/{1}/read",
+        "/api/notifications/{id}/read",
         [services](const drogon::HttpRequestPtr& request,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                    const std::string& raw_notification_id) {
@@ -205,7 +205,7 @@ void RegisterNotificationHttpRoutes(
                 return common::http::ApiResponse::Success(ToMarkReadResultJson(result));
             }));
         },
-        {drogon::Patch}
+        {drogon::Patch, drogon::Post}
     );
 #else
     static_cast<void>(services);

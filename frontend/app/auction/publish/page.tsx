@@ -4,12 +4,14 @@ export const dynamic = "force-dynamic";
 
 import { ChangeEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ImagePlus, Loader2, Save, Send, UploadCloud, X } from "lucide-react";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { SiteNav } from "@/components/layout/site-nav";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 import { addItemImage, createItem, submitItemForReview } from "@/lib/api/client";
+import { queryKeys } from "@/lib/query/keys";
 
 const steps = ["描述拍品", "上传实拍", "建议竞价配置", "检查并提交审核"];
 const draftStorageKey = "auction-publish-draft";
@@ -90,6 +92,7 @@ export default function PublishPage() {
 }
 
 function PublishPageContent() {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -252,6 +255,8 @@ function PublishPageContent() {
       }
 
       const reviewed = await submitItemForReview(itemId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications(false) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications(true) });
       setSubmittedItemId(String(reviewed.item_id));
       setToast(`提交成功，拍品 #${reviewed.item_id} 已进入审核队列`);
       setToastTone("success");

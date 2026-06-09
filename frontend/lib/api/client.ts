@@ -82,15 +82,17 @@ function normalizeAuctionImageUrl(imageUrl: string): string {
   return trimmed;
 }
 
+function parseTagsJson(tagsJson = "[]"): string[] {
+  try {
+    const parsed = JSON.parse(tagsJson || "[]");
+    return Array.isArray(parsed) ? parsed.filter((tag): tag is string => typeof tag === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapAuctionItem(raw: AuctionSummaryRaw): AuctionItem {
-  const tags = (() => {
-    try {
-      const parsed = JSON.parse(raw.tags_json || "[]");
-      return Array.isArray(parsed) ? parsed.filter((tag): tag is string => typeof tag === "string") : [];
-    } catch {
-      return [];
-    }
-  })();
+  const tags = parseTagsJson(raw.tags_json);
   return {
     id: String(raw.auction_id),
     title: raw.title,
@@ -126,20 +128,21 @@ function mapPublicAuctionSummary(raw: PublicAuctionSummaryRaw): AuctionItem {
   return {
     id: String(raw.auctionId),
     title: raw.title,
-    category: "拍卖",
+    category: raw.categoryName || "拍卖",
     imageUrl: normalizeAuctionImageUrl(raw.coverImageUrl),
     currentPrice: raw.currentPrice,
-    startPrice: raw.currentPrice,
-    minIncrement: 1,
+    startPrice: raw.startPrice ?? raw.currentPrice,
+    minIncrement: raw.bidStep ?? 1,
     endTime: raw.endTime,
     status: raw.status as AuctionItem["status"],
     highestBidder: "",
-    seller: { name: "", rating: 0, deals: 0 },
-    watchers: 0,
-    location: "",
-    tags: [],
-    description: "",
-    tradeMode: "",
+    seller: { name: raw.sellerUsername || "", rating: raw.sellerRating ?? 0, deals: raw.sellerDeals ?? 0 },
+    watchers: raw.watcherCount ?? 0,
+    location: raw.location || "",
+    tags: parseTagsJson(raw.tagsJson),
+    description: raw.description || "",
+    tradeMode: raw.tradeMode || "",
+    sellerUsername: raw.sellerUsername,
     acceptingBids: raw.acceptingBids ?? raw.status === "RUNNING",
   };
 }
@@ -150,9 +153,20 @@ function mapPublicAuctionDetail(raw: PublicAuctionDetailRaw): AuctionItem {
       auctionId: raw.auctionId,
       itemId: raw.itemId,
       title: raw.title,
+      categoryName: raw.categoryName,
       coverImageUrl: raw.coverImageUrl,
       status: raw.status,
       currentPrice: raw.currentPrice,
+      startPrice: raw.startPrice,
+      bidStep: raw.bidStep,
+      sellerUsername: raw.sellerUsername,
+      sellerRating: raw.sellerRating,
+      sellerDeals: raw.sellerDeals,
+      watcherCount: raw.watcherCount,
+      tradeMode: raw.tradeMode,
+      location: raw.location,
+      tagsJson: raw.tagsJson,
+      description: raw.description,
       startTime: raw.startTime,
       endTime: raw.endTime,
       acceptingBids: raw.acceptingBids,
@@ -462,7 +476,7 @@ export async function payOrder(orderId: string, payChannel: PaymentChannel) {
   const raw = await liveFetch<PayOrderResultRaw>(`/api/orders/${orderId}/pay`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pay_channel: payChannel }),
+    body: JSON.stringify({ pay_channel: payChannel, confirm_success: true }),
   });
   return { status: raw.pay_status };
 }

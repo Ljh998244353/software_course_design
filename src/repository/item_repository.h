@@ -68,6 +68,7 @@ public:
         std::uint64_t seller_id,
         const std::optional<std::string>& item_status
     ) const;
+    [[nodiscard]] std::vector<std::uint64_t> ListActiveAdminUserIds() const;
     [[nodiscard]] std::vector<modules::item::PendingAuditItemSummary> ListPendingAuditItems() const;
 
     [[nodiscard]] std::optional<modules::item::ItemImageRecord> FindImageById(

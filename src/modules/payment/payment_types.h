@@ -46,6 +46,7 @@ struct PaymentRecord {
 
 struct InitiatePaymentRequest {
     std::string pay_channel;
+    bool confirm_success{false};
 };
 
 struct InitiatePaymentResult {
