@@ -14,9 +14,20 @@ import type {
   CreateItemRaw,
   DailyStatisticsRaw,
   ItemImageRaw,
+  ItemSummaryRaw,
   LoginResponse,
+  MarkNotificationReadRaw,
+  MyItem,
+  MyItemsRaw,
+  NotificationListRaw,
+  OfflineItemRaw,
+  OperationLogRaw,
   OrderDetailRaw,
   OrderSummary,
+  OrderTransitionRaw,
+  OpsActionResultRaw,
+  OpsListRaw,
+  OrderReviewListRaw,
   PayOrderResultRaw,
   PaymentChannel,
   PendingAuditItemRaw,
@@ -26,7 +37,14 @@ import type {
   PublicAuctionSummaryRaw,
   PublicBidHistoryEntryRaw,
   PublicBidHistoryResponseRaw,
+  RegisterResponseRaw,
+  SubmitOrderReviewRaw,
   SubmitReviewRaw,
+  SystemExceptionRaw,
+  TaskLogRaw,
+  UserNotification,
+  UserOrder,
+  UserOrderListRaw,
   UserProfile,
 } from "@/types/auction";
 const fallbackAuctionImage =
@@ -228,6 +246,18 @@ function mapOrderDetail(raw: OrderDetailRaw): OrderSummary {
   };
 }
 
+function mapMyItem(raw: ItemSummaryRaw): MyItem {
+  return {
+    itemId: raw.item_id,
+    title: raw.title,
+    startPrice: raw.start_price,
+    status: raw.item_status,
+    coverImageUrl: normalizeAuctionImageUrl(raw.cover_image_url),
+    rejectReason: raw.reject_reason,
+    updatedAt: raw.updated_at,
+  };
+}
+
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem("auth_token");
@@ -400,6 +430,20 @@ export async function login(username: string, password?: string): Promise<LoginR
   return result;
 }
 
+export async function registerUser(params: {
+  username: string;
+  password: string;
+  phone?: string;
+  email?: string;
+  nickname?: string;
+}): Promise<RegisterResponseRaw> {
+  return liveFetch<RegisterResponseRaw>("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+}
+
 export async function getMe(): Promise<UserProfile> {
   return liveFetch<UserProfile>("/api/auth/me");
 }
@@ -421,6 +465,89 @@ export async function payOrder(orderId: string, payChannel: PaymentChannel) {
     body: JSON.stringify({ pay_channel: payChannel }),
   });
   return { status: raw.pay_status };
+}
+
+export async function getMyItems(status?: string): Promise<MyItem[]> {
+  const query = status && status !== "ALL" ? `?item_status=${encodeURIComponent(status)}` : "";
+  const raw = await liveFetch<MyItemsRaw>(`/api/items/mine${query}`);
+  return raw.items.map(mapMyItem);
+}
+
+export async function offlineItem(itemId: string): Promise<OfflineItemRaw> {
+  return liveFetch<OfflineItemRaw>(`/api/items/${itemId}/offline`, {
+    method: "POST",
+  });
+}
+
+export async function getMyOrders(params: { role?: "buyer" | "seller"; status?: string } = {}): Promise<UserOrder[]> {
+  const query = new URLSearchParams();
+  if (params.role) query.set("role", params.role);
+  if (params.status && params.status !== "ALL") query.set("status", params.status);
+  const raw = await liveFetch<UserOrderListRaw>(`/api/orders/mine${query.toString() ? `?${query.toString()}` : ""}`);
+  return raw.records;
+}
+
+export async function shipOrder(orderId: string): Promise<OrderTransitionRaw> {
+  return liveFetch<OrderTransitionRaw>(`/api/orders/${orderId}/ship`, {
+    method: "POST",
+  });
+}
+
+export async function confirmReceipt(orderId: string): Promise<OrderTransitionRaw> {
+  return liveFetch<OrderTransitionRaw>(`/api/orders/${orderId}/confirm-receipt`, {
+    method: "POST",
+  });
+}
+
+export async function submitOrderReview(orderId: string, rating: number, content: string): Promise<SubmitOrderReviewRaw> {
+  return liveFetch<SubmitOrderReviewRaw>("/api/reviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId: Number(orderId), rating, content }),
+  });
+}
+
+export async function getOrderReviews(orderId: string): Promise<OrderReviewListRaw> {
+  return liveFetch<OrderReviewListRaw>(`/api/orders/${orderId}/reviews`);
+}
+
+export async function getNotifications(unreadOnly = false): Promise<NotificationListRaw> {
+  const query = unreadOnly ? "?unreadOnly=true" : "";
+  return liveFetch<NotificationListRaw>(`/api/notifications${query}`);
+}
+
+export async function markNotificationRead(notificationId: number): Promise<MarkNotificationReadRaw> {
+  return liveFetch<MarkNotificationReadRaw>(`/api/notifications/${notificationId}/read`, {
+    method: "PATCH",
+  });
+}
+
+export async function getAdminOperationLogs(): Promise<OpsListRaw<OperationLogRaw>> {
+  return liveFetch<OpsListRaw<OperationLogRaw>>("/api/admin/ops/operation-logs?limit=8");
+}
+
+export async function getAdminTaskLogs(): Promise<OpsListRaw<TaskLogRaw>> {
+  return liveFetch<OpsListRaw<TaskLogRaw>>("/api/admin/ops/task-logs?limit=8");
+}
+
+export async function getAdminSystemExceptions(): Promise<OpsListRaw<SystemExceptionRaw>> {
+  return liveFetch<OpsListRaw<SystemExceptionRaw>>("/api/admin/ops/exceptions?limit=8");
+}
+
+export async function retryFailedNotifications(): Promise<OpsActionResultRaw> {
+  return liveFetch<OpsActionResultRaw>("/api/admin/ops/notifications/retry", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ limit: 20 }),
+  });
+}
+
+export async function runOpsCompensation(compensationType: string): Promise<OpsActionResultRaw> {
+  return liveFetch<OpsActionResultRaw>("/api/admin/ops/compensations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ compensationType, limit: 20 }),
+  });
 }
 
 export async function getAdminReviews(): Promise<AdminReviewItem[]> {

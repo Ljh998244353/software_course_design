@@ -2,9 +2,9 @@
 
 ## 新会话最小恢复卡片
 
-- 当前主 Step: `Release-Maintenance`
-- 当前唯一活动任务: 修复 `start.sh` fallback MySQL 持久化，避免重启后拍卖历史丢失
-- 当前执行阶段: `Persistence-Fallback`
+- 当前主 Step: `Graduation-Excellence`
+- 当前唯一活动任务: 毕业设计需求覆盖闭环与满分答辩证据补强
+- 当前执行阶段: `Requirements-Coverage-Audit`
 - 当前状态: `已完成`
 - 最近一次已通过验证:
   - `bash -n start.sh`
@@ -27,19 +27,36 @@
   - `bash -n scripts/test_frontend.sh`
   - `./start.sh --config config/app.local.json`
   - `scripts/deploy/verify_release.sh`
+  - `bash -n scripts/test.sh`
+  - `bash -n scripts/test_e2e.sh`
+  - `cd frontend && npm run typecheck`
+  - `scripts/test.sh e2e`（非沙箱环境，需本地端口监听权限）
+  - `bash -n scripts/deploy/verify_release.sh`
+  - `python3 -m py_compile scripts/performance_probe.py`
+  - `cmake --build build`
+  - `scripts/test.sh item`（非沙箱环境，1/1 通过；Codex 沙箱内临时 MySQL 启动失败）
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run build`
+  - `scripts/test.sh frontend`
+  - `scripts/test.sh e2e`（非沙箱环境，6/6 通过）
+  - `git diff --check`
 - 当前阻塞/风险:
+  - 需求覆盖矩阵、注册 UI、拍品下架、订单履约/评价/通知前端闭环、运维真实数据入口、性能脚本与 E2E 骨架已补齐
+  - 当前工作区已有 Playwright 相关未提交改动，需保留并在此基础上扩展，不回滚
+  - Playwright Chromium E2E 已在非沙箱环境通过；Codex 沙箱内仍可能因端口监听限制失败
+  - `scripts/test.sh performance` 已新增；实测需要后端正在运行，`scripts/deploy/verify_release.sh --full` 会在后端存活期间执行
   - `start.sh` 的自动 fallback MySQL 已改为复用 `build/local_mysql/runtime` 持久数据目录；测试与发布验证仍使用 `build/test_mysql/run-*` 临时库
   - `start.sh` 已修复 WSL 中误复用 `/mnt/c/.../*.exe` 编译器缓存的问题；若用户此前 build 目录已被 Windows clang 污染，脚本现在会自动重置 `CMakeCache.txt` 和 `CMakeFiles/`
   - Codex 沙箱仍无法自行复现本地 `mysqld` 监听；依赖 MySQL socket/TCP 的模块测试需在非沙箱本机环境运行
   - `schedule.md` 仍需持续保持短恢复入口，不再回涨为长历史流水
 - 下一步唯一动作:
-  - 后续仅按新增需求维护，不再进行“最终修复计划”范围内的收口工作
+  - 后续按新增答辩问题或验收反馈做增量维护；若需要性能证据，运行 `scripts/deploy/verify_release.sh --full`
 - 优先阅读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
-  - [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
   - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
   - [frontend/API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)
-  - [start.sh](/home/ljh/project/soft_course_design/start.sh)
+  - [playwright.config.ts](/home/ljh/project/soft_course_design/frontend/playwright.config.ts)
+  - [test_e2e.sh](/home/ljh/project/soft_course_design/scripts/test_e2e.sh)
 
 ## 当前真实状态
 
@@ -51,6 +68,8 @@
   - 后端唯一主入口为真实 HTTP/WS 接口
   - 支付仅保留本地测试支付模型，用于完整链路演示
 - 当前主修复方向：
+  - `Graduation-Excellence` 需求覆盖闭环与答辩证据补强：已完成
+  - `Graduation-Excellence` Playwright 浏览器 E2E 基础设施：已完成
   - `R2` 启动链路稳定化：已完成
   - `R3` 单一真实入口收敛：已完成
   - `R6` 发布门禁收敛：已完成
@@ -60,8 +79,8 @@
 
 ### 1. 基本信息
 
-- Step ID: `Release-Maintenance`
-- 模块名称: 启动链路与本地持久化维护
+- Step ID: `Graduation-Excellence`
+- 模块名称: 需求覆盖闭环与答辩证据补强
 - 当前状态: `已完成`
 - 统一进度文档: [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
 - 详细执行计划: [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
@@ -80,6 +99,27 @@
 - 大部分旧 `demo` 主入口口径已从测试、部署、联调、演示文档中退出
 
 ### 3. 本轮实际完成
+
+- 已新增 [毕业设计需求覆盖矩阵.md](/home/ljh/project/soft_course_design/docs/毕业设计需求覆盖矩阵.md)，按需求规格说明书覆盖系统目标、8 个模块、主流程、非功能需求和验证证据
+- 已补齐卖家拍品下架：
+  - 后端新增 `POST /api/items/{id}/offline`
+  - 服务层仅允许卖家下架自己的 `DRAFT`、`REJECTED`、`READY_FOR_AUCTION`、`UNSOLD` 拍品
+  - `PENDING_AUDIT`、`IN_AUCTION`、`SOLD` 不允许下架
+  - `tests/item/item_flow_tests.cpp` 已覆盖非本人拒绝和成功下架到 `OFFLINE`
+- 已补齐前端需求入口：
+  - `/auth/login` 支持登录/注册双模式，注册成功后自动登录
+  - `/account/items` 支持查看我的拍品和下架
+  - `/orders` 支持订单列表、发货、确认收货和评价入口
+  - `/notifications` 支持通知列表和已读
+  - `/admin/dashboard` 运维面板改为真实查询操作日志、任务日志、异常列表，并支持通知重试和补偿操作
+- 已补齐验证入口：
+  - `scripts/test.sh e2e` 的 Playwright 用例覆盖注册表单、下架入口、订单评价入口、通知入口和运维入口
+  - `scripts/test.sh performance` 使用 Python 标准库生成 `build/performance_report.json` 与 `build/performance_report.md`
+  - `scripts/deploy/verify_release.sh --full` 在发布验证中额外串联 E2E 与性能验证
+- 已修正文档旧口径：
+  - 旧提交审核接口名统一修正为当前真实 `submit-review`
+  - 当前 `ctest -N` 为 16 项
+  - Playwright 与性能脚本已接入，文档不再保留过时的缺失表述
 
 - 已修复重启后拍卖历史丢失的根因：
   - 业务仓储层本身已使用 MySQL 持久化 `auction`、`bid_record`、`order_info` 等交易事实

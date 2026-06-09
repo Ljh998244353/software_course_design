@@ -47,6 +47,21 @@ export function SiteNav() {
               发布拍品
             </Link>
           )}
+          {user && (
+            <Link className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700" href="/account/items">
+              我的拍品
+            </Link>
+          )}
+          {user && (
+            <Link className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700" href="/orders">
+              订单
+            </Link>
+          )}
+          {user && (
+            <Link className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700" href="/notifications">
+              通知
+            </Link>
+          )}
           {user?.role_code === "ADMIN" && (
             <Link className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700" href="/admin/dashboard">
               管理大盘

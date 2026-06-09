@@ -20,7 +20,7 @@ namespace {
 
 void AddCorsHeaders(const drogon::HttpResponsePtr& response) {
     response->addHeader("Access-Control-Allow-Origin", "*");
-    response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     response->addHeader("Access-Control-Max-Age", "86400");
 }
@@ -604,6 +604,50 @@ void RegisterItemHttpRoutes(
             } catch (...) {
                 common::logging::Logger::Instance().Error(
                     "unhandled exception in POST /api/items/{id}/submit-review"
+                );
+                callback(MakeError(
+                    common::errors::ErrorCode::kInternalError,
+                    "internal server error",
+                    drogon::k500InternalServerError
+                ));
+            }
+        },
+        {drogon::Post}
+    );
+
+    // POST /api/items/{id}/offline - seller offlines an item not in active transaction flow
+    RegisterCorsPreflight("/api/items/{id}/offline", "POST, OPTIONS");
+    drogon::app().registerHandler(
+        "/api/items/{id}/offline",
+        [&item_service](const drogon::HttpRequestPtr& request,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                        const std::string& id_str) {
+            try {
+                if (id_str.empty()) {
+                    callback(MakeError(
+                        common::errors::ErrorCode::kInvalidArgument,
+                        "item id is required"
+                    ));
+                    return;
+                }
+
+                const auto item_id = SafeParseUint64(id_str, "item id");
+                const auto auth_header = request->getHeader("authorization");
+                const auto result = item_service.OfflineItem(auth_header, item_id);
+                callback(MakeOk(UpdateItemResultToJson(result)));
+            } catch (const modules::item::ItemException& e) {
+                drogon::HttpStatusCode http_status = drogon::k400BadRequest;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const modules::auth::AuthException& e) {
+                drogon::HttpStatusCode http_status = drogon::k401Unauthorized;
+                MapItemHttpStatus(e.code(), http_status);
+                callback(MakeError(e.code(), e.what(), http_status));
+            } catch (const std::invalid_argument& e) {
+                callback(MakeError(common::errors::ErrorCode::kInvalidArgument, e.what()));
+            } catch (...) {
+                common::logging::Logger::Instance().Error(
+                    "unhandled exception in POST /api/items/{id}/offline"
                 );
                 callback(MakeError(
                     common::errors::ErrorCode::kInternalError,

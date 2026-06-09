@@ -125,6 +125,23 @@ Json::Value ToMarkReadResultJson(
     return json;
 }
 
+void RegisterCorsPreflight(const std::string& path, const std::string& methods) {
+    drogon::app().registerHandler(
+        path,
+        [methods](const drogon::HttpRequestPtr&,
+                  std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            auto response = drogon::HttpResponse::newHttpResponse();
+            response->setStatusCode(drogon::k204NoContent);
+            response->addHeader("Access-Control-Allow-Origin", "*");
+            response->addHeader("Access-Control-Allow-Methods", methods);
+            response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            response->addHeader("Access-Control-Max-Age", "86400");
+            callback(response);
+        },
+        {drogon::Options}
+    );
+}
+
 modules::notification::NotificationQuery BuildNotificationQuery(
     const drogon::HttpRequestPtr& request
 ) {
@@ -153,6 +170,9 @@ void RegisterNotificationHttpRoutes(
     const std::shared_ptr<common::http::HttpServiceContext> services
 ) {
 #if AUCTION_HAS_DROGON
+    RegisterCorsPreflight("/api/notifications", "GET, OPTIONS");
+    RegisterCorsPreflight("/api/notifications/{id}/read", "PATCH, OPTIONS");
+
     drogon::app().registerHandler(
         "/api/notifications",
         [services](const drogon::HttpRequestPtr& request,

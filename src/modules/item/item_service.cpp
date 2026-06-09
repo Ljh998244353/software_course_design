@@ -476,6 +476,41 @@ SubmitAuditResult ItemService::SubmitForAudit(
     };
 }
 
+UpdateItemResult ItemService::OfflineItem(
+    const std::string_view authorization_header,
+    const std::uint64_t item_id
+) {
+    const auto seller_context = RequireSeller(authorization_header);
+
+    auto connection = CreateConnection();
+    repository::ItemRepository repository(connection);
+    const auto item = LoadItemOrThrow(repository, item_id);
+    EnsureOwner(seller_context, item);
+
+    if (!IsValidOfflineItemStatus(item.item_status)) {
+        ThrowItemError(
+            common::errors::ErrorCode::kItemEditStatusInvalid,
+            "item status does not allow offline"
+        );
+    }
+
+    connection.BeginTransaction();
+    try {
+        repository.UpdateItemStatus(item_id, std::string(kItemStatusOffline), "");
+        connection.Commit();
+    } catch (...) {
+        connection.Rollback();
+        throw;
+    }
+
+    const auto offlined = LoadItemOrThrow(repository, item_id);
+    return UpdateItemResult{
+        .item_id = offlined.item_id,
+        .item_status = offlined.item_status,
+        .updated_at = offlined.updated_at,
+    };
+}
+
 std::vector<ItemSummary> ItemService::ListMyItems(
     const std::string_view authorization_header,
     const std::optional<std::string>& item_status

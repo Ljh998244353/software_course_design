@@ -280,12 +280,36 @@ Json::Value ToCompensationJson(const modules::ops::CompensationResult& result) {
     return json;
 }
 
+void RegisterCorsPreflight(const std::string& path, const std::string& methods) {
+    drogon::app().registerHandler(
+        path,
+        [methods](const drogon::HttpRequestPtr&,
+                  std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            auto response = drogon::HttpResponse::newHttpResponse();
+            response->setStatusCode(drogon::k204NoContent);
+            response->addHeader("Access-Control-Allow-Origin", "*");
+            response->addHeader("Access-Control-Allow-Methods", methods);
+            response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            response->addHeader("Access-Control-Max-Age", "86400");
+            callback(response);
+        },
+        {drogon::Options}
+    );
+}
+
 #endif
 
 }  // namespace
 
 void RegisterOpsHttpRoutes(const std::shared_ptr<common::http::HttpServiceContext> services) {
 #if AUCTION_HAS_DROGON
+    RegisterCorsPreflight("/api/admin/ops/operation-logs", "GET, OPTIONS");
+    RegisterCorsPreflight("/api/admin/ops/task-logs", "GET, OPTIONS");
+    RegisterCorsPreflight("/api/admin/ops/exceptions", "GET, OPTIONS");
+    RegisterCorsPreflight("/api/admin/ops/exceptions/mark", "POST, OPTIONS");
+    RegisterCorsPreflight("/api/admin/ops/notifications/retry", "POST, OPTIONS");
+    RegisterCorsPreflight("/api/admin/ops/compensations", "POST, OPTIONS");
+
     drogon::app().registerHandler(
         "/api/admin/ops/operation-logs",
         [services](const drogon::HttpRequestPtr& request,

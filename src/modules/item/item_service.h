@@ -44,6 +44,10 @@ public:
         std::string_view authorization_header,
         std::uint64_t item_id
     );
+    [[nodiscard]] UpdateItemResult OfflineItem(
+        std::string_view authorization_header,
+        std::uint64_t item_id
+    );
     [[nodiscard]] std::vector<ItemSummary> ListMyItems(
         std::string_view authorization_header,
         const std::optional<std::string>& item_status

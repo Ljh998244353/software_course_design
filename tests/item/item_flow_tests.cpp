@@ -353,6 +353,21 @@ int main() {
     });
     assert(ready_item.item_status == "READY_FOR_AUCTION");
 
+    ExpectItemError(ErrorCode::kItemOwnerMismatch, [&] {
+        const auto ignored = item_service.OfflineItem(other_header, created.item_id);
+        (void)ignored;
+    });
+
+    const auto offlined = item_service.OfflineItem(seller_header, created.item_id);
+    assert(offlined.item_status == "OFFLINE");
+    const auto offline_detail = item_service.GetItemDetail(seller_header, created.item_id);
+    assert(offline_detail.item.item_status == "OFFLINE");
+    const auto mine_offline = item_service.ListMyItems(seller_header, std::string("OFFLINE"));
+    const auto& offline_item = FindOrFail(mine_offline, [&](const auto& row) {
+        return row.item_id == created.item_id;
+    });
+    assert(offline_item.item_status == "OFFLINE");
+
     ExpectInvalidArgument([&] {
         const auto another_created = item_service.CreateDraftItem(
             seller_header,

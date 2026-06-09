@@ -7,6 +7,12 @@ TEST_SERVER_HOST="${AUCTION_RELEASE_SERVER_HOST:-127.0.0.1}"
 TEST_SERVER_PORT="${AUCTION_RELEASE_SERVER_PORT:-18080}"
 SERVER_LOG="${ROOT_DIR}/build/release_verify_server.log"
 SERVER_PID=""
+FULL_VERIFY=0
+
+if [[ "${1:-}" == "--full" ]]; then
+    FULL_VERIFY=1
+    shift
+fi
 
 cleanup() {
     if [[ -n "${SERVER_PID}" ]]; then
@@ -76,6 +82,11 @@ verify_server_entries() {
         "${ROOT_DIR}/build/verify_auctions.json"
     grep -q '"code"' "${ROOT_DIR}/build/verify_auctions.json"
 
+    if [[ "${FULL_VERIFY}" == "1" ]]; then
+        AUCTION_PERF_BASE_URL="http://${TEST_SERVER_HOST}:${TEST_SERVER_PORT}" \
+            "${ROOT_DIR}/scripts/test.sh" performance
+    fi
+
     cleanup
     SERVER_PID=""
 }
@@ -91,5 +102,9 @@ verify_server_entries
 "${ROOT_DIR}/scripts/test.sh" http
 "${ROOT_DIR}/scripts/test.sh" risk
 ctest --test-dir "${ROOT_DIR}/build" --output-on-failure
+
+if [[ "${FULL_VERIFY}" == "1" ]]; then
+    "${ROOT_DIR}/scripts/test.sh" e2e
+fi
 
 echo "release verification passed"

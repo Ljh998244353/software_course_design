@@ -6,3 +6,5 @@ node_modules/
 .next/
 *.tsbuildinfo
 .env.local
+frontend/test-results/
+frontend/playwright-report/

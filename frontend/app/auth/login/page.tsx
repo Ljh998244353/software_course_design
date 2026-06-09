@@ -4,16 +4,20 @@ export const dynamic = "force-dynamic";
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Gavel, Loader2, ShieldCheck } from "lucide-react";
-import { describeLoginError, login } from "@/lib/api/client";
+import { Gavel, Loader2, ShieldCheck, UserPlus } from "lucide-react";
+import { describeLoginError, login, registerUser } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
   const [toastTone, setToastTone] = useState<"success" | "danger">("success");
@@ -29,10 +33,19 @@ export default function LoginPage() {
     setLoading(true);
     setToast("");
     try {
+      if (mode === "register") {
+        await registerUser({
+          username: submittedUsername,
+          password: submittedPassword,
+          nickname: String(formData.get("nickname") ?? submittedUsername).trim() || submittedUsername,
+          email: String(formData.get("email") ?? "").trim(),
+          phone: String(formData.get("phone") ?? "").trim(),
+        });
+      }
       const result = await login(submittedUsername, submittedPassword);
       await refresh();
       setToastTone("success");
-      setToast(`登录成功，欢迎 ${result.user_info.nickname}`);
+      setToast(`${mode === "register" ? "注册并登录成功" : "登录成功"}，欢迎 ${result.user_info.nickname}`);
       setTimeout(() => router.push("/auction/hall"), 650);
     } catch (e) {
       setToastTone("danger");
@@ -64,8 +77,24 @@ export default function LoginPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
               <ShieldCheck className="h-6 w-6" />
             </div>
-            <h2 className="text-3xl font-black text-slate-950">登录 / 注册</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">使用真实账号进入正式业务工作台。默认管理员账号：`admin / Admin@123`。</p>
+          <h2 className="text-3xl font-black text-slate-950">登录 / 注册</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">使用真实账号进入正式业务工作台。默认管理员账号：`admin / Admin@123`。</p>
+          </div>
+          <div className="mb-6 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className={`h-10 rounded-md text-sm font-black ${mode === "login" ? "bg-white text-indigo-700 shadow-card" : "text-slate-500"}`}
+            >
+              登录
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("register")}
+              className={`h-10 rounded-md text-sm font-black ${mode === "register" ? "bg-white text-indigo-700 shadow-card" : "text-slate-500"}`}
+            >
+              注册
+            </button>
           </div>
           <label className="mb-2 block text-sm font-bold text-slate-700">用户名</label>
           <input
@@ -76,6 +105,35 @@ export default function LoginPage() {
             onChange={(event) => setUsername(event.target.value)}
             className="mb-5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
           />
+          {mode === "register" ? (
+            <>
+              <label className="mb-2 block text-sm font-bold text-slate-700">昵称</label>
+              <input
+                name="nickname"
+                autoComplete="nickname"
+                value={nickname}
+                onChange={(event) => setNickname(event.target.value)}
+                className="mb-5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <label className="mb-2 block text-sm font-bold text-slate-700">邮箱</label>
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mb-5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <label className="mb-2 block text-sm font-bold text-slate-700">手机号</label>
+              <input
+                name="phone"
+                autoComplete="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="mb-5 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </>
+          ) : null}
           <label className="mb-2 block text-sm font-bold text-slate-700">密码</label>
           <input
             required
@@ -87,8 +145,8 @@ export default function LoginPage() {
             className="mb-6 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
           />
           <Button className="w-full" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {loading ? "登录中" : "进入拍卖大厅"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : mode === "register" ? <UserPlus className="h-4 w-4" /> : null}
+            {loading ? "处理中" : mode === "register" ? "注册并进入大厅" : "进入拍卖大厅"}
           </Button>
         </form>
       </section>

@@ -32,6 +32,11 @@ inline bool IsValidAuditItemStatus(const std::string_view item_status) {
     return item_status == kItemStatusPendingAudit;
 }
 
+inline bool IsValidOfflineItemStatus(const std::string_view item_status) {
+    return item_status == kItemStatusDraft || item_status == kItemStatusRejected ||
+           item_status == kItemStatusReadyForAuction || item_status == kItemStatusUnsold;
+}
+
 inline bool IsValidAuditResult(const std::string_view audit_result) {
     return audit_result == kAuditResultApproved || audit_result == kAuditResultRejected;
 }

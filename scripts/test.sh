@@ -7,7 +7,7 @@ BUILD_DIR="${ROOT_DIR}/build"
 usage() {
     cat <<'EOF'
 用法:
-  scripts/test.sh [all|smoke|db|module|integration|contract|http|ui|risk|stress|security|frontend|auth|item|auction|bid|order|payment|review|statistics|ops|list] [额外 ctest 参数]
+  scripts/test.sh [all|smoke|db|module|integration|contract|http|ui|risk|stress|security|frontend|e2e|performance|auth|item|auction|bid|order|payment|review|statistics|ops|list] [额外 ctest 参数]
 
 示例:
   scripts/test.sh
@@ -17,6 +17,8 @@ usage() {
   scripts/test.sh ui
   scripts/test.sh risk
   scripts/test.sh frontend
+  scripts/test.sh e2e
+  scripts/test.sh performance
   scripts/test.sh bid
 EOF
 }
@@ -86,6 +88,12 @@ main() {
             ;;
         frontend)
             bash "${ROOT_DIR}/scripts/test_frontend.sh"
+            ;;
+        e2e)
+            bash "${ROOT_DIR}/scripts/test_e2e.sh"
+            ;;
+        performance)
+            python3 "${ROOT_DIR}/scripts/performance_probe.py"
             ;;
         auth)
             run_ctest "module_auth" "$@"

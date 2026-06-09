@@ -1,4 +1,6 @@
 export type AuctionStatus = "PENDING_START" | "RUNNING" | "SETTLING" | "SOLD" | "UNSOLD" | "CANCELLED";
+export type ItemStatus = "DRAFT" | "PENDING_AUDIT" | "REJECTED" | "READY_FOR_AUCTION" | "IN_AUCTION" | "SOLD" | "UNSOLD" | "OFFLINE";
+export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "WAITING_DELIVERY" | "SHIPPED" | "COMPLETED" | "REVIEWED" | "CLOSED";
 
 export type AuctionItem = {
   id: string;
@@ -42,6 +44,54 @@ export type OrderSummary = {
   total: number;
   seller: string;
   deadline: string;
+};
+
+export type MyItem = {
+  itemId: number;
+  title: string;
+  startPrice: number;
+  status: ItemStatus;
+  coverImageUrl: string;
+  rejectReason: string;
+  updatedAt: string;
+};
+
+export type UserOrder = {
+  orderId: number;
+  orderNo: string;
+  auctionId: number;
+  buyerId: number;
+  sellerId: number;
+  finalAmount: number;
+  orderStatus: OrderStatus;
+  payDeadlineAt: string;
+  paidAt: string;
+  shippedAt: string;
+  completedAt: string;
+  createdAt: string;
+  itemTitle: string;
+  coverImageUrl: string;
+  buyerUsername: string;
+  sellerUsername: string;
+  latestPayment?: {
+    paymentId: number;
+    payStatus: string;
+    payChannel: string;
+    paidAt: string;
+  } | null;
+};
+
+export type UserNotification = {
+  notificationId: number;
+  noticeType: string;
+  title: string;
+  content: string;
+  bizType: string;
+  bizId: number | null;
+  readStatus: "UNREAD" | "READ";
+  pushStatus: string;
+  createdAt: string;
+  readAt: string;
 };
 
 export type PaymentChannel = "MOCK_ALIPAY" | "MOCK_WECHAT";
@@ -96,6 +146,13 @@ export type LoginResponse = {
   token: string;
   expire_at: string;
   user_info: UserProfile;
+};
+
+export type RegisterResponseRaw = {
+  user_id: number;
+  username: string;
+  role_code: string;
+  status: string;
 };
 
 export type AuctionSummaryRaw = {
@@ -221,6 +278,29 @@ export type SubmitReviewRaw = {
   submitted_at: string;
 };
 
+export type ItemSummaryRaw = {
+  item_id: number;
+  seller_id: number;
+  category_id: number;
+  title: string;
+  start_price: number;
+  item_status: ItemStatus;
+  reject_reason: string;
+  cover_image_url: string;
+  updated_at: string;
+};
+
+export type MyItemsRaw = {
+  items: ItemSummaryRaw[];
+  total: number;
+};
+
+export type OfflineItemRaw = {
+  item_id: number;
+  item_status: ItemStatus;
+  updated_at: string;
+};
+
 export type ItemImageRaw = {
   image_id: number;
   item_id: number;
@@ -255,6 +335,97 @@ export type PayOrderResultRaw = {
   pay_url: string;
   expire_at: string;
   reused_existing: boolean;
+};
+
+export type UserOrderListRaw = {
+  records: UserOrder[];
+  pageNo: number;
+  pageSize: number;
+};
+
+export type OrderTransitionRaw = {
+  order_id: number;
+  old_status: string;
+  new_status: OrderStatus;
+};
+
+export type ReviewRecordRaw = {
+  reviewId: number;
+  orderId: number;
+  reviewerId: number;
+  revieweeId: number;
+  reviewType: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+};
+
+export type SubmitOrderReviewRaw = ReviewRecordRaw & {
+  orderStatusAfter: OrderStatus;
+  orderMarkedReviewed: boolean;
+};
+
+export type OrderReviewListRaw = {
+  orderId: number;
+  orderStatus: OrderStatus;
+  reviews: ReviewRecordRaw[];
+  total: number;
+};
+
+export type NotificationListRaw = {
+  list: UserNotification[];
+  total: number;
+  unreadCount: number;
+  limit: number;
+};
+
+export type MarkNotificationReadRaw = {
+  notificationId: number;
+  readStatus: "READ";
+  readAt: string;
+};
+
+export type OperationLogRaw = {
+  operationLogId: number;
+  moduleName: string;
+  operationName: string;
+  bizKey: string;
+  result: string;
+  detail: string;
+  createdAt: string;
+};
+
+export type TaskLogRaw = {
+  taskLogId: number;
+  taskType: string;
+  bizKey: string;
+  taskStatus: string;
+  retryCount: number;
+  lastError: string;
+  createdAt: string;
+};
+
+export type SystemExceptionRaw = {
+  sourceType: string;
+  sourceId: string;
+  bizKey: string;
+  currentStatus: string;
+  summary: string;
+  detail: string;
+  occurredAt: string;
+  retryable: boolean;
+};
+
+export type OpsListRaw<T> = {
+  list: T[];
+  total: number;
+};
+
+export type OpsActionResultRaw = {
+  scanned: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
 };
 
 export type PendingAuditItemRaw = {

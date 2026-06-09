@@ -100,12 +100,33 @@ Json::Value ToReviewSummaryJson(const modules::review::ReviewSummary& summary) {
     return json;
 }
 
+void RegisterCorsPreflight(const std::string& path, const std::string& methods) {
+    drogon::app().registerHandler(
+        path,
+        [methods](const drogon::HttpRequestPtr&,
+                  std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            auto response = drogon::HttpResponse::newHttpResponse();
+            response->setStatusCode(drogon::k204NoContent);
+            response->addHeader("Access-Control-Allow-Origin", "*");
+            response->addHeader("Access-Control-Allow-Methods", methods);
+            response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            response->addHeader("Access-Control-Max-Age", "86400");
+            callback(response);
+        },
+        {drogon::Options}
+    );
+}
+
 #endif
 
 }  // namespace
 
 void RegisterReviewHttpRoutes(const std::shared_ptr<common::http::HttpServiceContext> services) {
 #if AUCTION_HAS_DROGON
+    RegisterCorsPreflight("/api/reviews", "POST, OPTIONS");
+    RegisterCorsPreflight("/api/orders/{id}/reviews", "GET, OPTIONS");
+    RegisterCorsPreflight("/api/users/{id}/reviews/summary", "GET, OPTIONS");
+
     drogon::app().registerHandler(
         "/api/reviews",
         [services](const drogon::HttpRequestPtr& request,

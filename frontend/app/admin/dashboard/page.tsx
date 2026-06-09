@@ -4,14 +4,14 @@ export const dynamic = "force-dynamic";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, BarChart3, Check, ChevronRight, ClipboardCheck, Command, Gavel, Loader2, LogOut, PlusCircle, ShieldAlert, X } from "lucide-react";
+import { AlertCircle, BarChart3, Check, ChevronRight, ClipboardCheck, Command, Gavel, Loader2, LogOut, PlusCircle, RefreshCw, ShieldAlert, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { approveItem, createAdminAuction, getAdminAuctions, getAdminDailyStatistics, getAdminReviews, rejectItem } from "@/lib/api/client";
+import { approveItem, createAdminAuction, getAdminAuctions, getAdminDailyStatistics, getAdminOperationLogs, getAdminReviews, getAdminSystemExceptions, getAdminTaskLogs, rejectItem, retryFailedNotifications, runOpsCompensation } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
 import { formatPrice, formatTime } from "@/lib/utils/format";
 import type { AdminReviewDecision, AdminReviewItem, AuctionItem } from "@/types/auction";
@@ -52,6 +52,18 @@ function AdminDashboardContent() {
     queryKey: queryKeys.adminDailyStatistics(today, today),
     queryFn: () => getAdminDailyStatistics(today, today),
   });
+  const { data: operationLogs } = useQuery({
+    queryKey: ["admin-operation-logs"],
+    queryFn: getAdminOperationLogs,
+  });
+  const { data: taskLogs } = useQuery({
+    queryKey: ["admin-task-logs"],
+    queryFn: getAdminTaskLogs,
+  });
+  const { data: systemExceptions } = useQuery({
+    queryKey: ["admin-system-exceptions"],
+    queryFn: getAdminSystemExceptions,
+  });
   const rows = data.filter((row) => !removed.includes(row.id));
   const todayStats = dailyStatistics[0];
   const approveMutation = useMutation({
@@ -78,6 +90,22 @@ function AdminDashboardContent() {
       );
       setAuctionFormOpenFor(null);
       void queryClient.invalidateQueries({ queryKey: queryKeys.adminAuctions("ALL") });
+    },
+  });
+  const notificationRetryMutation = useMutation({
+    mutationFn: retryFailedNotifications,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-operation-logs"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-task-logs"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-system-exceptions"] });
+    },
+  });
+  const compensationMutation = useMutation({
+    mutationFn: runOpsCompensation,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-operation-logs"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-task-logs"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-system-exceptions"] });
     },
   });
   const auditError = approveMutation.error?.message ?? rejectMutation.error?.message;
@@ -169,7 +197,7 @@ function AdminDashboardContent() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="rounded-lg bg-slate-950 px-4 py-3 font-mono text-xs text-emerald-300 shadow-float">
               <Command className="mr-2 inline h-4 w-4" />
-              ops&gt; task_log scan OK · ws gateway online · retries 0
+              ops&gt; task logs {taskLogs?.total ?? 0} · exceptions {systemExceptions?.total ?? 0}
             </div>
             <Button variant="secondary" onClick={handleLeaveAdmin}>
               <LogOut className="h-4 w-4" />
@@ -403,10 +431,66 @@ function AdminDashboardContent() {
         ) : null}
 
         {panel === "ops" ? (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Kpi icon={<Command className="h-5 w-5" />} label="通知重试队列" value="0" />
-            <Kpi icon={<ClipboardCheck className="h-5 w-5" />} label="任务扫描" value="OK" />
-            <Kpi icon={<ShieldAlert className="h-5 w-5" />} label="实时通道" value="ONLINE" />
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <Kpi icon={<Command className="h-5 w-5" />} label="操作日志" value={String(operationLogs?.total ?? 0)} />
+              <Kpi icon={<ClipboardCheck className="h-5 w-5" />} label="任务日志" value={String(taskLogs?.total ?? 0)} />
+              <Kpi icon={<ShieldAlert className="h-5 w-5" />} label="异常记录" value={String(systemExceptions?.total ?? 0)} />
+            </div>
+            <div className="flex flex-wrap gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-card">
+              <Button disabled={notificationRetryMutation.isPending} onClick={() => notificationRetryMutation.mutate()}>
+                {notificationRetryMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                通知重试
+              </Button>
+              <Button variant="secondary" disabled={compensationMutation.isPending} onClick={() => compensationMutation.mutate("ORDER_SETTLEMENT")}>
+                订单结算补偿
+              </Button>
+              <Button variant="secondary" disabled={compensationMutation.isPending} onClick={() => compensationMutation.mutate("STATISTICS_DAILY_AGGREGATION")}>
+                统计补偿
+              </Button>
+              {notificationRetryMutation.data ? (
+                <span className="self-center text-sm text-slate-600">
+                  通知：成功 {notificationRetryMutation.data.succeeded}，失败 {notificationRetryMutation.data.failed}
+                </span>
+              ) : null}
+              {compensationMutation.data ? (
+                <span className="self-center text-sm text-slate-600">
+                  补偿：成功 {compensationMutation.data.succeeded}，跳过 {compensationMutation.data.skipped}
+                </span>
+              ) : null}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <OpsTable
+                title="操作日志"
+                rows={(operationLogs?.list ?? []).map((row) => ({
+                  key: String(row.operationLogId),
+                  primary: `${row.moduleName}.${row.operationName}`,
+                  secondary: row.bizKey || row.detail,
+                  status: row.result,
+                  time: row.createdAt,
+                }))}
+              />
+              <OpsTable
+                title="任务日志"
+                rows={(taskLogs?.list ?? []).map((row) => ({
+                  key: String(row.taskLogId),
+                  primary: row.taskType,
+                  secondary: row.lastError || row.bizKey,
+                  status: row.taskStatus,
+                  time: row.createdAt,
+                }))}
+              />
+              <OpsTable
+                title="异常列表"
+                rows={(systemExceptions?.list ?? []).map((row) => ({
+                  key: `${row.sourceType}-${row.sourceId}-${row.bizKey}`,
+                  primary: row.summary,
+                  secondary: row.detail || row.bizKey,
+                  status: row.currentStatus,
+                  time: row.occurredAt,
+                }))}
+              />
+            </div>
           </div>
         ) : null}
       </section>
@@ -490,6 +574,38 @@ function Kpi({ icon, label, value }: { icon: ReactNode; label: string; value: st
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">{icon}</div>
       <p className="text-sm font-bold text-slate-500">{label}</p>
       <p className="tabular mt-1 text-2xl font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function OpsTable({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{ key: string; primary: string; secondary: string; status: string; time: string }>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+      <div className="border-b border-slate-200 px-4 py-3">
+        <h2 className="text-sm font-black text-slate-950">{title}</h2>
+      </div>
+      {rows.length === 0 ? (
+        <div className="px-4 py-8 text-sm text-slate-500">暂无数据</div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {rows.map((row) => (
+            <div key={row.key} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="line-clamp-1 text-sm font-bold text-slate-950">{row.primary}</p>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-600">{row.status}</span>
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{row.secondary || "-"}</p>
+              <p className="mt-2 text-xs text-slate-400">{row.time ? formatTime(row.time) : "-"}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
