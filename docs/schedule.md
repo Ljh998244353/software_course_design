@@ -2,342 +2,198 @@
 
 ## 新会话最小恢复卡片
 
-- 当前主 Step: `Graduation-Excellence`
-- 当前唯一活动任务: 毕业设计需求覆盖闭环与满分答辩证据补强
-- 当前执行阶段: `Requirements-Coverage-Audit`
+- 当前主 Step: `Final-Closeout`
+- 当前唯一活动任务: 答辩演示流程与浏览器自动化验证收口
+- 当前执行阶段: `Defense-Demo-E2E-Closeout`
 - 当前状态: `已完成`
+- 当前真实状态:
+  - `S00-S15` 已完成
+  - `F16` 已完成
+  - `F17` 真实 HTTP 与真实 WebSocket 已接入完成
+  - `R2/R3/R6/R7` 最终收口已完成
+- 当前唯一主入口:
+  - 前端: `frontend/`，默认地址 `http://127.0.0.1:3000`
+  - 后端: `./build/bin/auction_app` 提供真实 `/api/...` 与 `/ws/...`
+  - 一键启动: `./start.sh --config config/app.local.json`
+- 当前支付口径:
+  - 保留本地测试支付模型
+  - 前端支付页传 `confirm_success=true` 时由后端本地 mock 成功回调推进订单
+  - 未接入真实第三方支付平台
 - 最近一次已通过验证:
   - `bash -n start.sh`
-  - `bash -n scripts/db/setup_local_mysql.sh`
-  - `cmake --build build`
-  - `scripts/test.sh auction`（非沙箱环境，需本地 MySQL socket/TCP）
-  - `scripts/test.sh bid`（非沙箱环境，需本地 MySQL socket/TCP）
-  - `git diff --check`
-  - `scripts/test.sh http`
-  - `scripts/test.sh risk`
-  - `ctest --test-dir build --output-on-failure`
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run build`
-  - `bash -n start.sh`
-  - `cmake -S . -B build`
-  - `./start.sh --backend-only`（已验证可自动重置被 Windows clang 污染的 CMake cache，并完成全量构建）
-  - `bash -n scripts/db/setup_local_mysql.sh`
-  - `bash -n scripts/deploy/verify_release.sh`
   - `bash -n scripts/test.sh`
   - `bash -n scripts/test_frontend.sh`
+  - `bash -n scripts/deploy/verify_release.sh`
+  - `git diff --check`
   - `./start.sh --config config/app.local.json`
   - `scripts/deploy/verify_release.sh`
-  - `bash -n scripts/test.sh`
-  - `bash -n scripts/test_e2e.sh`
-  - `cd frontend && npm run typecheck`
-  - `scripts/test.sh e2e`（非沙箱环境，需本地端口监听权限）
-  - `bash -n scripts/deploy/verify_release.sh`
-  - `python3 -m py_compile scripts/performance_probe.py`
   - `cmake --build build`
-  - `scripts/test.sh item`（非沙箱环境，1/1 通过；Codex 沙箱内临时 MySQL 启动失败）
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run build`
-  - `scripts/test.sh frontend`
-  - `scripts/test.sh e2e`（非沙箱环境，6/6 通过）
-  - `git diff --check`
-  - `cmake --build build`
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run build`
-  - `scripts/test.sh auction`
-  - `scripts/test.sh payment`（非沙箱环境，3/3 通过；Codex 沙箱内临时 MySQL 启动失败）
-  - `cd frontend && npm run test:e2e`（非沙箱环境，9/9 通过；Codex 沙箱内 Next dev server 启动失败）
-  - `cmake --build build`
-  - `cd frontend && npm run build`
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run test:e2e`（9/9 通过，覆盖通知红点、右下角弹窗和已读接口）
+  - `ctest --test-dir build --output-on-failure`
+  - `scripts/test.sh http`
+  - `scripts/test.sh risk`
   - `scripts/test.sh item`
-  - `scripts/test.sh integration`（非沙箱环境，2/2 通过；Codex 沙箱内临时 MySQL 启动失败）
+  - `scripts/test.sh auction`
+  - `scripts/test.sh bid`
+  - `scripts/test.sh payment`
+  - `scripts/test.sh integration`
+  - `scripts/test.sh frontend`
+  - `scripts/test.sh e2e`
+  - `cd frontend && npm run test:e2e -- tests/e2e/defense-flow.spec.ts`
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e`
   - `git diff --check`
 - 当前阻塞/风险:
-  - 需求覆盖矩阵、注册 UI、拍品下架、订单履约/评价/通知前端闭环、运维真实数据入口、性能脚本与 E2E 骨架已补齐
-  - 当前工作区已有 Playwright 相关未提交改动，需保留并在此基础上扩展，不回滚
-  - Playwright Chromium E2E 已在非沙箱环境通过；Codex 沙箱内仍可能因端口监听限制失败
-  - `scripts/test.sh performance` 已新增；实测需要后端正在运行，`scripts/deploy/verify_release.sh --full` 会在后端存活期间执行
-  - `start.sh` 的自动 fallback MySQL 已改为复用 `build/local_mysql/runtime` 持久数据目录；测试与发布验证仍使用 `build/test_mysql/run-*` 临时库
-  - `start.sh` 已修复 WSL 中误复用 `/mnt/c/.../*.exe` 编译器缓存的问题；若用户此前 build 目录已被 Windows clang 污染，脚本现在会自动重置 `CMakeCache.txt` 和 `CMakeFiles/`
-  - Codex 沙箱仍无法自行复现本地 `mysqld` 监听；依赖 MySQL socket/TCP 的模块测试需在非沙箱本机环境运行
-  - 本轮已修复大厅登录空态、真实筛选、审核通知、提审/建拍/开拍/支付/履约通知、通知红点与右下角弹窗、已读接口和虚拟支付成功闭环；后续如继续改支付回调需保留不传 `confirmSuccess` 时的 WAITING_CALLBACK 安全测试路径
-  - `schedule.md` 仍需持续保持短恢复入口，不再回涨为长历史流水
+  - Codex 沙箱内可能限制本地 MySQL socket/TCP 监听；依赖 MySQL 的测试需在本机非沙箱环境复验
+  - `build/local_mysql/runtime` 是 `start.sh` fallback 的本地持久运行库，不应作为普通缓存清理
+  - `build/test_mysql/run-*` 是测试临时库，可由测试脚本自行管理
+  - 当前仓库仍保留部分历史 `/app` 与 `/demo` 说明，但不能写成当前主验收入口
 - 下一步唯一动作:
-  - 后续按新增答辩问题或验收反馈做增量维护；若需要性能证据，运行 `scripts/deploy/verify_release.sh --full`
+  - 后续仅按新增验收反馈做增量维护
 - 优先阅读文件:
   - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
   - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
   - [frontend/API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)
-  - [playwright.config.ts](/home/ljh/project/soft_course_design/frontend/playwright.config.ts)
-  - [test_e2e.sh](/home/ljh/project/soft_course_design/scripts/test_e2e.sh)
-
-## 当前真实状态
-
-- `S00-S15`：已完成
-- `F16`：已完成
-- `F17`：真实 HTTP 与真实 WebSocket 已接入完成，当前只做最终产品化收口
-- 当前唯一发布口径：
-  - 前端唯一主入口为 `frontend/`
-  - 后端唯一主入口为真实 HTTP/WS 接口
-  - 支付仅保留本地测试支付模型，用于完整链路演示
-- 当前主修复方向：
-  - `F17-UX-Fix` 大厅筛选、登录空态、审核通知和虚拟支付闭环：已完成
-  - `Graduation-Excellence` 需求覆盖闭环与答辩证据补强：已完成
-  - `Graduation-Excellence` Playwright 浏览器 E2E 基础设施：已完成
-  - `R2` 启动链路稳定化：已完成
-  - `R3` 单一真实入口收敛：已完成
-  - `R6` 发布门禁收敛：已完成
-  - `R7` 文档与 handoff 收口：已完成
+  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
+  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
 
 ## 当前 Handoff
 
 ### 1. 基本信息
 
-- Step ID: `Graduation-Excellence`
-- 模块名称: 需求覆盖闭环与答辩证据补强
+- Step ID: `Final-Closeout/Defense-Demo`
+- 模块名称: 答辩演示流程与浏览器自动化验证收口
 - 当前状态: `已完成`
 - 统一进度文档: [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
-- 详细执行计划: [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
+- 前端接入状态: [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)、[frontend/API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)
 
-### 2. 本轮前已完成的关键修复
+### 2. 本轮实际处理
 
-- `start.sh` 已改为真实产品一键启动入口，默认优先 `config/app.local.json`
-- 配置缺失时会自动复制 `config/app.example.json` 为本地模板并退出
-- 启动前会执行：
-  - `auction_app --check-config`
-  - `auction_app --check-db`
-- 数据库检查失败时会自动尝试 `scripts/db/setup_local_mysql.sh`
-- fallback 运行配置已修复为使用应用账号 `auction_user / change_me`，不再误写 root 管理账号
-- `scripts/deploy/verify_release.sh` 已改为自动初始化本地测试 MySQL 并生成真实测试配置，不再直接用 `config/app.example.json`
-- 前端总入口脚本已统一为 [scripts/test_frontend.sh](/home/ljh/project/soft_course_design/scripts/test_frontend.sh)
-- 大部分旧 `demo` 主入口口径已从测试、部署、联调、演示文档中退出
-
-### 3. 本轮实际完成
-
-- 已修复拍卖大厅空态登录入口问题：
-  - 未登录且无拍品时继续显示“登录 / 注册”
-  - 已登录且无拍品时改为“发布拍品 / 查看通知 / 刷新列表”，不再跳回登录页
-- 已修复拍卖大厅筛选未对齐真实字段的问题：
-  - `/auction/hall` 分类已对齐种子数据：数码设备、图书文创、运动户外、校园收藏
-  - 分类、价格区间、卖家评分、有成交记录、交易方式都会写入 URL 并传给 `/api/auctions`
-  - `src/access/http/auction_public_http.cpp` 已解析上述参数，并返回分类、起拍价、加价幅度、卖家评分、成交记录、交易方式、地点、标签和描述等前端字段
-- 已补齐关键流程提示与通知闭环：
-  - 发布页继续在提交后提示“进入审核队列”
-  - `ItemService::SubmitForAudit` 现已在提审成功后给卖家写入 `ITEM_SUBMITTED_FOR_REVIEW`，并给所有可用管理员写入 `ITEM_REVIEW_REQUIRED`
-  - `ItemAuditService` 现已在审核事务提交后给卖家写入 `ITEM_REVIEW_APPROVED` / `ITEM_REVIEW_REJECTED` 站内通知，通知失败不回滚审核
-  - `AuctionService` 现已在管理员创建/修改/取消拍卖、系统自动开拍和无出价流拍后给卖家补发 `AUCTION_SCHEDULED` / `AUCTION_SCHEDULE_UPDATED` / `AUCTION_CANCELLED` / `AUCTION_STARTED` / `AUCTION_UNSOLD` 站内通知
-  - 竞价成功/被超价继续通过 Toast 与站内通知提示，成交和支付通知继续走现有订单/支付通知服务
-  - 前端全局导航会轮询未读通知并显示红点计数，新增未读通知会在右下角弹窗提示
-  - `/api/notifications/{id}/read` 已修正为 Drogon 命名占位符并支持 `PATCH/POST` 与 CORS 预检，点击“已读”不再误报无法连接后端
-- 已收敛虚拟支付体验：
-  - 前端支付页提交 `confirm_success=true`
-  - 后端 `/api/orders/{id}/pay` 在该开关下会创建或复用支付单并立即生成本地 mock 成功回调，推进订单到 `PAID`，拍卖/拍品到 `SOLD`
-  - 不传 `confirmSuccess` 时仍保留 `WAITING_CALLBACK` 模型，用于支付回调签名、金额和幂等测试
-- 已新增 [毕业设计需求覆盖矩阵.md](/home/ljh/project/soft_course_design/docs/毕业设计需求覆盖矩阵.md)，按需求规格说明书覆盖系统目标、8 个模块、主流程、非功能需求和验证证据
-- 已补齐卖家拍品下架：
-  - 后端新增 `POST /api/items/{id}/offline`
-  - 服务层仅允许卖家下架自己的 `DRAFT`、`REJECTED`、`READY_FOR_AUCTION`、`UNSOLD` 拍品
-  - `PENDING_AUDIT`、`IN_AUCTION`、`SOLD` 不允许下架
-  - `tests/item/item_flow_tests.cpp` 已覆盖非本人拒绝和成功下架到 `OFFLINE`
-- 已补齐前端需求入口：
-  - `/auth/login` 支持登录/注册双模式，注册成功后自动登录
-  - `/account/items` 支持查看我的拍品和下架
-  - `/orders` 支持订单列表、发货、确认收货和评价入口
-  - `/notifications` 支持通知列表和已读
-  - `/admin/dashboard` 运维面板改为真实查询操作日志、任务日志、异常列表，并支持通知重试和补偿操作
-- 已补齐验证入口：
-  - `scripts/test.sh e2e` 的 Playwright 用例覆盖注册表单、下架入口、订单评价入口、通知入口和运维入口
-  - `scripts/test.sh performance` 使用 Python 标准库生成 `build/performance_report.json` 与 `build/performance_report.md`
-  - `scripts/deploy/verify_release.sh --full` 在发布验证中额外串联 E2E 与性能验证
-- 已修正文档旧口径：
-  - 旧提交审核接口名统一修正为当前真实 `submit-review`
-  - 当前 `ctest -N` 为 16 项
-  - Playwright 与性能脚本已接入，文档不再保留过时的缺失表述
-
-- 已修复重启后拍卖历史丢失的根因：
-  - 业务仓储层本身已使用 MySQL 持久化 `auction`、`bid_record`、`order_info` 等交易事实
-  - 问题来自 `start.sh` 在配置数据库不可用时调用 `scripts/db/setup_local_mysql.sh`，而该脚本默认使用 `build/test_mysql/run-$$` 临时目录
-  - `start.sh` 现已显式传入 `AUCTION_TEST_MYSQL_ROOT_DIR=build/local_mysql/runtime`，使产品启动 fallback 复用同一数据目录
-  - 启动结束只停止本次自动拉起的 `mysqld`，不删除 `build/local_mysql/runtime`，因此后续重启可继续读取历史拍卖、出价、订单和支付数据
-- 已保持测试库隔离：
-  - `scripts/test_*.sh` 与 `scripts/deploy/verify_release.sh` 未改动，继续使用 `build/test_mysql/run-*` 临时库
-  - 测试和发布验证不会污染 `start.sh` 的本地持久运行库
-- 已同步文档：
-  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
-  - [环境配置说明.md](/home/ljh/project/soft_course_design/docs/环境配置说明.md)
-- 已修复前端大厅/首页对拍卖列表真实响应格式的兼容缺陷：
-  - 当前运行后端 `/api/auctions` 返回 `{ list, pageNo, pageSize, total }` 与 camelCase 字段
-  - 前端此前仍按“直接数组 + snake_case”解析，导致在后端正常返回空列表时被误判为加载失败
-  - `frontend/lib/api/client.ts` 现已兼容两套真实返回结构；`frontend/types/auction.ts` 已补齐对应类型
-- 已修复登录后访问公开拍卖接口的 CORS 缺陷：
-  - 浏览器在跨端口请求且携带 `Authorization` 时会先发 `OPTIONS` 预检
-  - `/api/auctions`、`/api/auctions/{id}`、`/api/auctions/{id}/price`、`/api/auctions/{id}/bids` 这组公开接口此前缺少预检处理与统一 CORS 响应头
-  - 现已在 `src/access/http/auction_public_http.cpp` 补齐预检，并在 `src/common/http/http_utils.cpp` 为统一 JSON 响应补齐 CORS 响应头
-- 已修复公开拍卖路由的 Drogon 路径占位符错误：
-  - `src/access/http/auction_public_http.cpp` 误把 `registerHandler` 路径写成 `/api/auctions/{1}` / `{1}/price` / `{1}/bids`
-  - 该写法会在应用启动阶段触发 `Parameter placeholder(value=1) out of range`，导致后端进程提前退出
-  - 现已统一改为与仓库其余路由一致的命名占位符写法 `/api/auctions/{id}...`
-- 已修复前端发布页重复图片 URL 导致的 React duplicate key 报错：
-  - `frontend/app/auction/publish/page.tsx` 现在会在草稿恢复和手动添加时去重
-  - 图片网格渲染 key 已改为稳定唯一组合值，不再直接使用 URL
-- 已补齐发布页图片撤回与校验能力：
-  - 图片卡片右上角现已提供删除按钮，可直接撤回单张图片并同步更新草稿
-  - 添加图片前会校验 URL 是否为 `http/https`、是否为常见图片格式，以及资源是否可实际加载；不合法时会直接报错
-- 已新增演示账号与全功能测试流程文档：
-  - `docs/演示账号与全功能测试流程.md`
-  - 记录管理员/普通用户演示账号、备用账号以及从发布、审核、建拍、竞价、支付、履约到评价和统计的完整演示脚本
-- 已修复管理端审核抽屉不可滚动的问题：
-  - `frontend/app/admin/dashboard/page.tsx` 已改为固定头部、独立滚动内容区和固定底部操作栏
-  - 审核详情信息较长时不再被遮挡，抽屉可完整滚动浏览
-- 已修复管理端缺少明确退出入口的问题：
-  - `frontend/app/admin/dashboard/page.tsx` 顶部已新增“退出后台”按钮
-  - 当前已收口为“退出后台仅返回前台页面，不清空登录态”，避免管理员误被整体登出
-- 已修复管理端审核后无法追踪的问题：
-  - 审核通过/驳回后，拍品不再只是从“待审核”列表消失
-  - “最近处理记录”现已持久化到浏览器本地存储，重新进入后台或重新登录后仍可继续追踪
-- 已补齐管理员创建拍卖入口：
-  - `frontend/app/admin/dashboard/page.tsx` 现在可直接基于“最近处理记录”里的已批准拍品填写时间和价格规则，并调用真实 `POST /api/admin/auctions` 创建正式拍卖
-  - `frontend/lib/api/client.ts` 已新增 `createAdminAuction()`，对接现有管理端拍卖创建接口
-- 已修复管理端审核抽屉看不到图片的问题：
-  - `GET /api/admin/items/pending` 现已返回 `cover_image_url`
-  - `frontend/app/admin/dashboard/page.tsx` 审核抽屉改为优先渲染真实封面图，只有缺图时才回退到占位面板
-- 已修复管理端创建拍卖被前端误判为“无法连接后端服务”的问题：
-  - `src/access/http/auction_admin_http.cpp` 已为 `/api/admin/auctions`、`/api/admin/auctions/{id}`、`/api/admin/auctions/{id}/cancel` 补齐 `OPTIONS` 预检和 CORS
-  - 浏览器跨端口携带 `Authorization` 时现在可以正常发送真实创建拍卖请求
-  - 同时已修复一处回归：管理端拍卖 Drogon 路由占位符已统一保持为命名形式 `{id}`，避免启动阶段再次触发 `Parameter placeholder(value=1) out of range`
-  - 已修复管理端创建拍卖时间被错误判定为过去的问题：前端不再把 `datetime-local` 值转换成 UTC `toISOString()`，而是按后端实际约定提交本地语义的 `YYYY-MM-DD HH:MM:SS`
-- 已修复同浏览器多窗口无法分别登录不同账号的问题：
-  - 前端认证 token 已从 `localStorage` 改为 `sessionStorage`
-  - 同一浏览器下不同窗口/标签页现在可维持各自独立的登录态，适合现场多账号并行演示
-  - WebSocket 身份识别与会话恢复已同步切换到 `sessionStorage`
-- 已修复首页/详情页因第三方图片域名触发的 Next 运行时崩溃：
-  - 拍品图片 URL 允许用户填写任意外部地址，继续依赖 `next/image` 的域名白名单会导致首页和详情页在遇到新域名时直接报错
-  - `frontend/components/auction/auction-card.tsx` 与 `frontend/app/auction/detail/[id]/page.tsx` 现已改为对用户图片使用普通 `<img>` 渲染，不再受 `next.config.mjs` 的 `images.remotePatterns` 限制
-- 已修复刷新页面时前端误显示为已退出登录的问题：
-  - `frontend/lib/auth-context.tsx` 现已在首次恢复会话前保持 `loading=true`，并统一从 `sessionStorage` 恢复 token
-  - `frontend/components/layout/site-nav.tsx` 现已在会话恢复期间固定显示占位态，不会先闪出“登录/注册”造成误判
-- 已修复首页、大厅、详情页对拍卖状态的口径不一致问题：
-  - 首页此前未显式限定 `RUNNING`，会把 `PENDING_START` 拍卖也展示在“正在竞价”区域
-  - 大厅默认只查询 `RUNNING`，详情页也只允许 `RUNNING` 状态出价，导致用户看到首页有拍品、大厅却为空，或详情页可见但不能竞拍
-  - 现已把首页查询统一收口为只展示 `RUNNING`，并在前端保留 `acceptingBids` 字段，详情页以服务端返回的可出价标记为准
-- 已修复后端运行时未自动推进拍卖状态的问题：
-  - `auction_app` 启动后此前只注册了 HTTP/WS 路由，没有把拍卖开始、拍卖结束、订单结算、订单超时关闭等调度周期挂进运行时
-  - 现已在 `src/common/runtime/application_bootstrap.cpp` 中注册定时任务，自动推进 `PENDING_START -> RUNNING`、`RUNNING -> SETTLING` 及后续订单结算链路
-  - 管理端创建拍卖的默认开始时间也已从“10 分钟后”收紧为“1 分钟后”，避免管理员刚建拍卖就误以为应当立刻可竞拍
-- 已修复 `crypt` 库探测导致的 CMake 配置失败：
-  - `CMakeLists.txt` 不再只用 `find_library(CRYPT_LIBRARY crypt REQUIRED)` 的单一路径探测
-  - 现已兼容 `crypt` / `xcrypt` 以及常见系统库目录，避免 Ubuntu/WSL 环境下误报 “Could not find CRYPT_LIBRARY”
-- 已将 `schedule.md` 从长历史流水改写为短恢复入口
-- 已把恢复信息收敛为：
-  - 当前阶段
-  - 当前风险
-  - 最近验证
-  - 唯一下一步动作
-  - 精简 handoff
-- 已把历史演进记录改为摘要，不再在本文件保留超长逐日流水
-- 已继续清理文档中的当前态误导口径：
-  - `docs/部署与答辩说明.md`
-  - `docs/答辩演示操作手册.md`
-  - `docs/环境配置说明.md`
-  - `docs/测试计划与用例说明.md`
-  - `docs/接口联调记录.md`
+- 新增并跑通答辩浏览器链路:
+  - `frontend/tests/e2e/defense-flow.spec.ts` 覆盖注册、登录、发布、审核、建拍、双买家出价、支付、发货、收货、评价、通知、统计和运维入口
+  - `frontend/public/demo-auction.svg` 作为现场发布页稳定图片 URL，避免依赖外网图片
+- 更新答辩演示文档:
+  - `docs/答辩演示操作手册.md` 已改为逐步操作脚本，包含每一步按钮、账号、字段值、预期验证点和自动化命令
+  - `docs/演示账号与全功能测试流程.md` 已同步短时拍卖、真实调度结算和本地演示图口径
+  - `frontend/API_READINESS.md` 与 `docs/frontend-next-schedule.md` 已记录专用 E2E 与演示资产
+- 已验证:
+  - `cd frontend && npm run test:e2e -- tests/e2e/defense-flow.spec.ts`
+  - `scripts/test.sh e2e`
+  - `cd frontend && npm run typecheck`
+  - `git diff --check`
+- 清理可再生成资源:
+  - 已删除 `frontend/.next`
+  - 已删除 `.cache/clangd`
+  - 未清理 `build/`、`data/`、`config/app.local.json`，避免破坏本地运行库、上传数据或本地配置
+- 清理冗余文档:
+  - 已删除完成后不再作为恢复入口的一次性计划文档
+  - `schedule.md` 已收缩为短恢复入口，不再保留长历史流水
+  - `docs/frontend-next-schedule.md` 已收缩为前端最终态与维护规则
+- 文档口径要求:
+  - 当前主入口必须写作 `frontend/` + 真实 HTTP/WS
+  - `/app` 只能作为旧阶段兼容/历史页面说明
+  - `/demo` 只能作为历史只读演示形态说明
+  - 支付只能写作本地测试支付模型或本地 mock 成功闭环
+- 已同步修正:
+  - `README.md`
+  - `frontend/README.md`
+  - `docs/认证与权限模块说明.md`
+  - `docs/物品与审核模块说明.md`
   - `docs/拍卖管理模块说明.md`
+  - `docs/竞价与实时通知模块说明.md`
+  - `docs/订单与支付模块说明.md`
   - `docs/评价与反馈模块说明.md`
   - `docs/统计分析与报表模块说明.md`
   - `docs/系统监控与异常处理模块说明.md`
-  - `docs/订单与支付模块说明.md`
-  - `docs/前端演示模块说明.md`
-  - `docs/认证与权限模块说明.md`
-  - `docs/物品与审核模块说明.md`
-  - `docs/测试报告.md`
-- 已修正文档中“运行不存在脚本/读取不存在 SQL 或目录”的描述，改为和当前 `start.sh`、`verify_release.sh`、`frontend/`、`sql/seed.sql` 一致
-- 已继续清理第二层历史口径，把多份模块文档中误写成当前现实的 `assets/app/*`、`node --check assets/app/app.js` 改为 `frontend/` 真实页面与当前测试入口
-- 已将仍把 `/app` 写成当前唯一产品入口的文档，统一收口为 `frontend/` + `http://127.0.0.1:3000` 当前主入口口径
-- 已修复发布门禁中的一个真实脚本缺陷：`scripts/test.sh frontend` 不再直接依赖 `scripts/test_frontend.sh` 的 Unix 可执行位，现改为显式 `bash` 调用
-- 已在本机正常 shell 中完成最终实跑验收：
-  - `./start.sh --config config/app.local.json`
-  - `scripts/deploy/verify_release.sh`
-  - `cmake --build build`（含提审、拍卖状态通知和通知已读路由修复）
-  - `cd frontend && npm run build`（含通知红点和右下角弹窗）
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run test:e2e`（9/9 通过）
-  - `scripts/test.sh item`
-  - `scripts/test.sh integration`（非沙箱环境，2/2 通过；Codex 沙箱内临时 MySQL 启动失败）
-  - `git diff --check`
+  - `docs/测试计划与用例说明.md`
+  - `docs/部署与答辩说明.md`
+  - `docs/接口联调记录.md`
+  - `docs/演示账号与全功能测试流程.md`
 
-### 4. 当前验证结果
+### 3. 当前交付清单
 
-- 已通过：
+- 后端模块:
+  - `src/modules/auth`
+  - `src/modules/item`
+  - `src/modules/audit`
+  - `src/modules/auction`
+  - `src/modules/bid`
+  - `src/modules/order`
+  - `src/modules/payment`
+  - `src/modules/review`
+  - `src/modules/notification`
+  - `src/modules/statistics`
+  - `src/modules/ops`
+- HTTP/WS 接入:
+  - `src/access/http/auth_http.*`
+  - `src/access/http/item_http.*`
+  - `src/access/http/admin_http.*`
+  - `src/access/http/auction_admin_http.*`
+  - `src/access/http/auction_public_http.*`
+  - `src/access/http/auction_http.*`
+  - `src/access/http/bid_http.*`
+  - `src/access/http/order_http.*`
+  - `src/access/http/payment_http.*`
+  - `src/access/http/review_http.*`
+  - `src/access/http/notification_http.*`
+  - `src/access/http/statistics_http.*`
+  - `src/access/http/ops_http.*`
+  - `src/access/http/auction_ws.*`
+- 前端页面:
+  - `frontend/app/page.tsx`
+  - `frontend/app/auth/login/page.tsx`
+  - `frontend/app/auction/hall/page.tsx`
+  - `frontend/app/auction/detail/[id]/page.tsx`
+  - `frontend/app/auction/publish/page.tsx`
+  - `frontend/app/account/items/page.tsx`
+  - `frontend/app/orders/page.tsx`
+  - `frontend/app/checkout/[orderId]/page.tsx`
+  - `frontend/app/notifications/page.tsx`
+  - `frontend/app/admin/dashboard/page.tsx`
+- 答辩演示与浏览器验证:
+  - `docs/答辩演示操作手册.md`
+  - `docs/演示账号与全功能测试流程.md`
+  - `frontend/public/demo-auction.svg`
+  - `frontend/tests/e2e/defense-flow.spec.ts`
+
+## 当前验证入口
+
+- 快速静态验证:
   - `bash -n start.sh`
-  - `bash -n scripts/db/setup_local_mysql.sh`
-  - `cmake --build build`
-  - `scripts/test.sh auction`（非沙箱环境，3/3 通过）
-  - `scripts/test.sh bid`（非沙箱环境，3/3 通过）
-  - `git diff --check`
-  - `scripts/test.sh http`
-  - `scripts/test.sh risk`
-  - `ctest --test-dir build --output-on-failure`
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run build`
-  - `bash -n start.sh`
-  - `bash -n scripts/db/setup_local_mysql.sh`
-  - `bash -n scripts/deploy/verify_release.sh`
   - `bash -n scripts/test.sh`
   - `bash -n scripts/test_frontend.sh`
-  - `scripts/test.sh frontend`
-  - `cd frontend && npm run typecheck`
-  - `cd frontend && npm run typecheck`（含管理页“退出后台/最近处理记录持久化/创建拍卖入口”修复）
-  - `cd frontend && npm run typecheck`（含发布页图片删除与图片 URL/格式可访问性校验修复）
-  - `cd frontend && npm run build`（含首页/详情页第三方图片域名兼容修复）
-  - `cd frontend && npm run typecheck`（含刷新时登录态恢复占位修复）
-  - `cd frontend && npm run build`（含首页/大厅/详情页拍卖状态口径统一修复）
-  - `cd frontend && npm run typecheck`（含首页/大厅/详情页拍卖状态口径统一修复）
+  - `bash -n scripts/deploy/verify_release.sh`
+  - `git diff --check`
+- 后端验证:
+  - `cmake -S . -B build`
   - `cmake --build build`
-  - `cmake --build build`（含运行时自动开拍/结束/结算调度注册修复）
-  - `cd frontend && npm run typecheck`（含管理端审核抽屉图片展示与创建拍卖联调修复）
-  - `cmake --build build`（含 `GET /api/admin/items/pending` 图片字段与管理端拍卖 CORS 修复）
+  - `ctest --test-dir build --output-on-failure`
+  - `scripts/test.sh http`
+  - `scripts/test.sh risk`
+- 前端验证:
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run build`
+  - `cd frontend && npm run test:e2e`
+  - `cd frontend && npm run test:e2e -- tests/e2e/defense-flow.spec.ts`
+- 发布验证:
   - `./start.sh --config config/app.local.json`
   - `scripts/deploy/verify_release.sh`
-
-### 5. 当前风险/阻塞
-
-- 已修复一个真实启动阻塞：`build/CMakeCache.txt` 缓存 Windows `clang++.exe` 时，`start.sh` 会在 WSL 中触发 MSVC STL 编译失败；当前脚本已固定优先 Linux 编译器并自动重置受污染的 CMake cache
-- `schedule.md` 作为统一进度真源，后续只能继续保持“短恢复入口 + 当前状态摘要”结构，避免再次膨胀
-- 仓库中剩余 `demo` 命中大多属于历史交付说明；继续清理时要保留“历史边界”语义，不能误改代码现状
-- `start.sh` 已在本机正常 shell 中成功完成自动拉起本地 MySQL、启动后端和启动前端；`scripts/deploy/verify_release.sh` 也已在本机通过
-- 当前剩余命中基本属于明确标注的历史边界说明，例如旧 `/demo`、`sql/demo_data.sql` 和 `/app` 兼容路由历史；这部分可以保留，但不能再写成当前主链路
-
-### 6. 下一步
-
-- 下一步 Step ID: `Release-Maintenance`
-- 下一步目标:
-  - 后续仅按新增需求做增量维护
-- 建议先读文件:
-  - [schedule.md](/home/ljh/project/soft_course_design/docs/schedule.md)
-  - [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
-  - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
-  - [接口联调记录.md](/home/ljh/project/soft_course_design/docs/接口联调记录.md)
-  - [部署与答辩说明.md](/home/ljh/project/soft_course_design/docs/部署与答辩说明.md)
+  - `scripts/deploy/verify_release.sh --full`
 
 ## 历史阶段摘要
 
-- `S00-S15`：课程设计后端、数据库、测试基线、部署与答辩交付均已完成
-- `F16`：Next.js 前端骨架、7 个页面、设计系统、Mock 闭环已完成
-- `F17`：Auth、Auction、Bid、Publish、Checkout、Admin、WebSocket 真实接入已完成
-- `2026-06-03`：完成真实后端 HTTP 合同收口，补齐订单、支付、登出、404 JSON 等联调缺口
-- `2026-06-07`：完成 `start.sh`、本地 MySQL fallback、`verify_release.sh`、前端测试脚本名收口等最终修复，并在本机通过最终验收
+- `S00-S15`：后端、数据库、核心模块、测试基线、部署与答辩材料完成
+- `F16`：Next.js 前端工程、设计系统、主页面骨架和本地交互闭环完成
+- `F17`：真实 Drogon HTTP、WebSocket、通知、订单履约、评价、统计与运维入口完成
+- `R2/R3/R6/R7`：启动、单一真实入口、发布门禁、handoff 收口完成
 
-历史细节已改由：
-- [release-final-system-plan.md](/home/ljh/project/soft_course_design/docs/release-final-system-plan.md)
-- 各模块文档
-- 具体代码与测试文件
+历史细节以各模块文档、测试文档、联调记录、代码和测试文件为准，本文件不再追加长流水。
 
 ## 后续更新规则
 
 1. 任何改变实现状态、验证状态、handoff、下一步或前端 readiness 的任务，都必须同步更新本文件。
-2. `schedule.md` 只保留恢复必需信息，不再追加超长逐日流水。
-3. 若任务涉及前端/F17 收口，还必须同步：
+2. `schedule.md` 只保留恢复必需信息，不再追加逐日流水。
+3. 若任务涉及前端或 F17 接入口径，还必须同步：
    - [frontend-next-schedule.md](/home/ljh/project/soft_course_design/docs/frontend-next-schedule.md)
    - [frontend/API_READINESS.md](/home/ljh/project/soft_course_design/frontend/API_READINESS.md)
 4. 若代码与文档不一致，先以代码现状为准，再同步修正文档。
@@ -349,12 +205,11 @@
 
 开始前先读取：
 1. docs/schedule.md
-2. docs/release-final-system-plan.md
-3. docs/frontend-next-schedule.md
-4. frontend/API_READINESS.md
-5. 若任务属于后端启动/验证，再读取 start.sh、scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
+2. docs/frontend-next-schedule.md
+3. frontend/API_READINESS.md
+4. 若任务属于后端启动/验证，再读取 start.sh、scripts/、scripts/deploy/、config/、sql/、tests/、CMakeLists.txt
 
-当前主任务：最终上线完整系统修复
+当前主任务：最终收尾后的增量维护
 当前状态：S00-S15 已完成；F16 已完成；F17 真实 HTTP/WS 已接入完成；R2/R3/R6/R7 最终收口已完成
 
 当前必须遵守：
@@ -362,6 +217,7 @@
 - schedule.md 只保留短恢复入口，不再扩写成长历史流水
 - 单一真实业务入口：frontend + 真实 HTTP/WS
 - 支付保留，但只做本地测试支付模型
+- 不清理 build/local_mysql/runtime，避免破坏本地持久演示数据
 - 每次改变实现状态、验证状态、handoff、下一步，都同步更新 docs/schedule.md
 - 始终用中文
 ```

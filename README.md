@@ -50,20 +50,22 @@
 
 ## 快速开始
 
-### 1. 构建后端
+### 1. 一键启动
 
 ```bash
-./scripts/bootstrap.sh
+./start.sh --config config/app.local.json
 ```
 
-或手动执行：
+该脚本会检查配置和数据库，必要时使用仓库内本地 MySQL fallback，并同时启动后端和前端开发服务。
+
+### 2. 手动构建后端
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
 
-### 2. 运行前端校验
+### 3. 运行前端校验
 
 ```bash
 cd frontend
@@ -71,7 +73,7 @@ npm install
 npm run release-check
 ```
 
-### 3. 启动后端服务
+### 4. 手动启动后端服务
 
 ```bash
 ./build/bin/auction_app
@@ -83,7 +85,7 @@ npm run release-check
 curl http://127.0.0.1:18080/healthz
 ```
 
-### 4. 启动前端开发环境
+### 5. 手动启动前端开发环境
 
 ```bash
 cd frontend

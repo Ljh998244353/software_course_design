@@ -50,7 +50,10 @@ NEXT_PUBLIC_WS_BASE_URL=ws://127.0.0.1:18080
 | 拍卖大厅 | `/auction/hall` | 登录后主阵地、筛选、实时拍品矩阵 |
 | 竞价详情 | `/auction/detail/[id]` | 核心实时竞价页、乐观出价和回滚 |
 | 拍品发布 | `/auction/publish` | 卖家分步发布向导 |
+| 我的拍品 | `/account/items` | 卖家拍品列表、下架入口 |
+| 我的订单 | `/orders` | 订单列表、履约和评价入口 |
 | 订单支付 | `/checkout/[orderId]` | 支付方式选择、交易确认 |
+| 通知中心 | `/notifications` | 通知列表、未读筛选和已读操作 |
 | 管理大盘 | `/admin/dashboard` | 管理员审核、KPI、运维终端 |
 
 ## 目录结构

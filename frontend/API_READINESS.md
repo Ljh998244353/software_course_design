@@ -44,3 +44,12 @@
 - Checkout 当前使用本地虚拟支付确认，点击“确认支付”后由后端 mock 成功回调推进订单到 `PAID`
 - 全局导航会轮询未读通知并显示红点计数，新增未读通知会在右下角弹窗提示；通知页点击“已读”走真实 `PATCH /api/notifications/{id}/read`
 - 详情页优先使用真实 `/ws/auction/{id}`，连接失败时自动降级到轮询
+
+## 浏览器验证
+
+- 专用答辩浏览器链路：`frontend/tests/e2e/defense-flow.spec.ts`
+- 稳定演示图片：`frontend/public/demo-auction.svg`
+- 运行命令：`cd frontend && npm run test:e2e -- tests/e2e/defense-flow.spec.ts`
+- 覆盖范围：注册、登录、发布、审核、建拍、两用户出价、支付、发货、收货、评价、通知已读、统计与运维入口
+
+该用例使用真实前端页面和真实 API client 请求格式，通过 Playwright route 固定浏览器层测试后端，主要验证页面操作链路和接口契约；交易事实一致性与并发/幂等规则仍以真实后端测试 `scripts/test.sh http`、`scripts/test.sh risk` 和 CTest 为准。
