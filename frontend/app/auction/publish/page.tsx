@@ -220,6 +220,9 @@ function PublishPageContent() {
       if (images.length === 0) {
         throw new Error("请至少填写一张图片 URL 后再提交审核");
       }
+      if ((parseFloat(suggestedBidStep) || 0) <= 0) {
+        throw new Error("建议最小加价幅度必须大于 0");
+      }
 
       let itemId = createdItemId;
       if (!itemId) {

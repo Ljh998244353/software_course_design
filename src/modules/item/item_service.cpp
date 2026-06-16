@@ -80,8 +80,8 @@ void ValidateCreateRequest(const CreateItemRequest& request) {
     if (request.start_price <= 0.0) {
         throw std::invalid_argument("start_price must be positive");
     }
-    if (request.suggested_bid_step < 0.0) {
-        throw std::invalid_argument("suggested_bid_step must be non-negative");
+    if (request.suggested_bid_step <= 0.0) {
+        throw std::invalid_argument("建议最小加价幅度必须大于 0");
     }
     if (request.suggested_anti_sniping_window_seconds < 0 ||
         request.suggested_extend_seconds < 0) {
@@ -124,8 +124,8 @@ void ValidateUpdateRequest(const UpdateItemRequest& request) {
     if (request.location.has_value() && TrimWhitespace(*request.location).empty()) {
         throw std::invalid_argument("location must not be empty");
     }
-    if (request.suggested_bid_step.has_value() && *request.suggested_bid_step < 0.0) {
-        throw std::invalid_argument("suggested_bid_step must be non-negative");
+    if (request.suggested_bid_step.has_value() && *request.suggested_bid_step <= 0.0) {
+        throw std::invalid_argument("建议最小加价幅度必须大于 0");
     }
     if (request.suggested_anti_sniping_window_seconds.has_value() &&
         *request.suggested_anti_sniping_window_seconds < 0) {
@@ -188,6 +188,9 @@ void ValidateItemCompleteness(
     }
     if (item.start_price <= 0.0) {
         throw std::invalid_argument("item start_price must be positive");
+    }
+    if (item.suggested_bid_step <= 0.0) {
+        throw std::invalid_argument("建议最小加价幅度必须大于 0");
     }
     if (image_count == 0) {
         throw std::invalid_argument("item must have at least one image before submit");

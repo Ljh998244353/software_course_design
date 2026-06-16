@@ -34,6 +34,7 @@ function AdminDashboardContent() {
   const [selected, setSelected] = useState<AdminReviewItem | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
   const [recentDecisions, setRecentDecisions] = useState<AdminReviewDecision[]>([]);
+  const [recentDecisionsLoaded, setRecentDecisionsLoaded] = useState(false);
   const [rejectReason, setRejectReason] = useState("不符合平台审核要求");
   const [auctionFormOpenFor, setAuctionFormOpenFor] = useState<string | null>(null);
   const [auctionStartTime, setAuctionStartTime] = useState(defaultAuctionStartTime);
@@ -118,7 +119,10 @@ function AdminDashboardContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(recentDecisionStorageKey);
-    if (!saved) return;
+    if (!saved) {
+      setRecentDecisionsLoaded(true);
+      return;
+    }
     try {
       const parsed = JSON.parse(saved) as AdminReviewDecision[];
       if (Array.isArray(parsed)) {
@@ -126,13 +130,15 @@ function AdminDashboardContent() {
       }
     } catch {
       window.localStorage.removeItem(recentDecisionStorageKey);
+    } finally {
+      setRecentDecisionsLoaded(true);
     }
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !recentDecisionsLoaded) return;
     window.localStorage.setItem(recentDecisionStorageKey, JSON.stringify(recentDecisions));
-  }, [recentDecisions]);
+  }, [recentDecisions, recentDecisionsLoaded]);
 
   function handleLeaveAdmin() {
     router.replace("/auction/hall");
