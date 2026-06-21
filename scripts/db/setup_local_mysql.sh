@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MYSQL_ROOT_DIR="${AUCTION_TEST_MYSQL_ROOT_DIR:-${ROOT_DIR}/build/test_mysql/run-$$}"
+RUN_UNIQUE_ID="${AUCTION_TEST_MYSQL_RUN_ID:-${BASHPID:-$$}-${RANDOM}-${RANDOM}}"
+MYSQL_ROOT_DIR="${AUCTION_TEST_MYSQL_ROOT_DIR:-${ROOT_DIR}/build/test_mysql/run-${RUN_UNIQUE_ID}}"
 DATADIR="${MYSQL_ROOT_DIR}/data"
 SOCKET_FILE="${MYSQL_ROOT_DIR}/mysql-runtime.sock"
 PID_FILE="${MYSQL_ROOT_DIR}/mysql-runtime.pid"
@@ -12,7 +13,9 @@ DB_NAME="${AUCTION_DB_NAME:-auction_system}"
 DB_USER="${AUCTION_DB_USER:-auction_user}"
 DB_PASSWORD="${AUCTION_DB_PASSWORD:-change_me}"
 TCP_HOST="${AUCTION_TEST_MYSQL_HOST:-127.0.0.1}"
-TCP_PORT="${AUCTION_TEST_MYSQL_PORT:-$((3406 + ($$ % 1000)))}"
+RUN_PID="${BASHPID:-$$}"
+DEFAULT_TCP_PORT="$((20000 + ((RUN_PID + RANDOM) % 20000)))"
+TCP_PORT="${AUCTION_TEST_MYSQL_PORT:-${DEFAULT_TCP_PORT}}"
 
 mkdir -p "${MYSQL_ROOT_DIR}"
 
@@ -85,6 +88,24 @@ start_tcp_mode() {
         --daemonize
 }
 
+wait_started_mysqld_to_exit() {
+    local pid=""
+    if [[ -f "${PID_FILE}" ]]; then
+        pid="$(<"${PID_FILE}")"
+    elif [[ -f "${SOCKET_FILE}.lock" ]]; then
+        pid="$(<"${SOCKET_FILE}.lock")"
+    fi
+
+    if [[ "${pid}" =~ ^[0-9]+$ ]]; then
+        for _ in {1..50}; do
+            if ! kill -0 "${pid}" >/dev/null 2>&1; then
+                return 0
+            fi
+            sleep 0.2
+        done
+    fi
+}
+
 wait_socket_mode() {
     for _ in {1..10}; do
         if mysqladmin --socket="${SOCKET_FILE}" -uroot ping >/dev/null 2>&1; then
@@ -110,6 +131,7 @@ if ! mysqladmin --socket="${SOCKET_FILE}" -uroot ping >/dev/null 2>&1; then
     if start_socket_mode && wait_socket_mode; then
         CONNECTION_MODE="socket"
     elif socket_start_failed_due_to_bind_permission; then
+        wait_started_mysqld_to_exit
         : > "${LOG_FILE}"
         start_tcp_mode
         wait_tcp_mode

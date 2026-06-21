@@ -1,0 +1,240 @@
+/* Light Theme Variant - For regular content slides */
+
+:root {
+  /* Light mode colors - clean and readable */
+  --light-bg: #ffffff;
+  --light-bg-secondary: #f8f9fa;
+  --light-bg-tertiary: #f3f4f6;
+
+  --light-text-primary: #1a1d23;
+  --light-text-secondary: #4b5563;
+  --light-text-muted: #6b7280;
+
+  --light-border: #e5e7eb;
+  --light-border-light: #f3f4f6;
+
+  /* Code block keeps dark theme for contrast */
+  --light-code-bg: var(--one-dark-bg);
+  --light-code-fg: var(--one-dark-fg);
+}
+
+/* ============================================
+   Light Layout Base - content slides default to white
+   ============================================ */
+html:not(.dark) .slidev-layout {
+  background: var(--light-bg);
+  color: var(--light-text-primary);
+}
+
+/* Override for content layout types to be light */
+html:not(.dark) .slidev-layout.default,
+html:not(.dark) .slidev-layout.two-columns,
+html:not(.dark) .slidev-layout.three-cols,
+html:not(.dark) .slidev-layout.image-right,
+html:not(.dark) .slidev-layout.image-left,
+html:not(.dark) .slidev-layout.fact,
+html:not(.dark) .slidev-layout.statement,
+html:not(.dark) .slidev-layout.quote,
+html:not(.dark) .slidev-layout.full,
+html:not(.dark) .slidev-layout.iframe {
+  background: var(--light-bg);
+  color: var(--light-text-primary);
+}
+
+/* Special layouts are now light too (academic, unified) */
+html:not(.dark) .slidev-layout.cover,
+html:not(.dark) .slidev-layout.intro,
+html:not(.dark) .slidev-layout.section,
+html:not(.dark) .slidev-layout.end {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Also apply to slide container in preview/overview */
+html:not(.dark) .slidev-overview .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns),
+html:not(.dark) .slidev-presenter .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) {
+  background: var(--light-bg);
+  color: var(--light-text-primary);
+}
+
+/* ============================================
+   Typography for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) h1 {
+  color: var(--light-text-primary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) h2 {
+  color: var(--one-dark-blue);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) h3 {
+  color: var(--one-dark-magenta);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) h4 {
+  color: var(--light-text-secondary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) p {
+  color: var(--light-text-secondary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) strong {
+  color: var(--light-text-primary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) em {
+  color: var(--one-dark-yellow-dark);
+}
+
+/* ============================================
+   Code Blocks - Dark Theme (One Dark Pro)
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) :not(pre) > code {
+  background: var(--light-bg-tertiary);
+  color: var(--one-dark-blue);
+  border: 1px solid var(--light-border);
+}
+
+/* ============================================
+   Links for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) a {
+  color: var(--one-dark-blue);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) a:hover {
+  color: var(--one-dark-cyan);
+}
+
+/* ============================================
+   Lists for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) li {
+  color: var(--light-text-secondary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) li::marker {
+  color: var(--one-dark-blue);
+}
+
+/* ============================================
+   Tables for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) table {
+  background: var(--light-bg-secondary);
+  border: 1px solid var(--light-border);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) thead {
+  background: var(--light-bg-tertiary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) th {
+  color: var(--light-text-primary);
+  border-bottom: 2px solid var(--light-border);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) td {
+  color: var(--light-text-secondary);
+  border-bottom: 1px solid var(--light-border-light);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) tbody tr:hover {
+  background: var(--light-bg-tertiary);
+}
+
+/* ============================================
+   Blockquotes for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) blockquote {
+  border-left: 3px solid var(--one-dark-blue);
+  background: var(--light-bg-secondary);
+  color: var(--light-text-muted);
+}
+
+/* ============================================
+   Cards and Containers for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .card {
+  background: var(--light-bg-secondary);
+  border: 1px solid var(--light-border);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .gradient-card {
+  background: var(--light-bg-secondary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .glass-gradient {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--light-border);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .gradient-border {
+  background: var(--light-bg);
+}
+
+/* ============================================
+   Alerts for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .alert-info {
+  background: rgba(97, 175, 239, 0.08);
+  color: var(--light-text-primary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .alert-success {
+  background: rgba(152, 195, 121, 0.08);
+  color: var(--light-text-primary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .alert-warning {
+  background: rgba(229, 192, 123, 0.08);
+  color: var(--light-text-primary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .alert-error {
+  background: rgba(224, 108, 117, 0.08);
+  color: var(--light-text-primary);
+}
+
+/* ============================================
+   Buttons for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) button:not(.btn-gradient):not(.btn-gradient-subtle) {
+  background: var(--light-bg-tertiary);
+  color: var(--light-text-primary);
+  border: 1px solid var(--light-border);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) button:not(.btn-gradient):not(.btn-gradient-subtle):hover {
+  background: var(--light-bg-secondary);
+}
+
+/* ============================================
+   Utility overrides for Light Theme
+   ============================================ */
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .text-muted {
+  color: var(--light-text-muted);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .text-primary {
+  color: var(--light-text-primary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .text-secondary {
+  color: var(--light-text-secondary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .bg-primary {
+  background: var(--light-bg);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .bg-secondary {
+  background: var(--light-bg-secondary);
+}
+
+html:not(.dark) .slidev-layout:not(.cover):not(.intro):not(.section):not(.end):not(.two-columns) .bg-tertiary {
+  background: var(--light-bg-tertiary);
+}

@@ -1,0 +1,4 @@
+[2026-06-18 14:56:53] [INFO] auction_app bootstrap started
+[2026-06-18 14:56:53] [INFO] config path: /home/ljh/project/soft_course_design/build/test_config/app.mysql.test.json
+[2026-06-18 14:56:53] [INFO] starting Drogon server on 127.0.0.1:18080
+20260618 06:58:45.585462 UTC 48140 WARN  SIGTERM signal received. - HttpAppFrameworkImpl.cc:181

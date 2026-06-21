@@ -1,0 +1,354 @@
+/* macOS Style Buttons */
+
+:root {
+  /* macOS System Colors */
+  --macos-blue: #007AFF;
+  --macos-blue-hover: #0051D5;
+  --macos-gray: #8E8E93;
+  --macos-gray-hover: #636366;
+  --macos-red: #FF3B30;
+  --macos-green: #34C759;
+  --macos-yellow: #FFCC00;
+  --macos-purple: #AF52DE;
+  --macos-pink: #FF2D55;
+  --macos-teal: #5AC8FA;
+
+  /* macOS Button Backgrounds */
+  --macos-button-bg: rgba(0, 0, 0, 0.05);
+  --macos-button-bg-hover: rgba(0, 0, 0, 0.08);
+  --macos-button-border: rgba(0, 0, 0, 0.12);
+
+  /* Dark mode variants */
+  --macos-dark-button-bg: rgba(255, 255, 255, 0.1);
+  --macos-dark-button-bg-hover: rgba(255, 255, 255, 0.15);
+  --macos-dark-button-border: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================
+   Base macOS Button Style
+   ============================================ */
+.btn-macos {
+  /* Typography */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+
+  /* Layout */
+  padding: 5px 12px;
+  min-width: 60px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  /* Appearance */
+  background: var(--macos-button-bg);
+  border: 1px solid var(--macos-button-border);
+  border-radius: 6px;
+  color: var(--light-text-primary);
+
+  /* Behavior */
+  cursor: default;
+  user-select: none;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover state */
+.btn-macos:hover {
+  background: var(--macos-button-bg-hover);
+  transform: scale(0.99);
+}
+
+/* Active state */
+.btn-macos:active {
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(0.97);
+}
+
+/* Focus state - macOS style focus ring */
+.btn-macos:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+}
+
+/* ============================================
+   Primary Button (Blue)
+   ============================================ */
+.btn-macos-primary {
+  background: var(--macos-blue);
+  border-color: var(--macos-blue);
+  color: white;
+  font-weight: 500;
+}
+
+.btn-macos-primary:hover {
+  background: var(--macos-blue-hover);
+  border-color: var(--macos-blue-hover);
+}
+
+.btn-macos-primary:active {
+  background: #0040A0;
+  border-color: #0040A0;
+}
+
+/* ============================================
+   Secondary Button (Gray)
+   ============================================ */
+.btn-macos-secondary {
+  background: linear-gradient(180deg, #FAFAFA 0%, #E5E5E7 100%);
+  border: 1px solid #C6C6C8;
+  color: #000000;
+}
+
+.btn-macos-secondary:hover {
+  background: linear-gradient(180deg, #F5F5F5 0%, #E0E0E2 100%);
+}
+
+.btn-macos-secondary:active {
+  background: linear-gradient(180deg, #E0E0E2 0%, #D5D5D7 100%);
+}
+
+/* Dark mode secondary */
+html.dark .btn-macos-secondary {
+  background: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
+  border: 1px solid #545456;
+  color: #FFFFFF;
+}
+
+/* ============================================
+   Destructive Button (Red)
+   ============================================ */
+.btn-macos-destructive {
+  background: var(--macos-red);
+  border-color: var(--macos-red);
+  color: white;
+}
+
+.btn-macos-destructive:hover {
+  background: #D70015;
+  border-color: #D70015;
+}
+
+/* ============================================
+   Success Button (Green)
+   ============================================ */
+.btn-macos-success {
+  background: var(--macos-green);
+  border-color: var(--macos-green);
+  color: white;
+}
+
+.btn-macos-success:hover {
+  background: #2FB34F;
+  border-color: #2FB34F;
+}
+
+/* ============================================
+   macOS Toolbar Button
+   ============================================ */
+.btn-macos-toolbar {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--macos-gray);
+}
+
+.btn-macos-toolbar:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--light-text-primary);
+}
+
+html.dark .btn-macos-toolbar:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* ============================================
+   macOS Rounded Rectangle Button
+   ============================================ */
+.btn-macos-rounded {
+  border-radius: 14px;
+  padding: 6px 16px;
+  height: 30px;
+}
+
+/* ============================================
+   macOS Capsule Button
+   ============================================ */
+.btn-macos-capsule {
+  border-radius: 100px;
+  padding: 6px 20px;
+  height: 32px;
+}
+
+/* ============================================
+   macOS Button Sizes
+   ============================================ */
+.btn-macos-small {
+  font-size: 11px;
+  padding: 3px 10px;
+  height: 22px;
+  min-width: 50px;
+}
+
+.btn-macos-regular {
+  /* Default size */
+}
+
+.btn-macos-large {
+  font-size: 15px;
+  padding: 8px 20px;
+  height: 36px;
+  min-width: 80px;
+}
+
+/* ============================================
+   macOS Button Group
+   ============================================ */
+.btn-macos-group {
+  display: inline-flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--macos-button-border);
+}
+
+.btn-macos-group .btn-macos {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--macos-button-border);
+}
+
+.btn-macos-group .btn-macos:last-child {
+  border-right: none;
+}
+
+/* ============================================
+   Disabled State
+   ============================================ */
+.btn-macos:disabled,
+.btn-macos.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+.btn-macos-loading {
+  color: transparent;
+  pointer-events: none;
+}
+
+.btn-macos-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  border-top-color: currentColor;
+  animation: macos-spin 0.6s linear infinite;
+}
+
+@keyframes macos-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Icon Buttons
+   ============================================ */
+.btn-macos-icon {
+  padding: 6px;
+  min-width: 28px;
+  width: 28px;
+}
+
+.btn-macos-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================
+   macOS Traffic Light Buttons
+   ============================================ */
+.macos-traffic-lights {
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+.macos-traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.macos-traffic-light.close {
+  background: #FF5F57;
+}
+
+.macos-traffic-light.minimize {
+  background: #FFBD2E;
+}
+
+.macos-traffic-light.maximize {
+  background: #28CA42;
+}
+
+.macos-traffic-lights:hover .macos-traffic-light.close {
+  background: #FF5F57;
+}
+
+.macos-traffic-lights:hover .macos-traffic-light.minimize {
+  background: #FFBD2E;
+}
+
+.macos-traffic-lights:hover .macos-traffic-light.maximize {
+  background: #28CA42;
+}
+
+/* Symbols on hover */
+.macos-traffic-light::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.macos-traffic-lights:hover .macos-traffic-light::after {
+  opacity: 1;
+}
+
+/* ============================================
+   Dark Theme Adjustments
+   ============================================ */
+html.dark .btn-macos {
+  background: var(--macos-dark-button-bg);
+  border-color: var(--macos-dark-button-border);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+html.dark .btn-macos:hover {
+  background: var(--macos-dark-button-bg-hover);
+}
+
+html.dark .btn-macos:active {
+  background: rgba(255, 255, 255, 0.2);
+}

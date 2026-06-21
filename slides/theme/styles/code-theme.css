@@ -1,0 +1,17 @@
+/* Code Block Theme — Shiki overrides only.
+   Base code styling is in main.css.
+   This file forces dark background on code blocks
+   even when Slidev tries to override it. */
+
+/* Force dark background on all code blocks */
+pre,
+.shiki,
+.slidev-code {
+  background: var(--bg-code, #21252b) !important;
+}
+
+/* Scrollbar styling for code blocks */
+.shiki::-webkit-scrollbar { width: 8px; height: 8px; }
+.shiki::-webkit-scrollbar-track { background: var(--bg-tertiary, #3e4452); border-radius: 4px; }
+.shiki::-webkit-scrollbar-thumb { background: var(--text-muted, #5c6370); border-radius: 4px; }
+.shiki::-webkit-scrollbar-thumb:hover { background: var(--text-secondary, #939aa3); }

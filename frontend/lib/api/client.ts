@@ -56,6 +56,20 @@ type ApiEnvelope<T> = {
   data?: T;
 };
 
+type DailyStatisticsListRaw = {
+  list: Array<{
+    statId: number;
+    statDate: string;
+    auctionCount: number;
+    soldCount: number;
+    unsoldCount: number;
+    bidCount: number;
+    gmvAmount: number;
+    createdAt: string;
+  }>;
+  total: number;
+};
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: number;
@@ -607,10 +621,23 @@ export async function rejectItem(itemId: string, reason?: string): Promise<Audit
 
 export async function getAdminDailyStatistics(startDate?: string, endDate?: string): Promise<DailyStatisticsRaw[]> {
   const params = new URLSearchParams();
-  if (startDate) params.set("start_date", startDate);
-  if (endDate) params.set("end_date", endDate);
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
   const qs = params.toString();
-  return liveFetch<DailyStatisticsRaw[]>(`/api/admin/statistics/daily${qs ? `?${qs}` : ""}`);
+  const raw = await liveFetch<DailyStatisticsRaw[] | DailyStatisticsListRaw>(`/api/admin/statistics/daily${qs ? `?${qs}` : ""}`);
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+  return raw.list.map((record) => ({
+    stat_id: record.statId,
+    stat_date: record.statDate,
+    auction_count: record.auctionCount,
+    sold_count: record.soldCount,
+    unsold_count: record.unsoldCount,
+    bid_count: record.bidCount,
+    gmv_amount: record.gmvAmount,
+    created_at: record.createdAt,
+  }));
 }
 
 export async function createItem(params: {

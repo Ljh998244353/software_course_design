@@ -139,6 +139,7 @@ int main() {
             .description = "成色较新，含原装配件",
             .category_id = 1,
             .start_price = 88.0,
+            .suggested_bid_step = 8.0,
             .cover_image_url = "",
         }
     );
@@ -152,6 +153,7 @@ int main() {
             .description = "用于验证提交审核必须存在图片元数据",
             .category_id = 1,
             .start_price = 66.0,
+            .suggested_bid_step = 6.0,
             .cover_image_url = "/images/" + unique_suffix + "/cover-only.jpg",
         }
     );
@@ -376,6 +378,7 @@ int main() {
                 .description = "缺少图片",
                 .category_id = 1,
                 .start_price = 30.0,
+                .suggested_bid_step = 5.0,
                 .cover_image_url = "",
             }
         );

@@ -321,7 +321,7 @@ ITEM_CREATE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"title\":\"${ITEM_TITLE}\",\"description\":\"HTTP item description\",\"category_id\":1,\"start_price\":99.50,\"cover_image_url\":\"\"}" \
+        --data "{\"title\":\"${ITEM_TITLE}\",\"description\":\"HTTP item description\",\"category_id\":1,\"start_price\":99.50,\"suggested_bid_step\":10.00,\"cover_image_url\":\"\"}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
 )"
 [[ "${ITEM_CREATE_STATUS}" == "200" ]]
@@ -342,7 +342,7 @@ ITEM_INVALID_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data '{"title":"","description":"invalid","category_id":1,"start_price":10.00}' \
+        --data '{"title":"","description":"invalid","category_id":1,"start_price":10.00,"suggested_bid_step":1.00}' \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
 )"
 [[ "${ITEM_INVALID_STATUS}" == "400" ]]
@@ -1243,7 +1243,7 @@ REJECT_ITEM_CREATE_STATUS="$(
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer ${REGISTER_TOKEN}" \
-        --data "{\"title\":\"${REJECT_ITEM_TITLE}\",\"description\":\"HTTP reject item\",\"category_id\":1,\"start_price\":50.00,\"cover_image_url\":\"\"}" \
+        --data "{\"title\":\"${REJECT_ITEM_TITLE}\",\"description\":\"HTTP reject item\",\"category_id\":1,\"start_price\":50.00,\"suggested_bid_step\":5.00,\"cover_image_url\":\"\"}" \
         "http://${SERVER_HOST}:${SERVER_PORT}/api/items"
 )"
 [[ "${REJECT_ITEM_CREATE_STATUS}" == "200" ]]

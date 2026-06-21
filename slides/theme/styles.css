@@ -1,0 +1,13 @@
+/* Slidev Theme - One Purple Unicorn Pro */
+/* Main entry point - imports all theme styles */
+@import './styles/colors.css';
+@import './styles/gradients.css';
+@import './styles/animations.css';
+@import './styles/main.css';
+@import './styles/layout.css';
+@import './styles/layout-fix.css';
+@import './styles/light-theme.css';
+@import './styles/dark-theme.css';
+@import './styles/code-theme.css';
+@import './styles/macos-buttons.css';
+@import './styles/index.css';

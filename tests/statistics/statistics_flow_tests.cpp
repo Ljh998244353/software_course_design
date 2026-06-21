@@ -267,6 +267,7 @@ std::uint64_t CreateApprovedItem(
             .description = "used for S10 statistics tests",
             .category_id = 1,
             .start_price = 100.0,
+            .suggested_bid_step = 10.0,
             .cover_image_url = "",
         }
     );

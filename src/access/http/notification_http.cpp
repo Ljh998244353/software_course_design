@@ -171,7 +171,6 @@ void RegisterNotificationHttpRoutes(
 ) {
 #if AUCTION_HAS_DROGON
     RegisterCorsPreflight("/api/notifications", "GET, OPTIONS");
-    RegisterCorsPreflight("/api/notifications/{id}/read", "PATCH, POST, OPTIONS");
 
     drogon::app().registerHandler(
         "/api/notifications",
@@ -195,6 +194,16 @@ void RegisterNotificationHttpRoutes(
         [services](const drogon::HttpRequestPtr& request,
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                    const std::string& raw_notification_id) {
+            if (request->method() == drogon::Options) {
+                auto response = drogon::HttpResponse::newHttpResponse();
+                response->setStatusCode(drogon::k204NoContent);
+                response->addHeader("Access-Control-Allow-Origin", "*");
+                response->addHeader("Access-Control-Allow-Methods", "PATCH, POST, OPTIONS");
+                response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                response->addHeader("Access-Control-Max-Age", "86400");
+                callback(response);
+                return;
+            }
             callback(common::http::ExecuteApi([&]() {
                 const auto context =
                     common::http::RequireAuthContext(request, services->auth_middleware());
@@ -205,7 +214,7 @@ void RegisterNotificationHttpRoutes(
                 return common::http::ApiResponse::Success(ToMarkReadResultJson(result));
             }));
         },
-        {drogon::Patch, drogon::Post}
+        {drogon::Patch, drogon::Post, drogon::Options}
     );
 #else
     static_cast<void>(services);

@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+Test set: local.auction.FinalSeleniumTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 20.12 s <<< FAILURE! -- in local.auction.FinalSeleniumTest
+local.auction.FinalSeleniumTest.sellerPublishAdminApproveAndCreateAuctionFlow -- Time elapsed: 11.44 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 管理端拍卖详情应包含 Selenium 创建的拍卖，auctionId=1, response={"code":0,"data":{"auction":{"antiSnipingWindowSeconds":300,"auctionId":1,"bidStep":20.0,"createdAt":"2026-06-18 21:53:03.308","currentPrice":320.0,"endTime":"2026-06-19 21:53:00.000","extendSeconds":180,"highestBidderId":null,"itemId":1,"sellerId":3,"startPrice":320.0,"startTime":"2026-06-18 21:54:00.000","status":"PENDING_START","updatedAt":"2026-06-18 21:53:03.308","version":0},"highestBidderUsername":"","item":{"coverImageUrl":"http://127.0.0.1:3100/demo-auction.svg","itemId":1,"itemStatus":... ==> expected: <true> but was: <false>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+	at local.auction.FinalSeleniumTest.sellerPublishAdminApproveAndCreateAuctionFlow(FinalSeleniumTest.java:230)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

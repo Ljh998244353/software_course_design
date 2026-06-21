@@ -1,0 +1,197 @@
+/* ========== Content Slide Layout ========== */
+/* Styles for content slides — layouts that show regular text/code content.
+   Only SPECIAL layouts (cover, section, full variants, etc.) are excluded.
+   Content layouts like two-cols, three-cols, comparison KEEP these styles. */
+
+/* Exclude list: only layouts with their own typography/positioning */
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) {
+  box-sizing: border-box;
+  font-size: 18px;
+  line-height: 1.3;
+  padding: 70px 30px 20px 30px;
+  text-align: left;
+}
+
+/* ========== H1 Absolute Positioning (Content Slides Only) ========== */
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) h1 {
+  position: absolute;
+  top: 15px;
+  left: 30px;
+  right: 30px;
+  margin: 0;
+  padding: 0;
+  font-size: 1.6em;
+  font-weight: 700;
+  background: var(--cover-h1-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  z-index: 200;
+  height: auto;
+  max-height: 50px;
+  overflow: visible;
+}
+
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) h1 + * {
+  margin-top: 0;
+}
+
+/* ========== Content Heading Sizes ========== */
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) h2 {
+  font-size: 1.3em;
+  color: var(--content-h2);
+  margin: 1.2rem 0 0.5rem;
+}
+
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) h1 + h2 {
+  margin-top: 0;
+}
+
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) h3 {
+  font-size: 1.15em;
+  color: var(--content-h3);
+}
+
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) h4 {
+  font-size: 1.1em;
+  color: var(--content-h4);
+}
+
+/* ========== Content List Marker Color ========== */
+.slidev-layout:not(.cover):not(.intro):not(.end):not(.section):not(.full):not(.full-image):not(.full-text):not(.full-split):not(.quote):not(.statement):not(.fact):not(.center):not(.iframe-layout):not(.image-layout) li::marker {
+  color: var(--content-marker);
+}
+
+/* ========== Cover/Intro/End/Section Overrides ========== */
+.slidev-layout.cover,
+.slidev-layout.intro,
+.slidev-layout.end,
+.slidev-layout.section {
+  background: var(--cover-bg);
+  color: var(--cover-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+.slidev-layout.cover h1,
+.slidev-layout.intro h1,
+.slidev-layout.end h1,
+.slidev-layout.section h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  background: var(--cover-h1-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  margin: 0 0 2rem;
+  position: static;
+  top: auto;
+  text-align: center;
+  height: auto;
+  max-height: none;
+}
+
+.slidev-layout.cover h1 *,
+.slidev-layout.intro h1 *,
+.slidev-layout.end h1 *,
+.slidev-layout.section h1 * {
+  background: inherit;
+  -webkit-background-clip: inherit;
+  background-clip: inherit;
+  -webkit-text-fill-color: inherit;
+}
+
+.slidev-layout.cover h2,
+.slidev-layout.intro h2,
+.slidev-layout.end h2,
+.slidev-layout.section h2 {
+  font-size: 1.5rem;
+  font-weight: 400;
+  background: var(--cover-h2-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.slidev-layout.cover p,
+.slidev-layout.intro p,
+.slidev-layout.end p,
+.slidev-layout.section p {
+  color: var(--cover-text);
+  font-size: 1.125rem;
+}
+
+/* ========== Global Heading Line Height ========== */
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3,
+.slidev-layout h4,
+.slidev-layout h5,
+.slidev-layout h6 {
+  line-height: 1.3;
+}
+
+/* ============================================
+   Academic refinement for title/section layouts
+   Paper-white, serif, short navy hairline under title.
+   ============================================ */
+.slidev-layout.cover h1,
+.slidev-layout.intro h1,
+.slidev-layout.end h1,
+.slidev-layout.section h1,
+.slidev-layout.fact h1,
+.slidev-layout.statement h1,
+.slidev-layout.quote h1 {
+  font-family: var(--font-serif);
+  display: inline-block;
+  letter-spacing: -0.01em;
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.4rem;
+  border-bottom: 3px solid var(--accent);
+  border-radius: 0;
+}
+
+/* Cover/section subtitle (h2) reads as a refined, lightly-tracked line */
+.slidev-layout.cover h2,
+.slidev-layout.intro h2,
+.slidev-layout.end h2,
+.slidev-layout.section h2 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: var(--accent) !important;
+  -webkit-text-fill-color: var(--accent);
+  letter-spacing: 0.01em;
+}
+
+/* Small-caps kicker: any blockquote on a title slide becomes an eyebrow label */
+.slidev-layout.cover blockquote,
+.slidev-layout.intro blockquote,
+.slidev-layout.section blockquote {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0 0 0.6rem;
+  font-style: normal;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Title-slide body text */
+.slidev-layout.cover p,
+.slidev-layout.intro p,
+.slidev-layout.end p,
+.slidev-layout.section p {
+  color: var(--ink-muted);
+}

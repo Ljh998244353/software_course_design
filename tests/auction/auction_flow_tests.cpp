@@ -147,6 +147,7 @@ std::uint64_t CreateApprovedItem(
             .description = "用于 S06 自动化测试",
             .category_id = 1,
             .start_price = 99.0,
+            .suggested_bid_step = 10.0,
             .cover_image_url = "",
         }
     );
@@ -356,6 +357,7 @@ int main() {
             .description = "未审核",
             .category_id = 1,
             .start_price = 66.0,
+            .suggested_bid_step = 5.0,
             .cover_image_url = "",
         }
     );

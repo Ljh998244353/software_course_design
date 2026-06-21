@@ -9,3 +9,6 @@ node_modules/
 .env.local
 frontend/test-results/
 frontend/playwright-report/
+slides/dist/
+docs/hw/
+jmeter.log

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">在线拍卖平台架构背景</title>
+  <desc id="desc">浏览器前端、C++ 后端、MySQL、WebSocket 和任务调度的抽象架构图。</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f4f7fa"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#1a1f2b" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1e3a5f"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="900" fill="#fcfcfa"/>
+  <path d="M0 120H1600M0 300H1600M0 480H1600M0 660H1600M210 0V900M500 0V900M790 0V900M1080 0V900M1370 0V900" stroke="#d9d7cf" stroke-width="1" opacity="0.36"/>
+  <circle cx="1360" cy="160" r="220" fill="#e8f4f6" opacity="0.35"/>
+  <circle cx="320" cy="700" r="260" fill="#eef2f7" opacity="0.52"/>
+
+  <g filter="url(#shadow)">
+    <rect x="110" y="215" width="310" height="190" rx="22" fill="url(#panel)" stroke="#d9d7cf" stroke-width="2"/>
+    <rect x="140" y="250" width="250" height="30" rx="9" fill="#1e3a5f" opacity="0.92"/>
+    <rect x="140" y="308" width="115" height="62" rx="14" fill="#e8eef5" stroke="#b7c4d6"/>
+    <rect x="275" y="308" width="115" height="62" rx="14" fill="#e8eef5" stroke="#b7c4d6"/>
+    <circle cx="175" cy="340" r="14" fill="#54b6c8"/>
+    <path d="M205 340h38M306 340h52" stroke="#1e3a5f" stroke-width="8" stroke-linecap="round" opacity="0.45"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="610" y="175" width="380" height="330" rx="30" fill="#ffffff" stroke="#1e3a5f" stroke-width="3"/>
+    <rect x="650" y="225" width="300" height="58" rx="18" fill="#1e3a5f" opacity="0.94"/>
+    <rect x="650" y="315" width="130" height="60" rx="16" fill="#eff5f9" stroke="#d9d7cf"/>
+    <rect x="820" y="315" width="130" height="60" rx="16" fill="#eff5f9" stroke="#d9d7cf"/>
+    <rect x="650" y="405" width="300" height="56" rx="16" fill="#f7f8f8" stroke="#d9d7cf"/>
+    <path d="M686 346h58M856 346h58M690 433h220" stroke="#1e3a5f" stroke-width="9" stroke-linecap="round" opacity="0.34"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <ellipse cx="1265" cy="258" rx="150" ry="42" fill="#eef4f7" stroke="#1e3a5f" stroke-width="3"/>
+    <path d="M1115 258v165c0 24 67 44 150 44s150-20 150-44V258" fill="#ffffff" stroke="#1e3a5f" stroke-width="3"/>
+    <ellipse cx="1265" cy="423" rx="150" ry="44" fill="#f6f8f9" stroke="#1e3a5f" stroke-width="3"/>
+    <path d="M1185 326h160M1185 376h160" stroke="#54b6c8" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1070" y="610" width="340" height="120" rx="28" fill="#ffffff" stroke="#d9d7cf" stroke-width="2"/>
+    <circle cx="1135" cy="670" r="28" fill="#54b6c8" opacity="0.78"/>
+    <path d="M1195 650h150M1195 690h95" stroke="#1e3a5f" stroke-width="12" stroke-linecap="round" opacity="0.42"/>
+  </g>
+
+  <path d="M420 310C505 305 535 265 610 265" fill="none" stroke="#1e3a5f" stroke-width="8" stroke-linecap="round" marker-end="url(#arrow)" opacity="0.78"/>
+  <path d="M990 300C1055 275 1065 270 1115 270" fill="none" stroke="#1e3a5f" stroke-width="8" stroke-linecap="round" marker-end="url(#arrow)" opacity="0.78"/>
+  <path d="M800 505C820 620 930 670 1070 670" fill="none" stroke="#54b6c8" stroke-width="7" stroke-linecap="round" marker-end="url(#arrow)" opacity="0.72"/>
+  <path d="M1265 610C1350 525 1445 410 1415 270" fill="none" stroke="#54b6c8" stroke-width="7" stroke-linecap="round" stroke-dasharray="18 18" opacity="0.58"/>
+</svg>

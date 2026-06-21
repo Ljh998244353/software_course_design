@@ -1,0 +1,278 @@
+/* Academic Light Theme - Gradient System neutralized to navy/neutral.
+   Class definitions below are unchanged; they all read these vars, so
+   re-pointing the vars to solid navy/neutral converts every helper at once. */
+
+:root {
+  /* All "unicorn"/vibrant gradients collapse to solid navy */
+  --gradient-unicorn-1: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-unicorn-2: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-unicorn-3: linear-gradient(0deg, var(--accent), var(--accent));
+
+  --gradient-vibrant-1: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-vibrant-2: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-vibrant-3: linear-gradient(0deg, var(--accent), var(--accent));
+
+  /* Soft/mesh washes -> very faint navy or none */
+  --gradient-soft-1: linear-gradient(135deg, var(--accent-soft) 0%, transparent 100%);
+  --gradient-soft-2: linear-gradient(135deg, var(--accent-soft) 0%, transparent 100%);
+  --gradient-soft-3: linear-gradient(135deg, var(--accent-soft) 0%, transparent 100%);
+
+  --gradient-mesh-1: none;
+  --gradient-mesh-2: none;
+
+  --gradient-static-1: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-static-2: linear-gradient(0deg, var(--accent-2), var(--accent-2));
+
+  /* Glass washes -> faint navy on paper */
+  --gradient-glass-1: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-soft) 100%);
+  --gradient-glass-2: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-soft) 100%);
+  --gradient-glass-3: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent-soft) 100%);
+
+  /* Text gradients -> solid navy (clip-to-text renders solid color) */
+  --gradient-text-1: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-text-2: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-text-3: linear-gradient(0deg, var(--accent-2), var(--accent-2));
+
+  /* Border gradients -> solid navy */
+  --gradient-border-1: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-border-2: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-border-3: linear-gradient(0deg, var(--accent-2), var(--accent-2));
+}
+
+/* ============================================
+   Gradient Background Classes
+   ============================================ */
+
+/* Main gradient background */
+.gradient-bg {
+  position: relative;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.gradient-bg::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: var(--gradient-mesh-1);
+  opacity: 0.4;
+  /* No animation for PDF */
+}
+
+/* Static gradient background */
+.gradient-animated {
+  background: var(--gradient-static-1);
+  /* No animation for PDF */
+}
+
+/* Subtle gradient overlay */
+.gradient-overlay {
+  position: relative;
+}
+
+.gradient-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-soft-1);
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* ============================================
+   Gradient Text Classes
+   ============================================ */
+
+.gradient-text {
+  background: var(--gradient-text-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+}
+
+.gradient-text-animated {
+  background: var(--gradient-static-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* No animation for PDF */
+}
+
+/* ============================================
+   Gradient Cards
+   ============================================ */
+
+.gradient-card {
+  background: var(--bg-secondary);
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  padding: 2rem;
+}
+
+.gradient-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-unicorn-1);
+}
+
+.gradient-card-hover {
+  background: var(--bg-secondary);
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  padding: 2rem;
+  border: 2px solid var(--gradient-unicorn-1);
+}
+
+/* ============================================
+   Gradient Borders
+   ============================================ */
+
+.gradient-border {
+  position: relative;
+  background: var(--bg-secondary);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: var(--gradient-unicorn-1);
+  border-radius: 1rem;
+  z-index: -1;
+}
+
+/* Static gradient border for PDF */
+.gradient-border-animated {
+  position: relative;
+  background: var(--bg-secondary);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+.gradient-border-animated::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: var(--gradient-static-1);
+  border-radius: 1rem;
+  z-index: -1;
+  /* No animation for PDF */
+}
+
+/* ============================================
+   Gradient Buttons
+   ============================================ */
+
+.btn-gradient {
+  background: var(--gradient-unicorn-1);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  /* No hover effects for PDF */
+}
+
+/* ============================================
+   Glass Morphism with Gradients
+   ============================================ */
+
+.glass-gradient {
+  background: var(--gradient-glass-1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* ============================================
+   Gradient Shapes
+   ============================================ */
+
+.gradient-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.6;
+  /* No animation for PDF */
+}
+
+.gradient-blob-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--gradient-unicorn-1);
+  top: -200px;
+  right: -200px;
+}
+
+.gradient-blob-2 {
+  width: 300px;
+  height: 300px;
+  background: var(--gradient-vibrant-2);
+  bottom: -150px;
+  left: -150px;
+}
+
+.gradient-blob-3 {
+  width: 350px;
+  height: 350px;
+  background: var(--gradient-vibrant-3);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ============================================
+   Gradient Utilities
+   ============================================ */
+
+.gradient-unicorn-bg { background: var(--gradient-unicorn-1); }
+.gradient-vibrant-bg { background: var(--gradient-vibrant-1); }
+.gradient-soft-bg { background: var(--gradient-soft-1); }
+
+.gradient-text-1 {
+  background: var(--gradient-text-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-2 {
+  background: var(--gradient-text-2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-3 {
+  background: var(--gradient-text-3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

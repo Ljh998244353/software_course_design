@@ -1,0 +1,189 @@
+/* Academic Light Theme - Paper + Navy Color System */
+
+:root {
+  /* ============================================
+     Academic Core Tokens (new)
+     ============================================ */
+  --paper: #fcfcfa;          /* warm paper white - main background */
+  --paper-2: #f4f3ee;        /* secondary panel background */
+  --paper-3: #ecebe4;        /* tertiary / hover background */
+
+  --ink: #1a1f2b;            /* primary text - near black */
+  --ink-2: #3f4654;          /* secondary text */
+  --ink-muted: #6b7280;      /* muted / disabled text */
+
+  --accent: #1e3a5f;         /* navy - single accent */
+  --accent-2: #2c4a7c;       /* lighter navy */
+  --accent-soft: rgba(30, 58, 95, 0.07);  /* faint navy wash */
+
+  --rule: #d9d7cf;           /* hairline / border - warm gray */
+  --rule-accent: rgba(30, 58, 95, 0.25);  /* navy hairline */
+
+  /* ============================================
+     Legacy palette remapped to academic tokens
+     (names kept so layouts/components inherit)
+     ============================================ */
+  /* One Dark Pro base -> academic neutrals/navy */
+  --one-dark-bg: var(--paper-2);
+  --one-dark-bg-light: var(--paper-3);
+  --one-dark-fg: var(--ink);
+  --one-dark-fg-bright: var(--ink);
+  --one-dark-green: #3f7d4e;
+  --one-dark-yellow: var(--accent-2);
+  --one-dark-yellow-dark: var(--accent-2);
+  --one-dark-red: #a33a3a;
+  --one-dark-blue: var(--accent);
+  --one-dark-cyan: var(--accent-2);
+  --one-dark-purple: var(--accent);
+  --one-dark-magenta: var(--accent);
+  --one-dark-gray: var(--ink-muted);
+  --one-dark-buffer: var(--ink-muted);
+  --one-dark-selection: var(--accent-soft);
+
+  /* Primary color scale (was purple) -> navy */
+  --primary-100: #dfe6f0;
+  --primary-300: var(--accent-2);
+  --primary-400: var(--accent);
+  --primary-500: var(--accent-2);
+  --primary-700: var(--accent);
+  --primary-800: var(--accent);
+  --primary-900: #142840;
+
+  /* Secondary color scale (was blue) -> navy */
+  --secondary-400: var(--accent-2);
+
+  /* Dark background aliases -> paper (light-first) */
+  --dark-bg: var(--paper);
+  --dark-bg-light: var(--paper-2);
+  --dark-fg: var(--ink-2);
+  --dark-fg-bright: var(--ink);
+
+  /* Extended Palette - Blue Variations -> navy steps */
+  --blue-50: #eef2f7;
+  --blue-100: #dfe6f0;
+  --blue-200: #c0cee0;
+  --blue-300: #8fa7c4;
+  --blue-400: var(--accent-2);
+  --blue-500: var(--accent);
+  --blue-600: var(--accent);
+  --blue-700: #18304f;
+  --blue-800: #142840;
+  --blue-900: #0f1f33;
+
+  /* Extended Palette - Purple Variations -> navy steps */
+  --purple-50: #eef2f7;
+  --purple-100: #dfe6f0;
+  --purple-200: #c0cee0;
+  --purple-300: #8fa7c4;
+  --purple-400: var(--accent);
+  --purple-500: var(--accent-2);
+  --purple-600: var(--accent);
+  --purple-700: #18304f;
+  --purple-800: #142840;
+  --purple-900: #0f1f33;
+
+  /* Background Colors -> paper */
+  --bg-primary: var(--paper);
+  --bg-secondary: var(--paper-2);
+  --bg-tertiary: var(--paper-3);
+  --bg-code: #20242e;          /* code keeps a dark slab for contrast */
+  --bg-overlay: rgba(252, 252, 250, 0.95);
+
+  /* Text Colors -> ink */
+  --text-primary: var(--ink);
+  --text-bright: var(--ink);
+  --text-secondary: var(--ink-2);
+  --text-muted: var(--ink-muted);
+  --text-disabled: #9ca3af;
+
+  /* Semantic Colors (toned down, academic) */
+  --success: #3f7d4e;
+  --warning: #b4791f;
+  --error: #a33a3a;
+  --info: var(--accent);
+
+  /* Gradients -> neutralized to solid navy */
+  --gradient-primary: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-secondary: linear-gradient(0deg, var(--accent), var(--accent));
+  --gradient-accent: linear-gradient(0deg, var(--accent-2), var(--accent-2));
+  --gradient-warm: linear-gradient(0deg, var(--accent-2), var(--accent-2));
+  --gradient-subtle: linear-gradient(0deg, var(--paper-2), var(--paper-2));
+  --gradient-vibrant: linear-gradient(0deg, var(--accent), var(--accent));
+
+  /* Syntax Highlighting (kept colorful for dark code slab readability) */
+  --syntax-keyword: #c678dd;
+  --syntax-string: #98c379;
+  --syntax-function: #61afef;
+  --syntax-comment: #7a8290;
+  --syntax-number: #e5c07b;
+  --syntax-operator: #56b6c2;
+  --syntax-class: #e5c07b;
+  --syntax-variable: #e06c75;
+  --syntax-constant: #e5c07b;
+  --syntax-tag: #e06c75;
+  --syntax-attribute: #e5c07b;
+
+  /* Interactive States */
+  --hover-bg: var(--paper-3);
+  --hover-opacity: 0.9;
+  --focus-ring: 0 0 0 2px rgba(30, 58, 95, 0.4);
+  --active-bg: var(--paper-3);
+
+  /* Shadows - light, academic */
+  --shadow-sm: 0 1px 2px rgba(26, 31, 43, 0.06);
+  --shadow-md: 0 2px 6px rgba(26, 31, 43, 0.08);
+  --shadow-lg: 0 6px 16px rgba(26, 31, 43, 0.10);
+  --shadow-xl: 0 10px 24px rgba(26, 31, 43, 0.12);
+  --shadow-glow: none;
+
+  /* Borders */
+  --border-default: var(--rule);
+  --border-subtle: rgba(217, 215, 207, 0.6);
+  --border-focus: var(--accent);
+  --border-error: var(--error);
+  --border-success: var(--success);
+
+  /* Light Mode Colors (aligned to academic tokens) */
+  --light-bg: var(--paper);
+  --light-bg-secondary: var(--paper-2);
+  --light-bg-tertiary: var(--paper-3);
+  --light-text-primary: var(--ink);
+  --light-text-secondary: var(--ink-2);
+  --light-text-muted: var(--ink-muted);
+  --light-border: var(--rule);
+  --light-border-light: rgba(217, 215, 207, 0.6);
+
+  /* Content Layout Colors (used by index.css) */
+  --content-h2: var(--accent);
+  --content-h3: var(--accent);
+  --content-h4: var(--accent-2);
+  --content-marker: var(--accent);
+  --content-inline-code-bg: var(--accent-soft);
+  --content-inline-code-color: var(--accent);
+
+  /* Cover/Section Layout Colors -> paper, no gradient */
+  --cover-bg: var(--paper);
+  --cover-text: var(--ink);
+  --cover-h1-gradient: linear-gradient(0deg, var(--ink), var(--ink));
+  --cover-h2-gradient: linear-gradient(0deg, var(--accent), var(--accent));
+
+  /* Special Effects - glows removed */
+  --glow-blue: none;
+  --glow-purple: none;
+  --glow-gradient: none;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Academic serif heading stack */
+  --font-serif: 'Source Serif 4', 'Noto Serif KR', Georgia, 'Times New Roman', serif;
+}

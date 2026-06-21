@@ -1,0 +1,467 @@
+/* ============================================
+   Animations - Opt-in for live presentations
+   All animations respect prefers-reduced-motion
+   and are disabled in print/PDF export.
+   ============================================ */
+
+/* ============================================
+   1. Animated Gradient Border
+   ============================================ */
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.anim-border {
+  --ab-c1: var(--one-dark-blue, #61afef);
+  --ab-c2: var(--one-dark-magenta, #c678dd);
+  --ab-c3: var(--one-dark-red, #e06c75);
+  --ab-dim: rgba(97, 175, 239, 0.08);
+
+  position: relative;
+  background: var(--bg-secondary, #1e2030);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  z-index: 0;
+}
+
+.anim-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--border-angle),
+    var(--ab-c1) 0%,
+    var(--ab-c2) 12%,
+    var(--ab-c3) 25%,
+    var(--ab-dim) 40%,
+    var(--ab-dim) 60%,
+    var(--ab-c1) 75%,
+    var(--ab-c1) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-rotate 6s linear infinite;
+  z-index: -1;
+}
+
+@keyframes border-rotate {
+  to { --border-angle: 360deg; }
+}
+
+@keyframes border-rotate-ccw {
+  to { --border-angle: -360deg; }
+}
+
+.anim-border-ccw::before { animation-name: border-rotate-ccw; }
+.anim-border-slow::before { animation-duration: 10s; }
+.anim-border-fast::before { animation-duration: 3s; }
+
+/* Color presets — neutralized to navy for the academic theme */
+.anim-border-ocean,
+.anim-border-sunset,
+.anim-border-neon,
+.anim-border-ice,
+.anim-border-fire,
+.anim-border-mint,
+.anim-border-gold {
+  --ab-c1: var(--accent, #1e3a5f);
+  --ab-c2: var(--accent-2, #2c4a7c);
+  --ab-c3: var(--accent, #1e3a5f);
+  --ab-dim: var(--accent-soft, rgba(30, 58, 95, 0.07));
+}
+
+/* ============================================
+   2. Shimmer
+   ============================================ */
+.anim-shimmer {
+  --shimmer-color: rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.anim-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    var(--shimmer-angle, 90deg),
+    transparent 0%,
+    transparent 35%,
+    var(--shimmer-color) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  background-size: var(--shimmer-size, 200% 100%);
+  animation-name: shimmer-lr;
+  animation-duration: 4s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer-lr {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.anim-shimmer-right::after { animation-name: shimmer-rl; }
+@keyframes shimmer-rl {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.anim-shimmer-down { --shimmer-angle: 180deg; --shimmer-size: 100% 200%; }
+.anim-shimmer-down::after { animation-name: shimmer-down; }
+@keyframes shimmer-down {
+  0%   { background-position: 0 200%; }
+  100% { background-position: 0 -200%; }
+}
+
+.anim-shimmer-up { --shimmer-angle: 0deg; --shimmer-size: 100% 200%; }
+.anim-shimmer-up::after { animation-name: shimmer-up; }
+@keyframes shimmer-up {
+  0%   { background-position: 0 -200%; }
+  100% { background-position: 0 200%; }
+}
+
+.anim-shimmer-diag { --shimmer-angle: 135deg; --shimmer-size: 300% 300%; }
+.anim-shimmer-diag::after { animation-name: shimmer-diag; }
+@keyframes shimmer-diag {
+  0%   { background-position: 200% -200%; }
+  100% { background-position: -200% 200%; }
+}
+
+.anim-shimmer-slow::after { animation-duration: 6s; }
+.anim-shimmer-fast::after { animation-duration: 2s; }
+
+.anim-shimmer-purple,
+.anim-shimmer-blue,
+.anim-shimmer-green,
+.anim-shimmer-warm,
+.anim-shimmer-neon { --shimmer-color: rgba(30, 58, 95, 0.08); }
+
+/* ============================================
+   3. Glow Pulse
+   ============================================ */
+.anim-glow {
+  --glow-color: 30, 58, 95;
+  --glow-intensity: 0.18;
+  animation: glow-pulse 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow-pulse {
+  from {
+    box-shadow: 0 0 6px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.3));
+  }
+  to {
+    box-shadow:
+      0 0 16px rgba(var(--glow-color), var(--glow-intensity)),
+      0 0 36px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.2));
+  }
+}
+
+.anim-glow-slow { animation-duration: 4s; }
+.anim-glow-fast { animation-duration: 1.2s; }
+
+.anim-glow-purple,
+.anim-glow-blue,
+.anim-glow-green,
+.anim-glow-red,
+.anim-glow-cyan,
+.anim-glow-gold,
+.anim-glow-neon { --glow-color: 30, 58, 95; }
+
+/* ============================================
+   4. Entrances (play once)
+   ============================================ */
+.anim-fade-in    { animation: fade-in 0.4s ease both; }
+.anim-fade-up    { animation: fade-up 0.4s ease both; }
+.anim-fade-left  { animation: fade-left 0.4s ease both; }
+.anim-fade-right { animation: fade-right 0.4s ease both; }
+
+.anim-delay-1 { animation-delay: 0.1s; }
+.anim-delay-2 { animation-delay: 0.2s; }
+.anim-delay-3 { animation-delay: 0.3s; }
+.anim-delay-4 { animation-delay: 0.4s; }
+.anim-delay-5 { animation-delay: 0.5s; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-left {
+  from { opacity: 0; transform: translateX(-0.75rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-right {
+  from { opacity: 0; transform: translateX(0.75rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================
+   5. Typing Cursor
+   ============================================ */
+.anim-cursor {
+  display: inline-block;
+  animation: blink 1s step-end infinite;
+  color: var(--primary-400, #c678dd);
+  font-weight: 100;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ============================================
+   6. Gradient Text Flow
+   ============================================ */
+.anim-gradient-text {
+  --gt-c1: var(--one-dark-blue, #61afef);
+  --gt-c2: var(--one-dark-magenta, #c678dd);
+  --gt-c3: var(--one-dark-red, #e06c75);
+  --gt-c4: var(--one-dark-yellow, #e5c07b);
+  --gt-c5: var(--one-dark-green, #98c379);
+
+  background: linear-gradient(90deg,
+    var(--gt-c1), var(--gt-c2), var(--gt-c3),
+    var(--gt-c4), var(--gt-c5), var(--gt-c1)
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-flow 5s linear infinite;
+}
+
+@keyframes gradient-flow {
+  to { background-position: 200% center; }
+}
+
+.anim-gt-slow { animation-duration: 10s; }
+.anim-gt-fast { animation-duration: 3s; }
+
+.anim-gradient-text-ocean,
+.anim-gradient-text-sunset,
+.anim-gradient-text-fire,
+.anim-gradient-text-neon {
+  --gt-c1: var(--accent, #1e3a5f);
+  --gt-c2: var(--accent-2, #2c4a7c);
+  --gt-c3: var(--accent, #1e3a5f);
+  --gt-c4: var(--accent-2, #2c4a7c);
+  --gt-c5: var(--accent, #1e3a5f);
+}
+
+/* ============================================
+   7. Float
+   ============================================ */
+.anim-float {
+  animation: float 3.5s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ============================================
+   8. Scale Pop (for v-click)
+   ============================================ */
+.anim-pop {
+  animation: scale-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes scale-pop {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   9. Hover Effects
+   ============================================ */
+
+/* Lift — rises with shadow */
+.hover-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(26, 31, 43, 0.12);
+}
+
+/* Scale — gentle grow */
+.hover-scale {
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+.hover-scale:hover {
+  transform: scale(1.04);
+}
+
+/* Glow — colored glow on hover */
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+  cursor: pointer;
+}
+.hover-glow:hover {
+  box-shadow: 0 0 0 1px var(--rule-accent, rgba(30, 58, 95, 0.25)), 0 6px 16px rgba(26, 31, 43, 0.10);
+}
+
+.hover-glow-blue { transition: box-shadow 0.3s ease; cursor: pointer; }
+.hover-glow-blue:hover { box-shadow: 0 0 0 1px var(--rule-accent, rgba(30, 58, 95, 0.25)), 0 6px 16px rgba(26, 31, 43, 0.10); }
+
+.hover-glow-green { transition: box-shadow 0.3s ease; cursor: pointer; }
+.hover-glow-green:hover { box-shadow: 0 0 0 1px var(--rule-accent, rgba(30, 58, 95, 0.25)), 0 6px 16px rgba(26, 31, 43, 0.10); }
+
+/* Border reveal — gradient border fades in */
+.hover-border {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.hover-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--one-dark-blue, #61afef), var(--one-dark-magenta, #c678dd)) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.hover-border:hover::after {
+  opacity: 1;
+}
+
+/* Shine — light sweep on hover */
+.hover-shine {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.hover-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.06) 55%,
+    transparent 100%
+  );
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+.hover-shine:hover::after {
+  left: 150%;
+}
+
+/* ============================================
+   Slide Transitions
+   ============================================ */
+
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-left-enter-from { opacity: 0; transform: translateX(24px); }
+.slide-left-leave-to   { opacity: 0; transform: translateX(-24px); }
+
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-right-enter-from { opacity: 0; transform: translateX(-24px); }
+.slide-right-leave-to   { opacity: 0; transform: translateX(24px); }
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-up-enter-from { opacity: 0; transform: translateY(24px); }
+.slide-up-leave-to   { opacity: 0; transform: translateY(-24px); }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.scale-fade-enter-active,
+.scale-fade-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.scale-fade-enter-from { opacity: 0; transform: scale(0.95); }
+.scale-fade-leave-to   { opacity: 0; transform: scale(1.05); }
+
+.blur-fade-enter-active,
+.blur-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.blur-fade-enter-from { opacity: 0; filter: blur(4px); transform: scale(0.97); }
+.blur-fade-leave-to   { opacity: 0; filter: blur(4px); transform: scale(1.03); }
+
+/* ============================================
+   Accessibility & Print Safety
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .anim-border::before,
+  .anim-shimmer::after,
+  .anim-cursor {
+    animation: none !important;
+  }
+  [class*="anim-glow"] {
+    animation: none !important;
+    box-shadow: none !important;
+  }
+  .anim-gradient-text,
+  [class*="anim-gradient-text-"] {
+    animation: none !important;
+  }
+  .anim-float,
+  .anim-pop,
+  .anim-fade-in,
+  .anim-fade-up,
+  .anim-fade-left,
+  .anim-fade-right {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
